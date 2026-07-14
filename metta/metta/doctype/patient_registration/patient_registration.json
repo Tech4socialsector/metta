@@ -5,19 +5,25 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "name1"
+  "name1",
+  "age"
  ],
  "fields": [
   {
    "fieldname": "name1",
    "fieldtype": "Data",
    "label": "Name"
+  },
+  {
+   "fieldname": "age",
+   "fieldtype": "Int",
+   "label": "Age"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-14 18:29:17.874590",
+ "modified": "2026-07-14 18:41:18.361683",
  "modified_by": "Administrator",
  "module": "metta",
  "name": "Patient Registration",
