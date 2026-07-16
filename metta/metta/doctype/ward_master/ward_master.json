@@ -1,0 +1,82 @@
+{
+ "actions": [],
+ "autoname": "prompt",
+ "creation": "2026-07-15 21:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "total_beds",
+  "column_break_beds",
+  "occupied_beds",
+  "available_beds",
+  "beds_section",
+  "beds"
+ ],
+ "fields": [
+  {
+   "fieldname": "total_beds",
+   "fieldtype": "Int",
+   "label": "Total Beds",
+   "non_negative": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_beds",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "occupied_beds",
+   "fieldtype": "Int",
+   "is_virtual": 1,
+   "label": "Occupied Beds",
+   "read_only": 1
+  },
+  {
+   "fieldname": "available_beds",
+   "fieldtype": "Int",
+   "is_virtual": 1,
+   "label": "Available Beds",
+   "read_only": 1
+  },
+  {
+   "fieldname": "beds_section",
+   "fieldtype": "Section Break",
+   "label": "Beds"
+  },
+  {
+   "description": "List each bed number in this ward. When beds are listed here, Total Beds is kept in sync automatically.",
+   "fieldname": "beds",
+   "fieldtype": "Table",
+   "label": "Beds",
+   "options": "Ward Bed"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-07-15 21:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "metta",
+ "name": "Ward Master",
+ "naming_rule": "Set by user",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

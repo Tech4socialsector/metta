@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class RegistrationtypeMaster(Document):
+class item(Document):
 	pass

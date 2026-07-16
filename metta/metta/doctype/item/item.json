@@ -1,26 +1,26 @@
 {
  "actions": [],
+ "allow_rename": 1,
  "autoname": "prompt",
- "creation": "2026-07-15 18:32:07.565845",
+ "creation": "2026-07-16 18:45:39.715118",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "fee_amount"
+  "section_break_ifho"
  ],
  "fields": [
   {
-   "fieldname": "fee_amount",
-   "fieldtype": "Currency",
-   "label": "Fee Amount"
+   "fieldname": "section_break_ifho",
+   "fieldtype": "Section Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-15 18:32:07.565845",
+ "modified": "2026-07-16 18:45:44.239591",
  "modified_by": "Administrator",
  "module": "metta",
- "name": "Registration type Master",
+ "name": "item",
  "naming_rule": "Set by user",
  "owner": "Administrator",
  "permissions": [
@@ -41,6 +41,5 @@
  "rows_threshold_for_grid_search": 20,
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": [],
- "track_changes": 1
+ "states": []
 }

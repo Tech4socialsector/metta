@@ -1,9 +1,88 @@
 # Copyright (c) 2026, tfss and contributors
 # For license information, please see license.txt
 
-# import frappe
+import frappe
+from frappe import _
 from frappe.model.document import Document
 
 
 class PatientRegistration(Document):
-	pass
+	def validate(self):
+		self.validate_bed_availability()
+		# Front-desk process requires checking Patient Details first: link the
+		# existing record, or create one there if the patient is genuinely new.
+		# Registration should never silently invent a patient - it must always
+		# point at a real, deliberately-created Patient Details record.
+		if not self.uhin_id:
+			frappe.throw(
+				_("Please select an existing patient, or create their Patient Details record first."),
+				title=_("Patient Not Linked"),
+			)
+
+	def validate_bed_availability(self):
+		# Only IP admissions occupy a physical bed; OP visits and unassigned
+		# beds/wards have nothing to conflict with.
+		if self.registration_category != "IP" or not self.ward or not self.bed_no:
+			return
+		# A Discharged record frees up its bed, so it shouldn't block reuse.
+		if self.admission_status != "Admitted":
+			return
+
+		# This is the real gate against double-booking a bed - the client-side
+		# popup is just a convenience; this check can't be bypassed by the UI,
+		# an API call, or two staff saving at nearly the same time.
+		existing = frappe.db.get_value(
+			"Patient Registration",
+			{
+				"ward": self.ward,
+				"bed_no": self.bed_no,
+				"admission_status": "Admitted",
+				"name": ["!=", self.name],
+			},
+			"name",
+		)
+		if existing:
+			frappe.throw(
+				_("Bed {0} in ward {1} is already occupied by patient registration {2}.").format(
+					frappe.bold(self.bed_no), frappe.bold(self.ward), frappe.bold(existing)
+				),
+				title=_("Bed Already Occupied"),
+			)
+
+# Returns just the receipt fragment so the client can show it in a dialog instead of navigating to Frappe's print view.
+@frappe.whitelist()
+def get_receipt_html(registration):
+	doc = frappe.get_doc("Patient Registration", registration)
+	doc.check_permission("read")
+	print_format = frappe.get_doc("Print Format", "Patient Registration Receipt")
+	return frappe.render_template(print_format.html, {"doc": doc.as_dict()})
+
+
+@frappe.whitelist()
+def get_ward_bed_summary(ward):
+	# Counts/beds are computed live (via Ward Master's virtual fields and
+	# get_bed_status_list) rather than stored, so this can never drift out of
+	# sync with actual admissions the way a manually-maintained counter would.
+	if not ward:
+		return {}
+	ward_doc = frappe.get_doc("Ward Master", ward)
+	return {
+		"total_beds": ward_doc.total_beds,
+		"occupied_beds": ward_doc.occupied_beds,
+		"available_beds": ward_doc.available_beds,
+		"beds": ward_doc.get_bed_status_list(),
+	}
+
+
+@frappe.whitelist()
+def check_bed_availability(ward, bed_no, registration=None):
+	# Client-side counterpart to validate_bed_availability() above - gives an
+	# instant popup instead of making the user wait for a failed save. Not a
+	# substitute for the server-side check, since this one is skippable.
+	if not ward or not bed_no:
+		return {"occupied": False}
+	filters = {"ward": ward, "bed_no": bed_no, "admission_status": "Admitted"}
+	if registration:
+		filters["name"] = ["!=", registration]
+	existing = frappe.db.get_value("Patient Registration", filters, "name")
+	return {"occupied": bool(existing), "occupied_by": existing}

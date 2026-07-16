@@ -5,6 +5,13 @@ app_description = "hospital management information system"
 app_email = "tech4socialsector@azimpremjifoundation.org"
 app_license = "mit"
 
+# Fixtures
+# --------
+
+fixtures = [
+	{"doctype": "Print Format", "filters": [["name", "=", "Patient Registration Receipt"]]},
+]
+
 # Apps
 # ------------------
 

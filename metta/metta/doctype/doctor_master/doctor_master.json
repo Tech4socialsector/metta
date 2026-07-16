@@ -1,26 +1,33 @@
 {
  "actions": [],
+ "allow_rename": 1,
  "autoname": "prompt",
- "creation": "2026-07-15 18:32:07.565845",
+ "creation": "2026-07-15 19:49:33.550507",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "department",
   "fee_amount"
  ],
  "fields": [
   {
+   "fieldname": "department",
+   "fieldtype": "Data",
+   "label": "Department"
+  },
+  {
    "fieldname": "fee_amount",
    "fieldtype": "Currency",
-   "label": "Fee Amount"
+   "label": "Fee amount"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-15 18:32:07.565845",
+ "modified": "2026-07-15 19:49:33.550507",
  "modified_by": "Administrator",
  "module": "metta",
- "name": "Registration type Master",
+ "name": "Doctor Master",
  "naming_rule": "Set by user",
  "owner": "Administrator",
  "permissions": [
@@ -41,6 +48,5 @@
  "rows_threshold_for_grid_search": 20,
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": [],
- "track_changes": 1
+ "states": []
 }
