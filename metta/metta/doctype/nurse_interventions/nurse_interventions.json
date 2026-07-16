@@ -7,6 +7,8 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "status",
+  "patient_registration",
   "basic_information_of_the_patient_section",
   "patient_unique_id",
   "patient_name",
@@ -33,12 +35,30 @@
  ],
  "fields": [
   {
+   "default": "Pending",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Pending\nCompleted"
+  },
+  {
+   "fieldname": "patient_registration",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Patient Registration",
+   "options": "Patient Registration",
+   "reqd": 1
+  },
+  {
    "fieldname": "basic_information_of_the_patient_section",
    "fieldtype": "Section Break",
    "label": "Basic Information of the Patient"
   },
   {
-   "fetch_from": "id.patient_unique_id",
+   "fetch_from": "patient_registration.uhin_id",
    "fieldname": "patient_unique_id",
    "fieldtype": "Link",
    "label": "Patient ID",

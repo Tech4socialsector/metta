@@ -19,6 +19,18 @@ class PatientRegistration(Document):
 				title=_("Patient Not Linked"),
 			)
 
+	def after_insert(self):
+		# Every registered patient needs a triage/vitals check - creating this
+		# up front (rather than waiting for a nurse to remember) is what makes
+		# "Pending" status on Nurse Interventions a reliable worklist.
+		frappe.get_doc(
+			{
+				"doctype": "Nurse Interventions",
+				"patient_registration": self.name,
+				"status": "Pending",
+			}
+		).insert(ignore_permissions=True)
+
 	def validate_bed_availability(self):
 		# Only IP admissions occupy a physical bed; OP visits and unassigned
 		# beds/wards have nothing to conflict with.
