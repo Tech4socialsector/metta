@@ -6,7 +6,12 @@
  "engine": "InnoDB",
  "field_order": [
   "item",
+<<<<<<< HEAD
   "item_group"
+=======
+  "item_group",
+  "test"
+>>>>>>> 23a566b (Patient Registration Module Update)
  ],
  "fields": [
   {
@@ -19,12 +24,24 @@
    "fieldname": "item_group",
    "fieldtype": "Data",
    "label": "Item Group"
+<<<<<<< HEAD
+=======
+  },
+  {
+   "fieldname": "test",
+   "fieldtype": "Data",
+   "label": "TEST"
+>>>>>>> 23a566b (Patient Registration Module Update)
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
+<<<<<<< HEAD
  "modified": "2026-07-16 18:47:13.607872",
+=======
+ "modified": "2026-07-16 16:02:37.104497",
+>>>>>>> 23a566b (Patient Registration Module Update)
  "modified_by": "Administrator",
  "module": "metta",
  "name": "item group",
