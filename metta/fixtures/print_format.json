@@ -14,9 +14,13 @@
   "format_data": null,
   "html": "<div style=\"font-family: sans-serif; max-width: 650px; margin: auto;\">\n  <h2 style=\"text-align: center; margin-bottom: 4px;\">Patient Registration Receipt</h2>\n  <hr>\n  <p>\n    <strong>Receipt No:</strong> {{ doc.name }}<br>\n    <strong>Date:</strong> {{ doc.date or \"\" }} {{ doc.time or \"\" }}\n  </p>\n\n  <h4>Patient Details</h4>\n  <p>\n    <strong>Name:</strong> {{ doc.patient_name or \"\" }}<br>\n    <strong>Phone:</strong> {{ doc.phone or \"—\" }}<br>\n    <strong>Doctor:</strong> {{ doc.doctor_name or \"—\" }}<br>\n    <strong>Department:</strong> {{ doc.department_name or \"—\" }}<br>\n    <strong>UHIN:</strong> {{ doc.uhin_id or \"—\" }}\n  </p>\n\n  <h4>Charges</h4>\n  {% set fee = (doc.fee_amount or 0)|float %}\n  {% set pct = ((doc.discount_percent or 0)|string|replace(\"%\", \"\")|trim or 0)|float %}\n  {% set adjustment_amount = fee * pct / 100 %}\n  {% if doc.adjustment_type == \"Discount\" %}\n    {% set total = fee - adjustment_amount %}\n  {% else %}\n    {% set total = fee + adjustment_amount %}\n  {% endif %}\n  <table style=\"width: 100%; border-collapse: collapse;\" border=\"1\" cellpadding=\"6\">\n    <tr>\n      <th style=\"text-align: left;\">Description</th>\n      <th style=\"text-align: right;\">Amount</th>\n    </tr>\n    <tr>\n      <td>Registration Fee ({{ doc.registration_type or \"\" }})</td>\n      <td style=\"text-align: right;\">{{ doc.default_currency or \"\" }} {{ \"%.2f\"|format(fee) }}</td>\n    </tr>\n    {% if pct %}\n    <tr>\n      <td>{{ doc.adjustment_type }} ({{ pct }}%)</td>\n      <td style=\"text-align: right;\">{{ \"+\" if doc.adjustment_type == \"Increase\" else \"-\" }} {{ doc.default_currency or \"\" }} {{ \"%.2f\"|format(adjustment_amount) }}</td>\n    </tr>\n    {% endif %}\n    <tr>\n      <th style=\"text-align: left;\">Total</th>\n      <th style=\"text-align: right;\">{{ doc.default_currency or \"\" }} {{ \"%.2f\"|format(total) }}</th>\n    </tr>\n  </table>\n</div>\n",
 <<<<<<< HEAD
+<<<<<<< HEAD
   "line_breaks": 0,
 =======
 >>>>>>> 23a566b (Patient Registration Module Update)
+=======
+  "line_breaks": 0,
+>>>>>>> 707c321 (Update)
   "margin_bottom": 15.0,
   "margin_left": 15.0,
   "margin_right": 15.0,
