@@ -19,7 +19,6 @@ class PatientRegistration(Document):
 				title=_("Patient Not Linked"),
 			)
 
-<<<<<<< HEAD
 	def after_insert(self):
 		# Every registered patient needs a triage/vitals check - creating this
 		# up front (rather than waiting for a nurse to remember) is what makes
@@ -32,8 +31,6 @@ class PatientRegistration(Document):
 			}
 		).insert(ignore_permissions=True)
 
-=======
->>>>>>> 23a566b (Patient Registration Module Update)
 	def validate_bed_availability(self):
 		# Only IP admissions occupy a physical bed; OP visits and unassigned
 		# beds/wards have nothing to conflict with.

@@ -7,11 +7,8 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-<<<<<<< HEAD
   "status",
   "patient_registration",
-=======
->>>>>>> 23a566b (Patient Registration Module Update)
   "basic_information_of_the_patient_section",
   "patient_unique_id",
   "patient_name",
@@ -38,7 +35,6 @@
  ],
  "fields": [
   {
-<<<<<<< HEAD
    "default": "Pending",
    "fieldname": "status",
    "fieldtype": "Select",
@@ -57,18 +53,12 @@
    "reqd": 1
   },
   {
-=======
->>>>>>> 23a566b (Patient Registration Module Update)
    "fieldname": "basic_information_of_the_patient_section",
    "fieldtype": "Section Break",
    "label": "Basic Information of the Patient"
   },
   {
-<<<<<<< HEAD
    "fetch_from": "patient_registration.uhin_id",
-=======
-   "fetch_from": "id.patient_unique_id",
->>>>>>> 23a566b (Patient Registration Module Update)
    "fieldname": "patient_unique_id",
    "fieldtype": "Link",
    "label": "Patient ID",
