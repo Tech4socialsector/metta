@@ -10,8 +10,13 @@ app_license = "mit"
 
 fixtures = [
 	{"doctype": "Print Format", "filters": [["name", "=", "Patient Registration Receipt"]]},
+	{"doctype": "Workspace", "filters": [["name", "=", "HMIS"]]},
+	{
+		"doctype": "Number Card",
+		"filters": [["name", "in", ["Patient Details", "Patient Registration", "Nurse Interventions"]]],
+	},
 ]
-
+ 
 # Apps
 # ------------------
 
