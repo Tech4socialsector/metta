@@ -10,12 +10,14 @@ app_license = "mit"
 
 fixtures = [
 	{"doctype": "Print Format", "filters": [["name", "=", "Patient Registration Receipt"]]},
-	{"doctype": "Workspace", "filters": [["name", "=", "HMIS"]]},
 	{
 		"doctype": "Number Card",
 		"filters": [["name", "in", ["Patient Details", "Patient Registration", "Nurse Interventions"]]],
 	},
 ]
+# Workspace is exported as a module file (metta/workspace/hmis/hmis.json), not a
+# fixture - migrate's orphan-cleanup deletes public+module+app workspaces that
+# aren't backed by a file, so fixture-only export isn't safe for this doctype.
  
 # Apps
 # ------------------

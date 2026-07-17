@@ -1,27 +1,36 @@
 {
  "actions": [],
- "allow_rename": 1,
- "autoname": "prompt",
- "creation": "2026-07-16 18:45:39.715118",
+ "autoname": "field:parent_item_group_name",
+ "creation": "2026-07-17 12:00:00.000000",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "section_break_ifho"
+  "parent_item_group_name",
+  "is_active"
  ],
  "fields": [
   {
-   "fieldname": "section_break_ifho",
-   "fieldtype": "Section Break"
+   "fieldname": "parent_item_group_name",
+   "fieldtype": "Data",
+   "label": "Parent Item Group Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Is Active"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-16 18:45:44.239591",
+ "modified": "2026-07-17 12:00:00.000000",
  "modified_by": "Administrator",
- "module": "metta",
- "name": "item",
- "naming_rule": "Set by user",
+ "module": "Stock And Pharmacy",
+ "name": "Parent Item Group",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
