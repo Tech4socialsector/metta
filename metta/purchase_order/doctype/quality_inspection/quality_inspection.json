@@ -1,0 +1,130 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "QI-.YYYY.-.#####",
+ "creation": "2026-07-17 14:24:05.865898",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "is_submittable": 1,
+ "field_order": [
+  "purchase_order",
+  "supplier",
+  "inspection_date_time",
+  "inspected_by",
+  "item",
+  "batch_no",
+  "expiry_date",
+  "qty_delivered",
+  "qty_accepted",
+  "qty_rejected",
+  "rejection_reason",
+  "result"
+ ],
+ "fields": [
+  {
+   "fieldname": "purchase_order",
+   "fieldtype": "Link",
+   "label": "Purchase Order",
+   "options": "Purchase Order",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "purchase_order.supplier",
+   "fieldname": "supplier",
+   "fieldtype": "Data",
+   "label": "Supplier",
+   "read_only": 1
+  },
+  {
+   "fieldname": "inspection_date_time",
+   "fieldtype": "Datetime",
+   "label": "Inspection Date Time",
+   "reqd": 1
+  },
+  {
+   "fieldname": "inspected_by",
+   "fieldtype": "Link",
+   "label": "Inspected By",
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "fieldname": "item",
+   "fieldtype": "Link",
+   "label": "Item",
+   "options": "Medicine Item",
+   "reqd": 1
+  },
+  {
+   "fieldname": "batch_no",
+   "fieldtype": "Data",
+   "label": "Batch No",
+   "reqd": 1
+  },
+  {
+   "fieldname": "expiry_date",
+   "fieldtype": "Date",
+   "label": "Expiry Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "qty_delivered",
+   "fieldtype": "Float",
+   "label": "Qty Delivered",
+   "reqd": 1
+  },
+  {
+   "fieldname": "qty_accepted",
+   "fieldtype": "Float",
+   "label": "Qty Accepted",
+   "reqd": 1
+  },
+  {
+   "fieldname": "qty_rejected",
+   "fieldtype": "Float",
+   "label": "Qty Rejected"
+  },
+  {
+   "fieldname": "rejection_reason",
+   "fieldtype": "Select",
+   "label": "Rejection Reason",
+   "options": "\nDamaged\nExpired\nShort Expiry\nWrong Item\nQuantity Mismatch"
+  },
+  {
+   "fieldname": "result",
+   "fieldtype": "Select",
+   "label": "Result",
+   "options": "\nAccepted\nPartially Accepted\nRejected",
+   "reqd": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-07-17 14:35:19.212242",
+ "modified_by": "Administrator",
+ "module": "Purchase Order",
+ "name": "Quality Inspection",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "cancel": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -1,2 +1,6 @@
 metta
-Stock And Pharmacy
+Purchase Request
+Purchase Order
+Sales
+Stock
+Master

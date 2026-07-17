@@ -1,0 +1,76 @@
+{
+ "actions": [],
+ "creation": "2026-07-17 21:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "item",
+  "batch_no",
+  "system_qty",
+  "physical_qty",
+  "difference",
+  "reason"
+ ],
+ "fields": [
+  {
+   "fieldname": "item",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Item",
+   "options": "Medicine Item",
+   "reqd": 1
+  },
+  {
+   "fieldname": "batch_no",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Batch",
+   "options": "Batch",
+   "reqd": 1
+  },
+  {
+   "fieldname": "system_qty",
+   "fieldtype": "Float",
+   "label": "System Qty",
+   "read_only": 1
+  },
+  {
+   "fieldname": "physical_qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Physical Qty",
+   "reqd": 1
+  },
+  {
+   "fieldname": "difference",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Difference",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.difference != 0",
+   "fieldname": "reason",
+   "fieldtype": "Select",
+   "label": "Reason",
+   "mandatory_depends_on": "eval:doc.difference != 0",
+   "options": "\nBreakage\nPilferage\nCounting Error\nExpiry Disposal\nOther"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-07-17 21:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Stock",
+ "name": "Stock Reconciliation Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
