@@ -1,0 +1,75 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-07-17 14:13:52.000317",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "item",
+  "qty_ordered",
+  "unit_of_messure",
+  "rate",
+  "amount",
+  "qty_received",
+  "indent_reference"
+ ],
+ "fields": [
+  {
+   "fieldname": "item",
+   "fieldtype": "Link",
+   "label": "Item",
+   "options": "Medicine Item"
+  },
+  {
+   "fieldname": "qty_ordered",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Qty Ordered",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "item.purchase_uom",
+   "fieldname": "unit_of_messure",
+   "fieldtype": "Data",
+   "label": "Unit of Messure"
+  },
+  {
+   "fetch_from": "item.standard_purchase_rate",
+   "fieldname": "rate",
+   "fieldtype": "Currency",
+   "label": "Rate"
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "label": "Amount"
+  },
+  {
+   "fieldname": "qty_received",
+   "fieldtype": "Float",
+   "label": "Qty Received"
+  },
+  {
+   "fieldname": "indent_reference",
+   "fieldtype": "Link",
+   "label": "Indent Reference",
+   "options": "Material Indent"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-07-17 14:19:11.198781",
+ "modified_by": "Administrator",
+ "module": "Stock And Pharmacy",
+ "name": "Purchase Order Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
