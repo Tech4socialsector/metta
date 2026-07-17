@@ -1,14 +1,13 @@
 {
  "actions": [],
  "autoname": "field:item_code",
- "creation": "2026-07-16 12:00:00.000000",
+ "creation": "2026-07-16 12:00:00",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "item_code",
-  "item_name",
-  "generic_name",
   "item_group",
+  "parent_item_group",
+  "item_code",
   "manufacturer",
   "hsn_code",
   "gst_percent",
@@ -27,29 +26,30 @@
  ],
  "fields": [
   {
-   "fieldname": "item_code",
-   "fieldtype": "Data",
-   "label": "Item Code",
-   "reqd": 1,
-   "unique": 1
-  },
-  {
-   "fieldname": "item_name",
-   "fieldtype": "Data",
-   "label": "Item Name",
-   "reqd": 1
-  },
-  {
-   "fieldname": "generic_name",
-   "fieldtype": "Data",
-   "label": "Generic / Salt Name"
-  },
-  {
    "fieldname": "item_group",
    "fieldtype": "Link",
-   "label": "Item Group",
+   "in_list_view": 1,
+   "label": "Item Name",
    "options": "Item Group",
    "reqd": 1
+  },
+  {
+   "fetch_from": "item_group.parent_item_group",
+   "fieldname": "parent_item_group",
+   "fieldtype": "Link",
+   "label": "Parent Item Group",
+   "options": "Parent Item Group",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "item_group.item_code",
+   "fieldname": "item_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Item Code",
+   "read_only": 1,
+   "reqd": 1,
+   "unique": 1
   },
   {
    "fieldname": "manufacturer",
@@ -69,6 +69,7 @@
   {
    "fieldname": "stock_uom",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Stock UOM",
    "reqd": 1
   },
@@ -137,7 +138,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-16 12:00:00.000000",
+ "modified": "2026-07-17 19:34:53.595540",
  "modified_by": "Administrator",
  "module": "Stock And Pharmacy",
  "name": "Medicine Item",
