@@ -21,7 +21,8 @@
   "corporate_customer",
   "prescribed_by",
   "amended_from",
-  "test"
+  "test",
+  "test_1"
  ],
  "fields": [
   {
@@ -130,13 +131,18 @@
    "fieldname": "test",
    "fieldtype": "Data",
    "label": "test"
+  },
+  {
+   "fieldname": "test_1",
+   "fieldtype": "Data",
+   "label": "test 1"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-07-20 18:31:30.296008",
+ "modified": "2026-07-20 18:42:01.816703",
  "modified_by": "Administrator",
  "module": "Sales",
  "name": "Sales Bill",
