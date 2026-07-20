@@ -5,20 +5,19 @@
  "creation": "2026-07-17 12:53:51.240069",
  "doctype": "DocType",
  "engine": "InnoDB",
- "is_submittable": 1,
  "field_order": [
   "supplier",
   "order_date",
   "expected_delivery",
   "source_indent",
-  "sent_via",
   "approval_status",
   "approved_by",
   "approved_date_time",
   "rejection_reason",
   "status",
   "items",
-  "total_amount"
+  "total_amount",
+  "amended_from"
  ],
  "fields": [
   {
@@ -46,12 +45,6 @@
    "fieldtype": "Link",
    "label": "Source Indent",
    "options": "Material Indent"
-  },
-  {
-   "fieldname": "sent_via",
-   "fieldtype": "Select",
-   "label": "Sent Via",
-   "options": "\nEmail\nPhone Call\nPortal"
   },
   {
    "fieldname": "approval_status",
@@ -98,18 +91,31 @@
    "fieldtype": "Currency",
    "label": "Total Amount",
    "read_only": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Purchase Order",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
+ "is_submittable": 1,
  "links": [],
- "modified": "2026-07-17 14:23:33.909518",
+ "modified": "2026-07-20 01:34:48.414153",
  "modified_by": "Administrator",
  "module": "Purchase Order",
  "name": "Purchase Order",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {
+   "cancel": 1,
    "create": 1,
    "delete": 1,
    "email": 1,
@@ -120,7 +126,6 @@
    "role": "System Manager",
    "share": 1,
    "submit": 1,
-   "cancel": 1,
    "write": 1
   }
  ],

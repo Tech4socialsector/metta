@@ -2,10 +2,9 @@
  "actions": [],
  "allow_rename": 1,
  "autoname": "SB-.YYYY.-.#####",
- "creation": "2026-07-17 21:00:00.000000",
+ "creation": "2026-07-17 21:00:00",
  "doctype": "DocType",
  "engine": "InnoDB",
- "is_submittable": 1,
  "field_order": [
   "warehouse",
   "patient",
@@ -20,7 +19,8 @@
   "net_amount",
   "payment_mode",
   "corporate_customer",
-  "prescribed_by"
+  "prescribed_by",
+  "amended_from"
  ],
  "fields": [
   {
@@ -35,7 +35,7 @@
    "fieldname": "patient",
    "fieldtype": "Link",
    "label": "Patient",
-   "options": "Patient Details"
+   "options": "Patient Registration"
   },
   {
    "fieldname": "customer_name",
@@ -114,18 +114,31 @@
    "fieldtype": "Link",
    "label": "Prescribed By",
    "options": "Doctor Master"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Sales Bill",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
+ "is_submittable": 1,
  "links": [],
- "modified": "2026-07-17 21:00:00.000000",
+ "modified": "2026-07-20 02:12:02.228881",
  "modified_by": "Administrator",
  "module": "Sales",
  "name": "Sales Bill",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {
+   "cancel": 1,
    "create": 1,
    "delete": 1,
    "email": 1,
@@ -136,7 +149,6 @@
    "role": "System Manager",
    "share": 1,
    "submit": 1,
-   "cancel": 1,
    "write": 1
   }
  ],

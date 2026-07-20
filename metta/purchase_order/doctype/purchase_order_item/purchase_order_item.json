@@ -18,6 +18,8 @@
   {
    "fieldname": "item",
    "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Item",
    "options": "Medicine Item",
    "reqd": 1
@@ -26,6 +28,7 @@
    "fieldname": "qty_ordered",
    "fieldtype": "Float",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Qty Ordered",
    "reqd": 1
   },
@@ -33,30 +36,40 @@
    "fetch_from": "item.purchase_uom",
    "fieldname": "unit_of_measure",
    "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Unit of Measure"
   },
   {
    "fetch_from": "item.standard_purchase_rate",
    "fieldname": "rate",
    "fieldtype": "Currency",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Rate",
    "reqd": 1
   },
   {
    "fieldname": "amount",
    "fieldtype": "Currency",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Amount",
    "read_only": 1
   },
   {
    "fieldname": "qty_received",
    "fieldtype": "Float",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Qty Received",
    "read_only": 1
   },
   {
    "fieldname": "indent_reference",
    "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Indent Reference",
    "options": "Material Indent"
   }
@@ -65,7 +78,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-07-17 14:19:11.198781",
+ "modified": "2026-07-20 01:39:36.958886",
  "modified_by": "Administrator",
  "module": "Purchase Order",
  "name": "Purchase Order Item",
