@@ -19,7 +19,7 @@ def run():
 		filters={"patient_registration": pr.name},
 		fields=["name", "status", "patient_unique_id", "patient_name"],
 	)
-
+	
 	result = {"registration": pr.name, "nurse_interventions": ni}
 
 	# cleanup

@@ -18,14 +18,18 @@ fixtures = [
 		"doctype": "Workspace Sidebar",
 		"filters": [["name", "in", ["HMIS", "Master Form", "Stock and Pharmacy"]]],
 	},
+	{
+		"doctype": "Desktop Icon",
+		"filters": [["name", "in", ["HMIS", "Master Form", "Stock and Pharmacy"]]],
+	},
 ]
 # Workspace is exported as a module file (metta/workspace/hmis/hmis.json), not a
 # fixture - migrate's orphan-cleanup deletes public+module+app workspaces that
 # aren't backed by a file, so fixture-only export isn't safe for this doctype.
-# Workspace Sidebar is a *separate* doctype only created when a workspace is
-# built via the Desk UI directly - migrate never generates it, so it has to be
-# shared explicitly. Its own orphan-cleanup only targets standard=1 records,
-# and ours are standard=0, so fixture export is safe for this one.
+# Workspace Sidebar and Desktop Icon are *separate* doctypes only created when a
+# workspace is built via the Desk UI directly - migrate never generates them, so
+# they have to be shared explicitly. Their own orphan-cleanup only targets
+# standard=1 records, and ours are standard=0, so fixture export is safe here.
  
 # Apps
 # ------------------
