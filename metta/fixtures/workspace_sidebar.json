@@ -1,0 +1,95 @@
+[
+ {
+  "app": null,
+  "docstatus": 0,
+  "doctype": "Workspace Sidebar",
+  "for_user": null,
+  "header_icon": null,
+  "items": [
+   {
+    "child": 0,
+    "collapsible": 1,
+    "filters": null,
+    "icon": null,
+    "indent": 0,
+    "keep_closed": 0,
+    "label": "HMIS",
+    "link_to": "HMIS",
+    "link_type": "Workspace",
+    "navigate_to_tab": null,
+    "route_options": null,
+    "show_arrow": 0,
+    "type": "Link",
+    "url": null
+   }
+  ],
+  "modified": "2026-07-15 20:06:26.018742",
+  "module": "metta",
+  "module_onboarding": null,
+  "name": "HMIS",
+  "standard": 0,
+  "title": "HMIS"
+ },
+ {
+  "app": null,
+  "docstatus": 0,
+  "doctype": "Workspace Sidebar",
+  "for_user": null,
+  "header_icon": null,
+  "items": [
+   {
+    "child": 0,
+    "collapsible": 1,
+    "filters": null,
+    "icon": null,
+    "indent": 0,
+    "keep_closed": 0,
+    "label": "Stock and Pharmacy",
+    "link_to": "Stock and Pharmacy",
+    "link_type": "Workspace",
+    "navigate_to_tab": null,
+    "route_options": null,
+    "show_arrow": 0,
+    "type": "Link",
+    "url": null
+   }
+  ],
+  "modified": "2026-07-20 14:56:30.075912",
+  "module": "metta",
+  "module_onboarding": null,
+  "name": "Stock and Pharmacy",
+  "standard": 0,
+  "title": "Stock and Pharmacy"
+ },
+ {
+  "app": null,
+  "docstatus": 0,
+  "doctype": "Workspace Sidebar",
+  "for_user": null,
+  "header_icon": null,
+  "items": [
+   {
+    "child": 0,
+    "collapsible": 1,
+    "filters": null,
+    "icon": null,
+    "indent": 0,
+    "keep_closed": 0,
+    "label": "Master Form",
+    "link_to": "Master Form",
+    "link_type": "Workspace",
+    "navigate_to_tab": null,
+    "route_options": null,
+    "show_arrow": 0,
+    "type": "Link",
+    "url": null
+   }
+  ],
+  "modified": "2026-07-20 15:35:11.442687",
+  "module": "metta",
+  "module_onboarding": null,
+  "name": "Master Form",
+  "standard": 0,
+  "title": "Master Form"
+ }
+]
