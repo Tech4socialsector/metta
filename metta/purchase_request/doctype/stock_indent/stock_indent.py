@@ -11,22 +11,21 @@ class StockIndent(Document):
 
 @frappe.whitelist()
 def search_items_for_indent(warehouse=None, search_term=""):
-	# Item Group's own name IS the medicine's identity (e.g. "dolo", "Dolo 650
-	# Tablet"), so searching that field is searching by item name.
-	filters = {}
+	# Services aren't stocked or indentable - only physical items can be
+	# requested from a warehouse.
+	filters = {"item_type": ["in", ["Medicine", "Consumable", "Asset"]]}
 	if search_term:
-		filters["item_group"] = ["like", f"%{search_term}%"]
+		filters["item_name"] = ["like", f"%{search_term}%"]
 
 	items = frappe.get_all(
-		"Medicine Item",
-		fields=["name as item_code", "item_group", "manufacturer", "standard_purchase_rate", "rack_location"],
+		"Item",
+		fields=["name as item_code", "item_name", "manufacturer", "standard_purchase_rate", "rack_location"],
 		filters=filters,
 		limit=20,
 	)
 
 	result = []
 	for it in items:
-		category = frappe.db.get_value("Item Group", it.item_group, "parent_item_group")
 		# Only Purchase Receipt currently keeps Stock Balance updated - other
 		# stock-moving doctypes still need the same logic wired in, so this
 		# may read 0 for movements that haven't been extended yet.
@@ -38,9 +37,8 @@ def search_items_for_indent(warehouse=None, search_term=""):
 		result.append(
 			{
 				"item_code": it.item_code,
-				"name": it.item_group,
+				"name": it.item_name,
 				"avail_qty": avail_qty,
-				"category": category,
 				"manufacturer": it.manufacturer or "",
 				"last_pur_rate": it.standard_purchase_rate or 0,
 				"rack_location": it.rack_location or "",

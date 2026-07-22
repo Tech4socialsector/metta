@@ -2,6 +2,13 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Quality Inspection", {
+	setup(frm) {
+		// Item now lives on the Quality Inspection Item child table, not the
+		// parent, since one inspection can cover a whole delivery's items.
+		frm.set_query("item", "items", () => ({
+			filters: { item_type: ["in", ["Medicine", "Consumable", "Asset"]] },
+		}));
+	},
 	refresh(frm) {
 		show_get_items_button(frm);
 	},

@@ -6,6 +6,7 @@
  "engine": "InnoDB",
  "field_order": [
   "item",
+  "item_type",
   "batch_no",
   "qty",
   "uom",
@@ -22,16 +23,25 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Item",
-   "options": "Medicine Item",
+   "options": "Item",
    "reqd": 1
   },
   {
+   "fetch_from": "item.item_type",
+   "fieldname": "item_type",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Item Type",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.item_type==\"Medicine\" || doc.item_type==\"Consumable\"",
    "fieldname": "batch_no",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Batch",
-   "options": "Batch",
-   "reqd": 1
+   "mandatory_depends_on": "eval:doc.item_type==\"Medicine\" || doc.item_type==\"Consumable\"",
+   "options": "Batch"
   },
   {
    "fieldname": "qty",
@@ -45,13 +55,14 @@
    "fieldtype": "Data",
    "label": "UOM",
    "read_only": 1,
-   "reqd": 1
+   "mandatory_depends_on": "eval:doc.item_type==\"Medicine\" || doc.item_type==\"Consumable\""
   },
   {
+   "default": "1",
    "fieldname": "conversion_factor",
    "fieldtype": "Float",
    "label": "Conversion Factor",
-   "reqd": 1
+   "mandatory_depends_on": "eval:doc.item_type==\"Medicine\" || doc.item_type==\"Consumable\""
   },
   {
    "fieldname": "stock_qty",

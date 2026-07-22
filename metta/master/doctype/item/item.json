@@ -1,0 +1,294 @@
+{
+ "actions": [],
+ "autoname": "field:item_code",
+ "creation": "2026-07-21 15:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "item_code",
+  "item_name",
+  "item_type",
+  "column_break_item_common",
+  "is_active",
+  "standard_selling_rate",
+  "description",
+  "stock_pricing_section",
+  "stock_uom",
+  "purchase_uom",
+  "sale_uom",
+  "column_break_stock_pricing",
+  "has_batch",
+  "has_expiry",
+  "shelf_life_months",
+  "standard_purchase_rate",
+  "rack_location",
+  "uom_conversions",
+  "reorder_levels",
+  "medicine_section",
+  "manufacturer",
+  "hsn_code",
+  "gst_percent",
+  "asset_section",
+  "asset_category",
+  "serial_no",
+  "purchase_date",
+  "purchase_cost",
+  "column_break_asset",
+  "warranty_expiry_date",
+  "useful_life_years",
+  "status",
+  "assigned_department",
+  "service_section",
+  "service_category",
+  "duration_minutes",
+  "column_break_service",
+  "department",
+  "is_taxable"
+ ],
+ "fields": [
+  {
+   "fieldname": "item_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Item Code",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "item_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Item Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "item_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Item Type",
+   "options": "\nMedicine\nService\nConsumable\nAsset",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_item_common",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Is Active"
+  },
+  {
+   "depends_on": "eval:doc.item_type!=\"Asset\"",
+   "fieldname": "standard_selling_rate",
+   "fieldtype": "Currency",
+   "label": "Standard Selling Rate",
+   "description": "MRP for Medicine/Consumable, or the standard charge for a Service."
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
+   "depends_on": "eval:doc.item_type==\"Medicine\" || doc.item_type==\"Consumable\"",
+   "fieldname": "stock_pricing_section",
+   "fieldtype": "Section Break",
+   "label": "Stock & Pricing"
+  },
+  {
+   "fieldname": "stock_uom",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Stock UOM"
+  },
+  {
+   "fieldname": "purchase_uom",
+   "fieldtype": "Data",
+   "label": "Purchase UOM"
+  },
+  {
+   "fieldname": "sale_uom",
+   "fieldtype": "Data",
+   "label": "Sale UOM"
+  },
+  {
+   "fieldname": "column_break_stock_pricing",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "fieldname": "has_batch",
+   "fieldtype": "Check",
+   "label": "Has Batch"
+  },
+  {
+   "default": "1",
+   "fieldname": "has_expiry",
+   "fieldtype": "Check",
+   "label": "Has Expiry"
+  },
+  {
+   "fieldname": "shelf_life_months",
+   "fieldtype": "Int",
+   "label": "Shelf Life (Months)"
+  },
+  {
+   "fieldname": "standard_purchase_rate",
+   "fieldtype": "Currency",
+   "label": "Standard Purchase Rate"
+  },
+  {
+   "fieldname": "rack_location",
+   "fieldtype": "Data",
+   "label": "Rack / Shelf Location"
+  },
+  {
+   "fieldname": "uom_conversions",
+   "fieldtype": "Table",
+   "label": "UOM Conversions",
+   "options": "Item UOM Conversion"
+  },
+  {
+   "fieldname": "reorder_levels",
+   "fieldtype": "Table",
+   "label": "Reorder Levels",
+   "options": "Item Reorder Level"
+  },
+  {
+   "depends_on": "eval:doc.item_type==\"Medicine\"",
+   "fieldname": "medicine_section",
+   "fieldtype": "Section Break",
+   "label": "Medicine Details"
+  },
+  {
+   "fieldname": "manufacturer",
+   "fieldtype": "Data",
+   "label": "Manufacturer"
+  },
+  {
+   "fieldname": "hsn_code",
+   "fieldtype": "Data",
+   "label": "HSN Code"
+  },
+  {
+   "fieldname": "gst_percent",
+   "fieldtype": "Percent",
+   "label": "GST %"
+  },
+  {
+   "depends_on": "eval:doc.item_type==\"Asset\"",
+   "fieldname": "asset_section",
+   "fieldtype": "Section Break",
+   "label": "Asset Details"
+  },
+  {
+   "fieldname": "asset_category",
+   "fieldtype": "Select",
+   "label": "Asset Category",
+   "options": "\nMedical Equipment\nFurniture\nIT Equipment\nOther"
+  },
+  {
+   "fieldname": "serial_no",
+   "fieldtype": "Data",
+   "label": "Serial No"
+  },
+  {
+   "fieldname": "purchase_date",
+   "fieldtype": "Date",
+   "label": "Purchase Date"
+  },
+  {
+   "fieldname": "purchase_cost",
+   "fieldtype": "Currency",
+   "label": "Purchase Cost"
+  },
+  {
+   "fieldname": "column_break_asset",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "warranty_expiry_date",
+   "fieldtype": "Date",
+   "label": "Warranty Expiry Date"
+  },
+  {
+   "fieldname": "useful_life_years",
+   "fieldtype": "Int",
+   "label": "Useful Life (Years)"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "\nIn Use\nUnder Maintenance\nRetired\nDisposed"
+  },
+  {
+   "fieldname": "assigned_department",
+   "fieldtype": "Data",
+   "label": "Assigned Department"
+  },
+  {
+   "depends_on": "eval:doc.item_type==\"Service\"",
+   "fieldname": "service_section",
+   "fieldtype": "Section Break",
+   "label": "Service Details"
+  },
+  {
+   "fieldname": "service_category",
+   "fieldtype": "Select",
+   "label": "Service Category",
+   "options": "\nConsultation\nDiagnostic\nProcedure\nNursing\nOther"
+  },
+  {
+   "fieldname": "duration_minutes",
+   "fieldtype": "Int",
+   "label": "Duration (Minutes)"
+  },
+  {
+   "fieldname": "column_break_service",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Data",
+   "label": "Department"
+  },
+  {
+   "default": "1",
+   "fieldname": "is_taxable",
+   "fieldtype": "Check",
+   "label": "Is Taxable"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-07-21 15:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Master",
+ "name": "Item",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

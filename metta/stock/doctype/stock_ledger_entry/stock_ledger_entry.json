@@ -23,7 +23,7 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Item",
-   "options": "Medicine Item",
+   "options": "Item",
    "reqd": 1
   },
   {

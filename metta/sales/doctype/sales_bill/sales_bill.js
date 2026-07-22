@@ -2,6 +2,13 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Sales Bill", {
+	setup(frm) {
+		// A patient is billed for medicine, consumables used on them, or a
+		// service (consultation, procedure) - never for a fixed asset.
+		frm.set_query("item", "items", () => ({
+			filters: { item_type: ["in", ["Medicine", "Consumable", "Service"]] },
+		}));
+	},
 	refresh(frm) {
 		calculate_totals(frm);
 	},
@@ -21,7 +28,7 @@ frappe.ui.form.on("Sales Bill Item", {
 			return;
 		}
 		frappe.db.get_value(
-			"Medicine Item",
+			"Item",
 			row.item,
 			["sale_uom", "standard_selling_rate", "gst_percent"],
 			(r) => {

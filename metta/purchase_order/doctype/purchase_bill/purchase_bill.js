@@ -2,6 +2,11 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Purchase Bill", {
+	setup(frm) {
+		frm.set_query("item", "items", () => ({
+			filters: { item_type: ["in", ["Medicine", "Consumable", "Asset"]] },
+		}));
+	},
 	refresh(frm) {
 		calculate_totals(frm);
 		show_get_items_button(frm);

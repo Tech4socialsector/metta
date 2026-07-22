@@ -2,6 +2,13 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Purchase Receipt", {
+	setup(frm) {
+		// Services aren't bought from a supplier or held in stock - only
+		// let physical, purchasable item types be picked here.
+		frm.set_query("item", "items", () => ({
+			filters: { item_type: ["in", ["Medicine", "Consumable", "Asset"]] },
+		}));
+	},
 	refresh(frm) {
 		show_get_items_button(frm);
 	},
@@ -57,7 +64,7 @@ frappe.ui.form.on("Purchase Receipt Item", {
 			frappe.model.set_value(cdt, cdn, "qty_ordered", 0);
 			return;
 		}
-		frappe.db.get_value("Medicine Item", row.item, "purchase_uom", (r) => {
+		frappe.db.get_value("Item", row.item, "purchase_uom", (r) => {
 			frappe.model.set_value(cdt, cdn, "unit_of_measure", r.purchase_uom || "");
 		});
 		// Qty Ordered can't be a plain fetch_from - it depends on both the
