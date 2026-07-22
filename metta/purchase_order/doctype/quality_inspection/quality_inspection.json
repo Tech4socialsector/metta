@@ -18,7 +18,8 @@
   "qty_accepted",
   "qty_rejected",
   "rejection_reason",
-  "result"
+  "result",
+  "amended_from"
  ],
  "fields": [
   {
@@ -96,6 +97,16 @@
    "label": "Result",
    "options": "\nAccepted\nPartially Accepted\nRejected",
    "reqd": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Quality Inspection",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
   }
  ],
  "grid_page_length": 50,

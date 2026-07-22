@@ -12,7 +12,8 @@
   "counted_by",
   "approved_by",
   "items",
-  "status"
+  "status",
+  "amended_from"
  ],
  "fields": [
   {
@@ -57,6 +58,16 @@
    "label": "Status",
    "options": "Draft\nSubmitted\nCancelled",
    "reqd": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Stock Reconciliation",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
   }
  ],
  "grid_page_length": 50,

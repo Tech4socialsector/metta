@@ -14,7 +14,8 @@
   "issue_date_time",
   "issued_by",
   "items",
-  "purpose"
+  "purpose",
+  "amended_from"
  ],
  "fields": [
   {
@@ -64,6 +65,16 @@
    "fieldname": "purpose",
    "fieldtype": "Data",
    "label": "Purpose / Procedure"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Material Issue",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
   }
  ],
  "grid_page_length": 50,

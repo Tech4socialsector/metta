@@ -10,6 +10,7 @@
   "qty",
   "uom",
   "conversion_factor",
+  "stock_qty",
   "rate",
   "amount"
  ],
@@ -49,6 +50,12 @@
    "fieldtype": "Float",
    "label": "Conversion Factor",
    "reqd": 1
+  },
+  {
+   "fieldname": "stock_qty",
+   "fieldtype": "Float",
+   "label": "Stock Qty",
+   "read_only": 1
   },
   {
    "fetch_from": "item.standard_selling_rate",

@@ -12,6 +12,7 @@
   "required_by",
   "priority",
   "status",
+  "item_search_area",
   "items",
   "remark"
  ],
@@ -60,10 +61,15 @@
    "options": "\nDraft\nSubmitted\nPartially Issued\nIssued\nCancelled"
   },
   {
+   "fieldname": "item_search_area",
+   "fieldtype": "HTML",
+   "label": "Add Item"
+  },
+  {
    "fieldname": "items",
    "fieldtype": "Table",
    "label": "Items",
-   "options": "Material Indent Item",
+   "options": "Stock Indent Item",
    "reqd": 1
   },
   {
@@ -75,10 +81,10 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-20 21:49:13.407177",
+ "modified": "2026-07-21 15:25:01.189762",
  "modified_by": "Administrator",
  "module": "Purchase Request",
- "name": "Material Indent",
+ "name": "Stock Indent",
  "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [

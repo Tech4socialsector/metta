@@ -69,7 +69,7 @@
  "modified": "2026-07-17 12:52:53.762534",
  "modified_by": "Administrator",
  "module": "Purchase Request",
- "name": "Material Indent Item",
+ "name": "Stock Indent Item",
  "owner": "Administrator",
  "permissions": [],
  "row_format": "Dynamic",

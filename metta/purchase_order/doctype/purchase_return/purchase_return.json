@@ -13,7 +13,8 @@
   "from_warehouse",
   "items",
   "total_credit_amount",
-  "status"
+  "status",
+  "amended_from"
  ],
  "fields": [
   {
@@ -61,6 +62,16 @@
    "label": "Status",
    "options": "Draft\nSubmitted\nCredit Received\nCancelled",
    "reqd": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Purchase Return",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
   }
  ],
  "grid_page_length": 50,

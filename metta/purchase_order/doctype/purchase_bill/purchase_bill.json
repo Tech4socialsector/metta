@@ -20,7 +20,8 @@
   "due_date",
   "payment_status",
   "amount_paid",
-  "balance_due"
+  "balance_due",
+  "amended_from"
  ],
  "fields": [
   {
@@ -110,6 +111,16 @@
    "fieldtype": "Currency",
    "label": "Balance Due",
    "read_only": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Purchase Bill",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
   }
  ],
  "grid_page_length": 50,

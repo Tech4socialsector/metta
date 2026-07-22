@@ -33,15 +33,14 @@
    "reqd": 1
   },
   {
-   "fetch_from": "item.purchase_uom",
    "fieldname": "unit_of_measure",
    "fieldtype": "Data",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Unit of Measure"
+   "label": "Unit of Measure",
+   "read_only": 1
   },
   {
-   "fetch_from": "item.standard_purchase_rate",
    "fieldname": "rate",
    "fieldtype": "Currency",
    "in_list_view": 1,
@@ -71,14 +70,14 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Indent Reference",
-   "options": "Material Indent"
+   "options": "Stock Indent"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-07-20 01:39:36.958886",
+ "modified": "2026-07-21 15:20:40.914464",
  "modified_by": "Administrator",
  "module": "Purchase Order",
  "name": "Purchase Order Item",

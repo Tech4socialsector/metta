@@ -1,7 +1,7 @@
 {
  "actions": [],
  "autoname": "prompt",
- "creation": "2026-07-15 21:00:00.000000",
+ "creation": "2026-07-15 21:00:00",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -18,7 +18,7 @@
    "fieldtype": "Int",
    "label": "Total Beds",
    "non_negative": 1,
-   "reqd": 1
+   "read_only": 1
   },
   {
    "fieldname": "column_break_beds",
@@ -54,7 +54,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-15 21:00:00.000000",
+ "modified": "2026-07-21 14:11:12.238957",
  "modified_by": "Administrator",
  "module": "metta",
  "name": "Ward Master",

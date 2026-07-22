@@ -5,7 +5,6 @@
  "creation": "2026-07-17 15:06:17.639007",
  "doctype": "DocType",
  "engine": "InnoDB",
- "is_submittable": 1,
  "field_order": [
   "against_indent",
   "from_warehouse",
@@ -19,18 +18,20 @@
   "discrepancy_status",
   "resolved_by",
   "resolution_date",
-  "status"
+  "status",
+  "amended_from"
  ],
  "fields": [
   {
    "fieldname": "against_indent",
    "fieldtype": "Link",
    "label": "Against Indent",
-   "options": "Material Indent"
+   "options": "Stock Indent"
   },
   {
    "fieldname": "from_warehouse",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "From Warehouse",
    "options": "Warehouse",
    "reqd": 1
@@ -38,6 +39,7 @@
   {
    "fieldname": "to_warehouse",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "To Warehouse",
    "options": "Warehouse",
    "reqd": 1
@@ -45,12 +47,14 @@
   {
    "fieldname": "dispatch_date_time",
    "fieldtype": "Datetime",
+   "in_list_view": 1,
    "label": "Dispatch Date Time",
    "reqd": 1
   },
   {
    "fieldname": "issued_by",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Issued By",
    "options": "User",
    "reqd": 1
@@ -103,18 +107,30 @@
    "label": "Status",
    "options": "Draft\nDispatched\nConfirmed\nCancelled",
    "reqd": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Stock Transfer",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
+ "is_submittable": 1,
  "links": [],
- "modified": "2026-07-17 15:18:12.024852",
+ "modified": "2026-07-21 15:20:40.796073",
  "modified_by": "Administrator",
  "module": "Stock",
  "name": "Stock Transfer",
  "owner": "Administrator",
  "permissions": [
   {
+   "cancel": 1,
    "create": 1,
    "delete": 1,
    "email": 1,
@@ -125,7 +141,6 @@
    "role": "System Manager",
    "share": 1,
    "submit": 1,
-   "cancel": 1,
    "write": 1
   }
  ],

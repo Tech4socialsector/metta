@@ -13,7 +13,8 @@
   "amount_paid",
   "payment_mode",
   "reference_no",
-  "paid_by"
+  "paid_by",
+  "amended_from"
  ],
  "fields": [
   {
@@ -64,6 +65,16 @@
    "label": "Paid By",
    "options": "User",
    "read_only": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Payment Entry",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
   }
  ],
  "grid_page_length": 50,

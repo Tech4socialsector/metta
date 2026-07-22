@@ -13,9 +13,9 @@ IGNORE_TEST_RECORD_DEPENDENCIES = []  # eg. ["User"]
 
 
 
-class IntegrationTestMaterialIndent(IntegrationTestCase):
+class IntegrationTestWardMaster(IntegrationTestCase):
 	"""
-	Integration tests for MaterialIndent.
+	Integration tests for WardMaster.
 	Use this class for testing interactions between multiple components.
 	"""
 

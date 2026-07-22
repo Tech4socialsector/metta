@@ -10,11 +10,10 @@
   "order_date",
   "expected_delivery",
   "source_indent",
-  "approval_status",
+  "status",
   "approved_by",
   "approved_date_time",
   "rejection_reason",
-  "status",
   "items",
   "total_amount",
   "amended_from"
@@ -44,15 +43,15 @@
    "fieldname": "source_indent",
    "fieldtype": "Link",
    "label": "Source Indent",
-   "options": "Material Indent"
+   "options": "Stock Indent"
   },
   {
-   "fieldname": "approval_status",
+   "fieldname": "status",
    "fieldtype": "Select",
    "in_list_view": 1,
-   "label": "Approval Status",
-   "options": "\nPending\nApproved\nRejected",
-   "reqd": 1
+   "label": "Status",
+   "options": "\nPending Approval\nApproved\nRejected\nSent to Dealer\nPartially Received\nReceived\nClosed\nCancelled",
+   "read_only": 1
   },
   {
    "fieldname": "approved_by",
@@ -68,16 +67,11 @@
    "read_only": 1
   },
   {
+   "depends_on": "eval:doc.status=='Rejected'",
    "fieldname": "rejection_reason",
    "fieldtype": "Small Text",
-   "label": "Rejection Reason"
-  },
-  {
-   "fieldname": "status",
-   "fieldtype": "Select",
-   "label": "Status",
-   "options": "\nDraft\nAwaiting Approval\nSent to Dealer\nPartially Received\nReceived\nClosed\nCancelled",
-   "reqd": 1
+   "label": "Rejection Reason",
+   "read_only": 1
   },
   {
    "fieldname": "items",
@@ -107,7 +101,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-07-20 01:34:48.414153",
+ "modified": "2026-07-21 15:20:40.977045",
  "modified_by": "Administrator",
  "module": "Purchase Order",
  "name": "Purchase Order",

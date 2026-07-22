@@ -12,7 +12,7 @@
   "receipt_date_time",
   "receiving_warehouse",
   "items",
-  "status"
+  "amended_from"
  ],
  "fields": [
   {
@@ -50,11 +50,14 @@
    "reqd": 1
   },
   {
-   "fieldname": "status",
-   "fieldtype": "Select",
-   "label": "Status",
-   "options": "Draft\nSubmitted\nCancelled",
-   "reqd": 1
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Purchase Receipt",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
   }
  ],
  "grid_page_length": 50,

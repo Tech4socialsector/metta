@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "autoname": "SLE-.YYYY.-.#####",
  "creation": "2026-07-17 21:00:00.000000",
  "description": "System doctype - created on_submit of stock transactions, reversed on cancel. No manual entry.",
  "doctype": "DocType",
@@ -96,6 +97,7 @@
  "modified_by": "Administrator",
  "module": "Stock",
  "name": "Stock Ledger Entry",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {
