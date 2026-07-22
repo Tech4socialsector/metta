@@ -7,11 +7,11 @@
  "engine": "InnoDB",
  "field_order": [
   "item",
+  "item_name",
   "qty_ordered",
   "unit_of_measure",
   "rate",
   "amount",
-  "qty_received",
   "indent_reference"
  ],
  "fields": [
@@ -25,6 +25,13 @@
    "reqd": 1
   },
   {
+   "fieldname": "item_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Item Name",
+   "read_only": 1
+  },
+  {
    "fieldname": "qty_ordered",
    "fieldtype": "Float",
    "in_list_view": 1,
@@ -33,6 +40,7 @@
    "reqd": 1
   },
   {
+   "fetch_from": "item.purchase_uom",
    "fieldname": "unit_of_measure",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -57,14 +65,6 @@
    "read_only": 1
   },
   {
-   "fieldname": "qty_received",
-   "fieldtype": "Float",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Qty Received",
-   "read_only": 1
-  },
-  {
    "fieldname": "indent_reference",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -77,7 +77,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-07-21 15:20:40.914464",
+ "modified": "2026-07-22 16:56:35.465026",
  "modified_by": "Administrator",
  "module": "Purchase Order",
  "name": "Purchase Order Item",

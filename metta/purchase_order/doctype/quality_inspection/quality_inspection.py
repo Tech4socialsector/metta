@@ -20,6 +20,7 @@ def get_items_to_inspect(purchase_receipt):
 	return [
 		{
 			"item": row.item,
+			"item_name": frappe.db.get_value("Item", row.item, "item_name") or "",
 			"batch_no": row.batch_no,
 			"expiry_date": row.expiry_date,
 			"qty_delivered": row.qty_received,

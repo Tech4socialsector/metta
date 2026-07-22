@@ -25,16 +25,18 @@ frappe.ui.form.on("Sales Bill Item", {
 		const row = locals[cdt][cdn];
 		if (!row.item) {
 			frappe.model.set_value(cdt, cdn, "uom", "");
+			frappe.model.set_value(cdt, cdn, "item_name", "");
 			return;
 		}
 		frappe.db.get_value(
 			"Item",
 			row.item,
-			["sale_uom", "standard_selling_rate", "gst_percent"],
+			["sale_uom", "standard_selling_rate", "gst_percent", "item_name"],
 			(r) => {
 				frappe.model.set_value(cdt, cdn, "uom", r.sale_uom || "");
 				frappe.model.set_value(cdt, cdn, "rate", flt(r.standard_selling_rate));
 				frappe.model.set_value(cdt, cdn, "gst_percent", flt(r.gst_percent));
+				frappe.model.set_value(cdt, cdn, "item_name", r.item_name || "");
 			}
 		);
 	},

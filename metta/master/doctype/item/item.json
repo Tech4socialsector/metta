@@ -271,6 +271,7 @@
  "module": "Master",
  "name": "Item",
  "naming_rule": "By fieldname",
+ "title_field": "item_name",
  "owner": "Administrator",
  "permissions": [
   {

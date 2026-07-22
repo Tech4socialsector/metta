@@ -49,3 +49,16 @@ function show_get_items_button(frm) {
 		});
 	}).addClass("btn-primary");
 }
+
+frappe.ui.form.on("Quality Inspection Item", {
+	item(frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		if (!row.item) {
+			frappe.model.set_value(cdt, cdn, "item_name", "");
+			return;
+		}
+		frappe.db.get_value("Item", row.item, "item_name", (r) => {
+			frappe.model.set_value(cdt, cdn, "item_name", r.item_name || "");
+		});
+	},
+});

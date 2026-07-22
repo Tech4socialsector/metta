@@ -6,6 +6,7 @@
  "engine": "InnoDB",
  "field_order": [
   "item",
+  "item_name",
   "batch_no",
   "system_qty",
   "physical_qty",
@@ -20,6 +21,13 @@
    "label": "Item",
    "options": "Item",
    "reqd": 1
+  },
+  {
+   "fieldname": "item_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Item Name",
+   "read_only": 1
   },
   {
    "fieldname": "batch_no",

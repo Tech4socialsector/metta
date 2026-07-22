@@ -12,6 +12,14 @@ frappe.ui.form.on("Stock Reconciliation", {
 frappe.ui.form.on("Stock Reconciliation Item", {
 	item(frm, cdt, cdn) {
 		fetch_system_qty(frm, cdt, cdn);
+		const row = locals[cdt][cdn];
+		if (!row.item) {
+			frappe.model.set_value(cdt, cdn, "item_name", "");
+			return;
+		}
+		frappe.db.get_value("Item", row.item, "item_name", (r) => {
+			frappe.model.set_value(cdt, cdn, "item_name", r.item_name || "");
+		});
 	},
 	physical_qty(frm, cdt, cdn) {
 		calculate_difference(cdt, cdn);

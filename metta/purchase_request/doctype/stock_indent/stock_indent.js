@@ -15,6 +15,21 @@ frappe.ui.form.on("Stock Indent", {
 	},
 });
 
+frappe.ui.form.on("Stock Indent Item", {
+	// The search widget's Add button already fills item_name in - this only
+	// covers rows added directly via the standard grid's "Add row" instead.
+	item(frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		if (!row.item) {
+			frappe.model.set_value(cdt, cdn, "item_name", "");
+			return;
+		}
+		frappe.db.get_value("Item", row.item, "item_name", (r) => {
+			frappe.model.set_value(cdt, cdn, "item_name", r.item_name || "");
+		});
+	},
+});
+
 function render_item_search(frm) {
 	const wrapper = frm.fields_dict.item_search_area.$wrapper;
 	wrapper.html(`
@@ -125,6 +140,7 @@ function render_item_search(frm) {
 		}
 		const row = frm.add_child("items", {
 			item: selected.item_code,
+			item_name: selected.name,
 			qty_requested: qty,
 		});
 		frm.refresh_field("items");

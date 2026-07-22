@@ -9,6 +9,7 @@
  "field_order": [
   "warehouse",
   "item",
+  "item_name",
   "batch_no",
   "qty",
   "reason",
@@ -33,6 +34,13 @@
    "label": "Item",
    "options": "Item",
    "reqd": 1
+  },
+  {
+   "fetch_from": "item.item_name",
+   "fieldname": "item_name",
+   "fieldtype": "Data",
+   "label": "Item Name",
+   "read_only": 1
   },
   {
    "fieldname": "batch_no",

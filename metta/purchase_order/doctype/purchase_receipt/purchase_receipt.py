@@ -99,6 +99,7 @@ def get_pending_items(purchase_order):
 		rows.append(
 			{
 				"item": po_row.item,
+				"item_name": frappe.db.get_value("Item", po_row.item, "item_name") or "",
 				"unit_of_measure": po_row.unit_of_measure,
 				"qty_ordered": po_row.qty_ordered,
 				"qty_received": pending_qty,

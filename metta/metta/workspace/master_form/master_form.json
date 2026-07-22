@@ -1,7 +1,7 @@
 {
  "app": "metta",
  "charts": [],
- "content": "[{\"id\":\"9whNvwTjFL\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Welcome to the Master Form workspace</span>\",\"col\":12}},{\"id\":\"4b6uBx61hv\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Item\",\"col\":3}}]",
+ "content": "[{\"id\":\"9whNvwTjFL\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Welcome to the Master Form workspace</span>\",\"col\":12}},{\"id\":\"DrnxMAmj5O\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Item\",\"col\":3}}]",
  "creation": "2026-07-20 15:35:11.437678",
  "custom_blocks": [],
  "docstatus": 0,
@@ -13,7 +13,7 @@
  "label": "Master Form",
  "link_type": "DocType",
  "links": [],
- "modified": "2026-07-20 20:50:48.386077",
+ "modified": "2026-07-22 16:22:20.789929",
  "modified_by": "Administrator",
  "module": "metta",
  "name": "Master Form",

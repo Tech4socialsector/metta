@@ -58,12 +58,19 @@ frappe.ui.form.on("Purchase Order Item", {
 		const row = locals[cdt][cdn];
 		if (!row.item) {
 			frappe.model.set_value(cdt, cdn, "unit_of_measure", "");
+			frappe.model.set_value(cdt, cdn, "item_name", "");
 			return;
 		}
-		frappe.db.get_value("Item", row.item, ["purchase_uom", "standard_purchase_rate"], (r) => {
-			frappe.model.set_value(cdt, cdn, "unit_of_measure", r.purchase_uom || "");
-			frappe.model.set_value(cdt, cdn, "rate", flt(r.standard_purchase_rate));
-		});
+		frappe.db.get_value(
+			"Item",
+			row.item,
+			["purchase_uom", "standard_purchase_rate", "item_name"],
+			(r) => {
+				frappe.model.set_value(cdt, cdn, "unit_of_measure", r.purchase_uom || "");
+				frappe.model.set_value(cdt, cdn, "rate", flt(r.standard_purchase_rate));
+				frappe.model.set_value(cdt, cdn, "item_name", r.item_name || "");
+			}
+		);
 	},
 	qty_ordered(frm, cdt, cdn) {
 		calculate_amount(frm, cdt, cdn);

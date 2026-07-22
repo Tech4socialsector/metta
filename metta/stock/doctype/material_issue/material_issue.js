@@ -15,3 +15,16 @@ frappe.ui.form.on("Material Issue", {
 		}
 	},
 });
+
+frappe.ui.form.on("Material Issue Item", {
+	item(frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		if (!row.item) {
+			frappe.model.set_value(cdt, cdn, "item_name", "");
+			return;
+		}
+		frappe.db.get_value("Item", row.item, "item_name", (r) => {
+			frappe.model.set_value(cdt, cdn, "item_name", r.item_name || "");
+		});
+	},
+});

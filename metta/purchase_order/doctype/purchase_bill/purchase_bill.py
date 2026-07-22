@@ -74,12 +74,14 @@ def get_items_from_receipt(purchase_receipt):
 				)
 				or 0
 			)
-		gst_percent = frappe.db.get_value("Item", pr_row.item, "gst_percent") or 0
+		item_details = frappe.db.get_value("Item", pr_row.item, ["gst_percent", "item_name"], as_dict=True) or {}
+		gst_percent = item_details.get("gst_percent") or 0
 		qty = flt(pr_row.qty_received)
 		amount = qty * flt(rate)
 		rows.append(
 			{
 				"item": pr_row.item,
+				"item_name": item_details.get("item_name") or "",
 				"qty": qty,
 				"rate": rate,
 				"amount": amount,

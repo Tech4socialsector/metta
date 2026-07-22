@@ -62,10 +62,12 @@ frappe.ui.form.on("Purchase Receipt Item", {
 		if (!row.item) {
 			frappe.model.set_value(cdt, cdn, "unit_of_measure", "");
 			frappe.model.set_value(cdt, cdn, "qty_ordered", 0);
+			frappe.model.set_value(cdt, cdn, "item_name", "");
 			return;
 		}
-		frappe.db.get_value("Item", row.item, "purchase_uom", (r) => {
+		frappe.db.get_value("Item", row.item, ["purchase_uom", "item_name"], (r) => {
 			frappe.model.set_value(cdt, cdn, "unit_of_measure", r.purchase_uom || "");
+			frappe.model.set_value(cdt, cdn, "item_name", r.item_name || "");
 		});
 		// Qty Ordered can't be a plain fetch_from - it depends on both the
 		// Purchase Order and this specific Item, not just the Item alone.
