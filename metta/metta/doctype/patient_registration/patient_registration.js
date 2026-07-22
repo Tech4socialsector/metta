@@ -120,4 +120,95 @@ frappe.ui.form.on("Patient Registration", {
 			},
 		});
 	},
+
+	accommodation_type(frm) {
+		// Ward and Room are mutually exclusive - clear whichever set of fields
+		// no longer applies so a stale link can't linger and get saved.
+		frm.set_intro("");
+		if (frm.doc.accommodation_type === "Ward") {
+			frm.set_value("room", "");
+			frm.set_value("room_bed_no", "");
+		} else if (frm.doc.accommodation_type === "Room") {
+			frm.set_value("ward", "");
+			frm.set_value("bed_no", "");
+		}
+	},
+
+	room(frm) {
+		if (!frm.doc.room) {
+			frm.set_intro("");
+			return;
+		}
+		frappe.call({
+			method:
+				"metta.metta.doctype.patient_registration.patient_registration.get_room_details",
+			args: { room: frm.doc.room },
+			callback(r) {
+				if (!r.message || r.message.capacity === undefined) {
+					return;
+				}
+				const { room_type, rent_per_day, floor, capacity, occupied_beds, available_beds, beds } =
+					r.message;
+				let html = __(
+					"Room {0} ({1}): {2} total beds &mdash; <span style='color:#28a745;font-weight:bold;'>{3} available</span>, <span style='color:#dc3545;font-weight:bold;'>{4} occupied</span>",
+					[frm.doc.room, room_type || __("Type not set"), capacity, available_beds, occupied_beds]
+				);
+				if (floor) {
+					html += ` &mdash; ${__("Floor")} ${frappe.utils.escape_html(floor)}`;
+				}
+				if (rent_per_day) {
+					html += ` &mdash; ${__("Rent")} ${format_currency(rent_per_day)}/${__("day")}`;
+				}
+
+				if (beds && beds.length) {
+					// Only rooms with an enumerated bed list (see Room Master) can show
+					// individual bed-level status; others only have a manual capacity count.
+					const pill = (bed) => {
+						const is_available = bed.status === "Available";
+						const bg = is_available ? "#28a745" : "#dc3545";
+						return `<span title="${bed.status}" style="display:inline-block;margin:2px;padding:2px 8px;border-radius:10px;background:${bg};color:#fff;font-size:11px;">${frappe.utils.escape_html(
+							bed.bed_no
+						)}</span>`;
+					};
+					html += `<div style="margin-top:6px;">${beds.map(pill).join("")}</div>`;
+				} else {
+					html += `<div style="margin-top:4px;color:#888;">${__(
+						"Individual beds are not listed for this room yet — add them under Beds on the Room Master record to see bed-wise status here."
+					)}</div>`;
+				}
+
+				frm.set_intro(html);
+			},
+		});
+	},
+
+	room_bed_no(frm) {
+		// Only IP admissions occupy a bed - nothing to check for OP or an
+		// incomplete room/bed selection.
+		if (!frm.doc.room || !frm.doc.room_bed_no || frm.doc.registration_category !== "IP") {
+			return;
+		}
+		frappe.call({
+			method:
+				"metta.metta.doctype.patient_registration.patient_registration.check_room_availability",
+			args: {
+				room: frm.doc.room,
+				room_bed_no: frm.doc.room_bed_no,
+				registration: frm.doc.name,
+			},
+			callback(r) {
+				if (r.message && r.message.occupied) {
+					frappe.msgprint({
+						title: __("Bed Already Occupied"),
+						indicator: "red",
+						message: __(
+							"Bed {0} in room {1} is already occupied by {2}. Please choose a different bed.",
+							[frm.doc.room_bed_no, frm.doc.room, r.message.occupied_by]
+						),
+					});
+					frm.set_value("room_bed_no", "");
+				}
+			},
+		});
+	},
 });

@@ -9,6 +9,7 @@ from frappe.model.document import Document
 class PatientRegistration(Document):
 	def validate(self):
 		self.validate_bed_availability()
+		self.validate_room_availability()
 		# Front-desk process requires checking Patient Details first: link the
 		# existing record, or create one there if the patient is genuinely new.
 		# Registration should never silently invent a patient - it must always
@@ -32,9 +33,14 @@ class PatientRegistration(Document):
 		).insert(ignore_permissions=True)
 
 	def validate_bed_availability(self):
-		# Only IP admissions occupy a physical bed; OP visits and unassigned
-		# beds/wards have nothing to conflict with.
-		if self.registration_category != "IP" or not self.ward or not self.bed_no:
+		# Only IP admissions occupy a physical bed; OP visits, Room-type
+		# admissions, and unassigned beds/wards have nothing to conflict with.
+		if (
+			self.registration_category != "IP"
+			or self.accommodation_type != "Ward"
+			or not self.ward
+			or not self.bed_no
+		):
 			return
 		# A Discharged record frees up its bed, so it shouldn't block reuse.
 		if self.admission_status != "Admitted":
@@ -57,6 +63,38 @@ class PatientRegistration(Document):
 			frappe.throw(
 				_("Bed {0} in ward {1} is already occupied by patient registration {2}.").format(
 					frappe.bold(self.bed_no), frappe.bold(self.ward), frappe.bold(existing)
+				),
+				title=_("Bed Already Occupied"),
+			)
+
+	def validate_room_availability(self):
+		# Rooms can hold more than one patient (Semi-Private/Deluxe etc.), so
+		# the conflict check is per bed slot within the room, same shape as
+		# validate_bed_availability() above - not per room.
+		if (
+			self.registration_category != "IP"
+			or self.accommodation_type != "Room"
+			or not self.room
+			or not self.room_bed_no
+		):
+			return
+		if self.admission_status != "Admitted":
+			return
+
+		existing = frappe.db.get_value(
+			"Patient Registration",
+			{
+				"room": self.room,
+				"room_bed_no": self.room_bed_no,
+				"admission_status": "Admitted",
+				"name": ["!=", self.name],
+			},
+			"name",
+		)
+		if existing:
+			frappe.throw(
+				_("Bed {0} in room {1} is already occupied by patient registration {2}.").format(
+					frappe.bold(self.room_bed_no), frappe.bold(self.room), frappe.bold(existing)
 				),
 				title=_("Bed Already Occupied"),
 			)
@@ -94,6 +132,38 @@ def check_bed_availability(ward, bed_no, registration=None):
 	if not ward or not bed_no:
 		return {"occupied": False}
 	filters = {"ward": ward, "bed_no": bed_no, "admission_status": "Admitted"}
+	if registration:
+		filters["name"] = ["!=", registration]
+	existing = frappe.db.get_value("Patient Registration", filters, "name")
+	return {"occupied": bool(existing), "occupied_by": existing}
+
+
+@frappe.whitelist()
+def get_room_details(room):
+	# Mirrors get_ward_bed_summary() - occupancy is computed live via Room
+	# Master's own property/get_bed_status_list() rather than stored.
+	if not room:
+		return {}
+	room_doc = frappe.get_doc("Room Master", room)
+	return {
+		"room_type": room_doc.room_type,
+		"rent_per_day": room_doc.rent_per_day,
+		"floor": room_doc.floor,
+		"capacity": room_doc.capacity,
+		"occupied_beds": room_doc.occupied_beds,
+		"available_beds": room_doc.available_beds,
+		"beds": room_doc.get_bed_status_list(),
+	}
+
+
+@frappe.whitelist()
+def check_room_availability(room, room_bed_no, registration=None):
+	# Client-side counterpart to validate_room_availability() above - gives an
+	# instant popup instead of making the user wait for a failed save. Not a
+	# substitute for the server-side check, since this one is skippable.
+	if not room or not room_bed_no:
+		return {"occupied": False}
+	filters = {"room": room, "room_bed_no": room_bed_no, "admission_status": "Admitted"}
 	if registration:
 		filters["name"] = ["!=", registration]
 	existing = frappe.db.get_value("Patient Registration", filters, "name")

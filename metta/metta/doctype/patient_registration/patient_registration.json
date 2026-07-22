@@ -31,8 +31,11 @@
   "time",
   "address",
   "ip_section",
+  "accommodation_type",
   "ward",
   "bed_no",
+  "room",
+  "room_bed_no",
   "admission_status",
   "column_break_ip",
   "admission_date",
@@ -252,13 +255,35 @@
    "label": "IP Details"
   },
   {
+   "fieldname": "accommodation_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Accommodation Type",
+   "options": "\nWard\nRoom"
+  },
+  {
+   "depends_on": "eval:doc.accommodation_type==\"Ward\"",
    "fieldname": "ward",
    "fieldtype": "Link",
    "label": "Ward",
    "options": "Ward Master"
   },
   {
+   "depends_on": "eval:doc.accommodation_type==\"Ward\"",
    "fieldname": "bed_no",
+   "fieldtype": "Data",
+   "label": "Bed No"
+  },
+  {
+   "depends_on": "eval:doc.accommodation_type==\"Room\"",
+   "fieldname": "room",
+   "fieldtype": "Link",
+   "label": "Room",
+   "options": "Room Master"
+  },
+  {
+   "depends_on": "eval:doc.accommodation_type==\"Room\"",
+   "fieldname": "room_bed_no",
    "fieldtype": "Data",
    "label": "Bed No"
   },
