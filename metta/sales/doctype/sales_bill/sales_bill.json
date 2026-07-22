@@ -20,9 +20,7 @@
   "payment_mode",
   "corporate_customer",
   "prescribed_by",
-  "amended_from",
-  "test",
-  "test_1"
+  "amended_from"
  ],
  "fields": [
   {
@@ -126,16 +124,6 @@
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
-  },
-  {
-   "fieldname": "test",
-   "fieldtype": "Data",
-   "label": "test"
-  },
-  {
-   "fieldname": "test_1",
-   "fieldtype": "Data",
-   "label": "test 1"
   }
  ],
  "grid_page_length": 50,

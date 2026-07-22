@@ -24,6 +24,22 @@ class SalesBill(Document):
 				title=_("Corporate Customer Required"),
 			)
 
+		# JS keeps this live while editing, but validate() is the authoritative
+		# recompute, same as Purchase Bill's subtotal/gst/total.
+		discount_percent = flt(self.discount_percent)
+		subtotal = 0
+		gst_total = 0
+		for row in self.items:
+			row.amount = flt(row.qty) * flt(row.rate)
+			taxable_value = row.amount * (1 - discount_percent / 100)
+			row.gst_amount = taxable_value * flt(row.gst_percent) / 100
+			subtotal += row.amount
+			gst_total += row.gst_amount
+		self.subtotal = subtotal
+		self.discount_amount = subtotal * discount_percent / 100
+		self.gst_amount = gst_total
+		self.net_amount = subtotal - self.discount_amount + gst_total
+
 	def on_submit(self):
 		for row in self.items:
 			row.stock_qty = flt(row.qty) * flt(row.conversion_factor or 1)

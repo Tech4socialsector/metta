@@ -100,6 +100,7 @@ def get_pending_items(purchase_order):
 			{
 				"item": po_row.item,
 				"unit_of_measure": po_row.unit_of_measure,
+				"qty_ordered": po_row.qty_ordered,
 				"qty_received": pending_qty,
 				"conversion_factor": conversion_factor,
 			}
@@ -108,21 +109,37 @@ def get_pending_items(purchase_order):
 
 
 @frappe.whitelist()
-def find_matching_quality_inspection(purchase_order, item, batch_no):
-	# A Quality Inspection is keyed by the same (Purchase Order, Item, Batch)
-	# as the receipt row it belongs to - so it can be found automatically
-	# instead of making the store staff hunt for it in a dropdown. The field
-	# is read_only, so this is the only thing that ever sets it.
-	if not (purchase_order and item and batch_no):
+def get_qty_ordered(purchase_order, item):
+	# Qty Ordered is only meaningful in relation to a specific Purchase Order
+	# Item row, so it can't be a plain fetch_from - needed when someone picks
+	# an Item by hand instead of using Get Items From Purchase Order.
+	if not (purchase_order and item):
+		return 0
+	return (
+		frappe.db.get_value("Purchase Order Item", {"parent": purchase_order, "item": item}, "qty_ordered") or 0
+	)
+
+
+@frappe.whitelist()
+def find_matching_quality_inspection(purchase_receipt, item, batch_no):
+	# A Quality Inspection is now keyed to the specific Purchase Receipt it
+	# inspected (not just the Purchase Order, which can have several receipts
+	# against it) - so the match has to join into its child table filtering by
+	# this exact receipt, item and batch.
+	if not (purchase_receipt and item and batch_no):
 		return None
-	return frappe.db.get_value(
-		"Quality Inspection",
-		{
-			"purchase_order": purchase_order,
-			"item": item,
-			"batch_no": batch_no,
-			"docstatus": 1,
-		},
-		["name", "result"],
+	rows = frappe.db.sql(
+		"""
+		SELECT qi.name, qii.result
+		FROM `tabQuality Inspection Item` qii
+		INNER JOIN `tabQuality Inspection` qi ON qi.name = qii.parent
+		WHERE qi.purchase_receipt = %s
+		  AND qi.docstatus = 1
+		  AND qii.item = %s
+		  AND qii.batch_no = %s
+		LIMIT 1
+		""",
+		(purchase_receipt, item, batch_no),
 		as_dict=True,
 	)
+	return rows[0] if rows else None

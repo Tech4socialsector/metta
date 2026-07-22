@@ -10,6 +10,7 @@
   "batch_no",
   "manufacturing_date",
   "expiry_date",
+  "qty_ordered",
   "qty_received",
   "unit_of_measure",
   "conversion_factor",
@@ -46,6 +47,13 @@
    "in_standard_filter": 1,
    "label": "Expiry Date",
    "reqd": 1
+  },
+  {
+   "fieldname": "qty_ordered",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Qty Ordered",
+   "read_only": 1
   },
   {
    "fieldname": "qty_received",

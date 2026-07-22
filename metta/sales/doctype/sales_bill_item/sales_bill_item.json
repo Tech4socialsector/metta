@@ -12,7 +12,9 @@
   "conversion_factor",
   "stock_qty",
   "rate",
-  "amount"
+  "amount",
+  "gst_percent",
+  "gst_amount"
  ],
  "fields": [
   {
@@ -39,10 +41,10 @@
    "reqd": 1
   },
   {
-   "fetch_from": "item.sale_uom",
    "fieldname": "uom",
    "fieldtype": "Data",
    "label": "UOM",
+   "read_only": 1,
    "reqd": 1
   },
   {
@@ -58,7 +60,6 @@
    "read_only": 1
   },
   {
-   "fetch_from": "item.standard_selling_rate",
    "fieldname": "rate",
    "fieldtype": "Currency",
    "in_list_view": 1,
@@ -70,6 +71,18 @@
    "fieldtype": "Currency",
    "in_list_view": 1,
    "label": "Amount",
+   "read_only": 1
+  },
+  {
+   "fieldname": "gst_percent",
+   "fieldtype": "Percent",
+   "label": "GST %",
+   "read_only": 1
+  },
+  {
+   "fieldname": "gst_amount",
+   "fieldtype": "Currency",
+   "label": "GST Amount",
    "read_only": 1
   }
  ],

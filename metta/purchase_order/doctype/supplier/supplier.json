@@ -13,7 +13,6 @@
   "gst_number",
   "drug_license_number",
   "payment_terms_days",
-  "outstanding_amount",
   "is_active"
  ],
  "fields": [
@@ -59,12 +58,6 @@
    "fieldname": "payment_terms_days",
    "fieldtype": "Int",
    "label": "Payment Terms (Days)"
-  },
-  {
-   "fieldname": "outstanding_amount",
-   "fieldtype": "Currency",
-   "label": "Outstanding Amount (Payable)",
-   "read_only": 1
   },
   {
    "default": "1",

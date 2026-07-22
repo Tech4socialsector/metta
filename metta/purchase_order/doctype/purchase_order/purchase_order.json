@@ -9,7 +9,6 @@
   "supplier",
   "order_date",
   "expected_delivery",
-  "source_indent",
   "status",
   "approved_by",
   "approved_date_time",
@@ -28,6 +27,7 @@
    "reqd": 1
   },
   {
+   "default": "Today",
    "fieldname": "order_date",
    "fieldtype": "Date",
    "in_list_view": 1,
@@ -38,12 +38,6 @@
    "fieldname": "expected_delivery",
    "fieldtype": "Date",
    "label": "Expected Delivery"
-  },
-  {
-   "fieldname": "source_indent",
-   "fieldtype": "Link",
-   "label": "Source Indent",
-   "options": "Stock Indent"
   },
   {
    "fieldname": "status",
@@ -101,7 +95,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-07-21 15:20:40.977045",
+ "modified": "2026-07-22 15:15:57.115289",
  "modified_by": "Administrator",
  "module": "Purchase Order",
  "name": "Purchase Order",

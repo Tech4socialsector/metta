@@ -7,30 +7,32 @@
  "engine": "InnoDB",
  "is_submittable": 1,
  "field_order": [
+  "purchase_receipt",
   "purchase_order",
   "supplier",
   "inspection_date_time",
   "inspected_by",
-  "item",
-  "batch_no",
-  "expiry_date",
-  "qty_delivered",
-  "qty_accepted",
-  "qty_rejected",
-  "rejection_reason",
-  "result",
+  "items",
   "amended_from"
  ],
  "fields": [
   {
+   "fieldname": "purchase_receipt",
+   "fieldtype": "Link",
+   "label": "Purchase Receipt",
+   "options": "Purchase Receipt",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "purchase_receipt.purchase_order",
    "fieldname": "purchase_order",
    "fieldtype": "Link",
    "label": "Purchase Order",
    "options": "Purchase Order",
-   "reqd": 1
+   "read_only": 1
   },
   {
-   "fetch_from": "purchase_order.supplier",
+   "fetch_from": "purchase_receipt.supplier",
    "fieldname": "supplier",
    "fieldtype": "Data",
    "label": "Supplier",
@@ -50,52 +52,10 @@
    "reqd": 1
   },
   {
-   "fieldname": "item",
-   "fieldtype": "Link",
-   "label": "Item",
-   "options": "Medicine Item",
-   "reqd": 1
-  },
-  {
-   "fieldname": "batch_no",
-   "fieldtype": "Data",
-   "label": "Batch No",
-   "reqd": 1
-  },
-  {
-   "fieldname": "expiry_date",
-   "fieldtype": "Date",
-   "label": "Expiry Date",
-   "reqd": 1
-  },
-  {
-   "fieldname": "qty_delivered",
-   "fieldtype": "Float",
-   "label": "Qty Delivered",
-   "reqd": 1
-  },
-  {
-   "fieldname": "qty_accepted",
-   "fieldtype": "Float",
-   "label": "Qty Accepted",
-   "reqd": 1
-  },
-  {
-   "fieldname": "qty_rejected",
-   "fieldtype": "Float",
-   "label": "Qty Rejected"
-  },
-  {
-   "fieldname": "rejection_reason",
-   "fieldtype": "Select",
-   "label": "Rejection Reason",
-   "options": "\nDamaged\nExpired\nShort Expiry\nWrong Item\nQuantity Mismatch"
-  },
-  {
-   "fieldname": "result",
-   "fieldtype": "Select",
-   "label": "Result",
-   "options": "\nAccepted\nPartially Accepted\nRejected",
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "label": "Items",
+   "options": "Quality Inspection Item",
    "reqd": 1
   },
   {
@@ -112,7 +72,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-17 14:35:19.212242",
+ "modified": "2026-07-22 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Purchase Order",
  "name": "Quality Inspection",

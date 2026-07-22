@@ -54,11 +54,23 @@ frappe.ui.form.on("Purchase Receipt Item", {
 		const row = locals[cdt][cdn];
 		if (!row.item) {
 			frappe.model.set_value(cdt, cdn, "unit_of_measure", "");
+			frappe.model.set_value(cdt, cdn, "qty_ordered", 0);
 			return;
 		}
 		frappe.db.get_value("Medicine Item", row.item, "purchase_uom", (r) => {
 			frappe.model.set_value(cdt, cdn, "unit_of_measure", r.purchase_uom || "");
 		});
+		// Qty Ordered can't be a plain fetch_from - it depends on both the
+		// Purchase Order and this specific Item, not just the Item alone.
+		if (frm.doc.purchase_order) {
+			frappe.call({
+				method: "metta.purchase_order.doctype.purchase_receipt.purchase_receipt.get_qty_ordered",
+				args: { purchase_order: frm.doc.purchase_order, item: row.item },
+				callback(r) {
+					frappe.model.set_value(cdt, cdn, "qty_ordered", flt(r.message));
+				},
+			});
+		}
 		find_and_fill_quality_inspection(frm, cdt, cdn);
 	},
 	batch_no(frm, cdt, cdn) {
@@ -68,13 +80,16 @@ frappe.ui.form.on("Purchase Receipt Item", {
 
 function find_and_fill_quality_inspection(frm, cdt, cdn) {
 	const row = locals[cdt][cdn];
-	if (!frm.doc.purchase_order || !row.item || !row.batch_no) return;
+	// A Quality Inspection links to this exact Purchase Receipt by name, so
+	// there's nothing to match against until this document has actually been
+	// saved at least once (frm.is_new() means the name is still a placeholder).
+	if (frm.is_new() || !row.item || !row.batch_no) return;
 
 	frappe.call({
 		method:
 			"metta.purchase_order.doctype.purchase_receipt.purchase_receipt.find_matching_quality_inspection",
 		args: {
-			purchase_order: frm.doc.purchase_order,
+			purchase_receipt: frm.doc.name,
 			item: row.item,
 			batch_no: row.batch_no,
 		},
