@@ -60,7 +60,6 @@ function render_item_search(frm) {
 					<tr>
 						<th>${__("Name")}</th>
 						<th class="text-right">${__("Avail. Qty")}</th>
-						<th>${__("Category")}</th>
 						<th>${__("Manufacturer")}</th>
 						<th class="text-right">${__("Last Pur. Rate")}</th>
 						<th>${__("Rack/Shelf")}</th>
@@ -73,7 +72,6 @@ function render_item_search(frm) {
 						<tr class="indent-item-row" data-idx="${i}" style="cursor:pointer;">
 							<td>${frappe.utils.escape_html(r.name)}</td>
 							<td class="text-right" style="${r.avail_qty === 0 ? "color:#dc3545;" : ""}">${r.avail_qty}</td>
-							<td>${frappe.utils.escape_html(r.category || "")}</td>
 							<td>${frappe.utils.escape_html(r.manufacturer || "")}</td>
 							<td class="text-right">${r.last_pur_rate ? r.last_pur_rate.toFixed(2) : "0.00"}</td>
 							<td>${frappe.utils.escape_html(r.rack_location || "")}</td>

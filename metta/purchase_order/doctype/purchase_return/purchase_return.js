@@ -2,6 +2,11 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Purchase Return", {
+	setup(frm) {
+		frm.set_query("item", "items", () => ({
+			filters: { item_type: ["in", ["Medicine", "Consumable", "Asset"]] },
+		}));
+	},
 	refresh(frm) {
 		if (frm.doc.docstatus === 1 && frm.doc.status === "Submitted") {
 			frm.add_custom_button(__("Mark Credit Received"), () => {

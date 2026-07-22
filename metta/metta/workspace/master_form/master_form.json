@@ -1,7 +1,7 @@
 {
  "app": "metta",
  "charts": [],
- "content": "[{\"id\":\"9whNvwTjFL\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Welcome to the Master Form workspace</span>\",\"col\":12}},{\"id\":\"4b6uBx61hv\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Item\",\"col\":3}},{\"id\":\"53JWt46NRh\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Parent Item\",\"col\":3}},{\"id\":\"3VMFzesJ38\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Medicine Item\",\"col\":3}}]",
+ "content": "[{\"id\":\"9whNvwTjFL\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Welcome to the Master Form workspace</span>\",\"col\":12}},{\"id\":\"4b6uBx61hv\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Item\",\"col\":3}}]",
  "creation": "2026-07-20 15:35:11.437678",
  "custom_blocks": [],
  "docstatus": 0,
@@ -28,23 +28,7 @@
    "color": "Grey",
    "doc_view": "List",
    "label": "Item",
-   "link_to": "Item Group",
-   "stats_filter": "[]",
-   "type": "DocType"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Parent Item",
-   "link_to": "Parent Item Group",
-   "stats_filter": "[]",
-   "type": "DocType"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Medicine Item",
-   "link_to": "Medicine Item",
+   "link_to": "Item",
    "stats_filter": "[]",
    "type": "DocType"
   }

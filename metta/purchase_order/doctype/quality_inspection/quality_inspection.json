@@ -53,7 +53,7 @@
    "fieldname": "item",
    "fieldtype": "Link",
    "label": "Item",
-   "options": "Medicine Item",
+   "options": "Item",
    "reqd": 1
   },
   {
