@@ -10,6 +10,7 @@
   "item_name",
   "batch",
   "expiry_date",
+  "qty_requested",
   "qty_dispatched",
   "qty_confirmed",
   "unit_of_measure",
@@ -19,6 +20,8 @@
   {
    "fieldname": "item",
    "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Item",
    "options": "Item",
    "reqd": 1
@@ -27,12 +30,15 @@
    "fieldname": "item_name",
    "fieldtype": "Data",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Item Name",
    "read_only": 1
   },
   {
    "fieldname": "batch",
    "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Batch",
    "options": "Batch",
    "reqd": 1
@@ -41,12 +47,23 @@
    "fetch_from": "batch.expiry_date",
    "fieldname": "expiry_date",
    "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Expiry Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "qty_requested",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Qty Requested",
    "read_only": 1
   },
   {
    "fieldname": "qty_dispatched",
    "fieldtype": "Float",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Qty Dispatched",
    "reqd": 1
   },
@@ -54,17 +71,23 @@
    "allow_on_submit": 1,
    "fieldname": "qty_confirmed",
    "fieldtype": "Float",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Qty Confirmed"
   },
   {
    "fetch_from": "item.stock_uom",
    "fieldname": "unit_of_measure",
    "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Unit of Measure"
   },
   {
    "fieldname": "indent_row_reference",
    "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Indent Row Reference"
   }
  ],
@@ -72,7 +95,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-07-17 15:17:24.945977",
+ "modified": "2026-07-23 14:52:26.880053",
  "modified_by": "Administrator",
  "module": "Stock",
  "name": "Stock Transfer Item",

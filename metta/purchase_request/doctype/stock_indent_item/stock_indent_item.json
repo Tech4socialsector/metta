@@ -60,12 +60,14 @@
   {
    "fieldname": "qty_issued",
    "fieldtype": "Float",
+   "in_list_view": 1,
    "label": "Qty Issued",
    "read_only": 1
   },
   {
    "fieldname": "qty_pending",
    "fieldtype": "Float",
+   "in_list_view": 1,
    "label": "Qty Pending",
    "read_only": 1
   }

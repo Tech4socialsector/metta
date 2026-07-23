@@ -3,10 +3,40 @@
 
 import frappe
 from frappe.model.document import Document
+from frappe.utils import flt
+
+# Statuses reached only after Submitted - a Stock Transfer can move the
+# indent forward through these, but must never touch a Draft/Cancelled indent.
+ISSUING_STATUSES = ("Submitted", "Partially Issued", "Issued")
 
 
 class StockIndent(Document):
 	pass
+
+
+def refresh_issuing_status(stock_indent_name):
+	# Called by Stock Transfer after it updates qty_issued, so the indent's
+	# status always reflects reality without anyone touching it by hand.
+	indent = frappe.get_doc("Stock Indent", stock_indent_name)
+	if indent.status not in ISSUING_STATUSES:
+		return
+
+	total_requested = sum(flt(row.qty_requested) for row in indent.items)
+	total_issued = sum(flt(row.qty_issued) for row in indent.items)
+
+	# Unlike a one-way receiving status, this must also revert cleanly back to
+	# "Submitted" when a Stock Transfer against it is cancelled and
+	# total_issued drops back to zero - not get stuck on "Issued"/"Partially
+	# Issued" forever.
+	if total_issued <= 0:
+		new_status = "Submitted"
+	elif total_issued >= total_requested:
+		new_status = "Issued"
+	else:
+		new_status = "Partially Issued"
+
+	if new_status != indent.status:
+		indent.db_set("status", new_status, update_modified=False)
 
 
 @frappe.whitelist()

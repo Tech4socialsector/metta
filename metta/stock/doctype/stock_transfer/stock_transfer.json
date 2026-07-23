@@ -69,13 +69,15 @@
   {
    "fieldname": "confirmation_date_time",
    "fieldtype": "Datetime",
-   "label": "Confirmation Date Time"
+   "label": "Confirmation Date Time",
+   "read_only": 1
   },
   {
    "fieldname": "confirmed_by",
    "fieldtype": "Link",
    "label": "Confirmed By",
-   "options": "User"
+   "options": "User",
+   "read_only": 1
   },
   {
    "default": "0",
@@ -85,27 +87,33 @@
    "read_only": 1
   },
   {
+   "default": "Not Applicable",
    "fieldname": "discrepancy_status",
    "fieldtype": "Select",
    "label": "Discrepancy Status",
-   "options": "Not Applicable\nPending Review\nWritten Off\nReissued"
+   "options": "Not Applicable\nPending Review\nWritten Off\nReissued",
+   "read_only": 1
   },
   {
    "fieldname": "resolved_by",
    "fieldtype": "Link",
    "label": "Resolved By",
-   "options": "User"
+   "options": "User",
+   "read_only": 1
   },
   {
    "fieldname": "resolution_date",
    "fieldtype": "Date",
-   "label": "Resolution Date"
+   "label": "Resolution Date",
+   "read_only": 1
   },
   {
+   "default": "Draft",
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
    "options": "Draft\nDispatched\nConfirmed\nCancelled",
+   "read_only": 1,
    "reqd": 1
   },
   {
