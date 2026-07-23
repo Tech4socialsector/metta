@@ -6,6 +6,7 @@ from frappe.model.document import Document
 from frappe.utils import flt
 
 from metta.purchase_order.doctype.purchase_order.purchase_order import refresh_receiving_status
+from metta.purchase_order.doctype.purchase_return.purchase_return import update_status_on_replacement_receipt
 from metta.stock.doctype.stock_ledger_entry.stock_ledger_entry import (
 	create_stock_ledger_entry,
 	reverse_stock_ledger_entries,
@@ -32,6 +33,8 @@ class PurchaseReceipt(Document):
 			self.update_purchase_order_qty_received(row)
 		if self.purchase_order:
 			refresh_receiving_status(self.purchase_order)
+		if self.replacement_for:
+			update_status_on_replacement_receipt(self.replacement_for, received=True)
 
 	def on_cancel(self):
 		reverse_stock_ledger_entries("Purchase Receipt", self.name)
@@ -39,6 +42,8 @@ class PurchaseReceipt(Document):
 			self.update_purchase_order_qty_received(row, reverse=True)
 		if self.purchase_order:
 			refresh_receiving_status(self.purchase_order)
+		if self.replacement_for:
+			update_status_on_replacement_receipt(self.replacement_for, received=False)
 
 	def get_or_create_batch(self, row):
 		# Purchase Receipt is where a Batch first has a reason to exist - if

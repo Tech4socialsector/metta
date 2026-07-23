@@ -11,6 +11,7 @@ frappe.ui.form.on("Quality Inspection", {
 	},
 	refresh(frm) {
 		show_get_items_button(frm);
+		show_create_return_button(frm);
 	},
 	// Selecting a value in a Link field doesn't fire "refresh" on its own in
 	// Frappe - only a reload/save does - so without this the button would
@@ -48,6 +49,65 @@ function show_get_items_button(frm) {
 			},
 		});
 	}).addClass("btn-primary");
+}
+
+function show_create_return_button(frm) {
+	if (frm.doc.docstatus !== 1) return;
+	// Whether to offer a return depends on there being a rejected quantity to
+	// send back - not on the Result dropdown, since a row can have some units
+	// rejected (Short Expiry, etc.) while the batch overall is still marked
+	// Accepted.
+	const has_rejected = (frm.doc.items || []).some((row) => flt(row.qty_rejected) > 0);
+	if (!has_rejected) return;
+
+	// A Quality Inspection should only ever produce one Purchase Return - if
+	// one already exists, offer to view it instead of risking a duplicate.
+	frappe.call({
+		method:
+			"metta.purchase_order.doctype.purchase_return.purchase_return.get_existing_return_for_quality_inspection",
+		args: { quality_inspection: frm.doc.name },
+		callback(r) {
+			if (r.message) {
+				frm.add_custom_button(__("View Purchase Return"), () => {
+					frappe.set_route("Form", "Purchase Return", r.message);
+				}).addClass("btn-primary");
+				return;
+			}
+
+			frm.add_custom_button(__("Create Purchase Return"), () => {
+				frappe.call({
+					method:
+						"metta.purchase_order.doctype.purchase_return.purchase_return.get_return_details_from_quality_inspection",
+					args: { quality_inspection: frm.doc.name },
+					callback(r2) {
+						const details = r2.message;
+						if (!details || !details.items.length) {
+							frappe.msgprint(__("No rejected items with a rejected quantity found to return."));
+							return;
+						}
+						frappe.new_doc("Purchase Return", {
+							supplier: details.supplier,
+							against_purchase_receipt: details.against_purchase_receipt,
+							from_warehouse: details.from_warehouse,
+							quality_inspection: frm.doc.name,
+						}).then(() => {
+							const new_frm = cur_frm;
+							new_frm.clear_table("items");
+							details.items.forEach((row) => new_frm.add_child("items", row));
+							new_frm.refresh_field("items");
+							new_frm.dirty();
+							frappe.show_alert({
+								message: __("{0} rejected item(s) pulled in - review and Submit.", [
+									details.items.length,
+								]),
+								indicator: "green",
+							});
+						});
+					},
+				});
+			}).addClass("btn-primary");
+		},
+	});
 }
 
 frappe.ui.form.on("Quality Inspection Item", {

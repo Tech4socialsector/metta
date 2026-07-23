@@ -10,12 +10,16 @@
   "item_name",
   "batch",
   "qty_returned",
+  "rate",
+  "amount",
   "return_reason"
  ],
  "fields": [
   {
    "fieldname": "item",
    "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Item",
    "options": "Item",
    "reqd": 1
@@ -24,12 +28,15 @@
    "fieldname": "item_name",
    "fieldtype": "Data",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Item Name",
    "read_only": 1
   },
   {
    "fieldname": "batch",
    "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Batch",
    "options": "Batch",
    "reqd": 1
@@ -37,12 +44,30 @@
   {
    "fieldname": "qty_returned",
    "fieldtype": "Float",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Qty Returned",
    "reqd": 1
   },
   {
+   "fieldname": "rate",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Rate",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Amount",
+   "read_only": 1
+  },
+  {
    "fieldname": "return_reason",
    "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Return Reason",
    "options": "Damaged\nExpired\nShort Expiry\nExcess\nRecall",
    "reqd": 1
@@ -52,7 +77,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-07-17 15:24:20.236425",
+ "modified": "2026-07-22 22:22:34.494117",
  "modified_by": "Administrator",
  "module": "Purchase Order",
  "name": "Purchase Return Item",

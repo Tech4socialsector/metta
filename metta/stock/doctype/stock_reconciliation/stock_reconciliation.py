@@ -54,3 +54,13 @@ def get_current_stock_qty(item, warehouse):
 	from metta.stock.doctype.stock_balance.stock_balance import get_or_create_stock_balance
 
 	return flt(get_or_create_stock_balance(item, warehouse).actual_qty)
+
+
+@frappe.whitelist()
+def get_batches_for_item(item):
+	# A Batch belongs to exactly one Item (its name is literally "{item}-{batch_no}"),
+	# so a row counting a different item's batch by mistake is always a data error,
+	# not a legitimate case - the Batch field is restricted to this list client-side.
+	if not item:
+		return []
+	return frappe.get_all("Batch", filters={"item": item, "disabled": 0}, pluck="name")

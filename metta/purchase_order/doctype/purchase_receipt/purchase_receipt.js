@@ -21,7 +21,11 @@ frappe.ui.form.on("Purchase Receipt", {
 });
 
 function show_get_items_button(frm) {
-	if (frm.doc.docstatus !== 0 || !frm.doc.purchase_order) return;
+	// A replacement receipt already has its items pre-filled from the
+	// Purchase Return it's replacing - pulling from the Purchase Order here
+	// instead would wipe that out and pull in the rest of the order's
+	// pending items, which has nothing to do with this replacement.
+	if (frm.doc.docstatus !== 0 || !frm.doc.purchase_order || frm.doc.replacement_for) return;
 
 	frm.add_custom_button(__("Get Items From Purchase Order"), () => {
 		frappe.call({

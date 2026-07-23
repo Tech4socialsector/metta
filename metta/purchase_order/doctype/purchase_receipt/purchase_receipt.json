@@ -11,6 +11,7 @@
   "purchase_order",
   "receipt_date_time",
   "receiving_warehouse",
+  "replacement_for",
   "items",
   "amended_from"
  ],
@@ -41,6 +42,13 @@
    "label": "Receiving Warehouse",
    "options": "Warehouse",
    "reqd": 1
+  },
+  {
+   "fieldname": "replacement_for",
+   "fieldtype": "Link",
+   "label": "Replacement For",
+   "options": "Purchase Return",
+   "read_only": 1
   },
   {
    "fieldname": "items",

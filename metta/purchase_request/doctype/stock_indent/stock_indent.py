@@ -19,16 +19,13 @@ def search_items_for_indent(warehouse=None, search_term=""):
 
 	items = frappe.get_all(
 		"Item",
-		fields=["name as item_code", "item_name", "manufacturer", "standard_purchase_rate", "rack_location"],
+		fields=["name as item_code", "item_name", "manufacturer", "rack_location"],
 		filters=filters,
 		limit=20,
 	)
 
 	result = []
 	for it in items:
-		# Only Purchase Receipt currently keeps Stock Balance updated - other
-		# stock-moving doctypes still need the same logic wired in, so this
-		# may read 0 for movements that haven't been extended yet.
 		avail_qty = 0
 		if warehouse:
 			avail_qty = frappe.db.get_value(
@@ -40,7 +37,6 @@ def search_items_for_indent(warehouse=None, search_term=""):
 				"name": it.item_name,
 				"avail_qty": avail_qty,
 				"manufacturer": it.manufacturer or "",
-				"last_pur_rate": it.standard_purchase_rate or 0,
 				"rack_location": it.rack_location or "",
 			}
 		)

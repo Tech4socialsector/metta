@@ -9,6 +9,7 @@
  "field_order": [
   "supplier",
   "against_purchase_receipt",
+  "quality_inspection",
   "return_date_time",
   "from_warehouse",
   "items",
@@ -29,6 +30,13 @@
    "fieldtype": "Link",
    "label": "Against Purchase Receipt",
    "options": "Purchase Receipt"
+  },
+  {
+   "fieldname": "quality_inspection",
+   "fieldtype": "Link",
+   "label": "Created From Quality Inspection",
+   "options": "Quality Inspection",
+   "read_only": 1
   },
   {
    "fieldname": "return_date_time",
@@ -60,7 +68,7 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "Draft\nSubmitted\nCredit Received\nCancelled",
+   "options": "Draft\nSubmitted\nCredit Received\nReplacement Pending\nReplacement Received\nCancelled",
    "reqd": 1
   },
   {
