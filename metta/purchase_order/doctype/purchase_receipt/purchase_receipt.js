@@ -73,6 +73,20 @@ frappe.ui.form.on("Purchase Receipt Item", {
 			frappe.model.set_value(cdt, cdn, "unit_of_measure", r.purchase_uom || "");
 			frappe.model.set_value(cdt, cdn, "item_name", r.item_name || "");
 		});
+		// If this Item already has a Batch on record, pre-fill it as a
+		// convenience - still just a starting point, not a lock; change it
+		// for a genuinely new delivery with its own new batch number.
+		frappe.call({
+			method:
+				"metta.purchase_order.doctype.purchase_receipt.purchase_receipt.get_latest_batch_for_item",
+			args: { item: row.item },
+			callback(r) {
+				const batch = r.message;
+				if (!batch) return;
+				frappe.model.set_value(cdt, cdn, "batch_no", batch.batch_no || "");
+				frappe.model.set_value(cdt, cdn, "expiry_date", batch.expiry_date || "");
+			},
+		});
 		// Qty Ordered can't be a plain fetch_from - it depends on both the
 		// Purchase Order and this specific Item, not just the Item alone.
 		if (frm.doc.purchase_order) {

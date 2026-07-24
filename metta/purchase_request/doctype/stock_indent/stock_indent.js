@@ -3,6 +3,9 @@
 
 frappe.ui.form.on("Stock Indent", {
 	refresh(frm) {
+		if (frm.is_new() && !frm.doc.requested_by) {
+			frm.set_value("requested_by", frappe.session.user);
+		}
 		render_item_search(frm);
 	},
 	requesting_warehouse(frm) {

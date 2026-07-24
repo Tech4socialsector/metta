@@ -27,9 +27,9 @@
    "reqd": 1
   },
   {
-   "default": "Today",
+   "default": "Now",
    "fieldname": "order_date",
-   "fieldtype": "Date",
+   "fieldtype": "Datetime",
    "in_list_view": 1,
    "label": "Order Date",
    "reqd": 1

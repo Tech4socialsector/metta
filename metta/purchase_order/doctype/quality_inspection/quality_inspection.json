@@ -39,6 +39,7 @@
    "read_only": 1
   },
   {
+    "default": "Now",
    "fieldname": "inspection_date_time",
    "fieldtype": "Datetime",
    "label": "Inspection Date Time",

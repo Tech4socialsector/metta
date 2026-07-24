@@ -127,6 +127,24 @@ def get_qty_ordered(purchase_order, item):
 
 
 @frappe.whitelist()
+def get_latest_batch_for_item(item):
+	# Convenience only - a genuinely new delivery still needs its own batch_no
+	# typed in by hand to match the physical packaging. This just saves
+	# re-typing when the Item picked already has a Batch on record (e.g.
+	# receiving more of an existing batch).
+	if not item:
+		return None
+	batches = frappe.get_all(
+		"Batch",
+		filters={"item": item, "disabled": 0},
+		fields=["batch_no", "expiry_date"],
+		order_by="creation desc",
+		limit=1,
+	)
+	return batches[0] if batches else None
+
+
+@frappe.whitelist()
 def find_matching_quality_inspection(purchase_receipt, item, batch_no):
 	# A Quality Inspection is now keyed to the specific Purchase Receipt it
 	# inspected (not just the Purchase Order, which can have several receipts

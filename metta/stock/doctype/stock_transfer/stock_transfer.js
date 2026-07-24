@@ -8,6 +8,9 @@ frappe.ui.form.on("Stock Transfer", {
 		}));
 	},
 	refresh(frm) {
+		if (frm.is_new() && !frm.doc.issued_by) {
+			frm.set_value("issued_by", frappe.session.user);
+		}
 		show_get_items_button(frm);
 
 		if (frm.doc.docstatus === 1 && frm.doc.status === "Dispatched") {

@@ -33,6 +33,7 @@
    "reqd": 1
   },
   {
+   "default": "Now",
    "fieldname": "request_date_time",
    "fieldtype": "Datetime",
    "in_list_view": 1,

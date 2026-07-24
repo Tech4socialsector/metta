@@ -31,6 +31,7 @@
    "reqd": 1
   },
   {
+    "default":"Now",
    "fieldname": "receipt_date_time",
    "fieldtype": "Datetime",
    "label": "Receipt Date Time",
