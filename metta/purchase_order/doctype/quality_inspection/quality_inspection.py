@@ -2,10 +2,30 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
+from frappe.utils import flt
 
 
 class QualityInspection(Document):
+	def validate(self):
+		# JS keeps Qty Rejected/Qty Accepted live while editing (each is
+		# Qty Delivered minus the other), but validate() is the authoritative
+		# recompute so this is still correct even via the API or an import,
+		# not just when the client script ran.
+		for row in self.items:
+			row.qty_rejected = flt(row.qty_delivered) - flt(row.qty_accepted)
+			if row.qty_rejected < 0:
+				frappe.throw(
+					_("Row #{0}: Qty Accepted cannot be more than Qty Delivered.").format(row.idx)
+				)
+			if row.qty_rejected > 0 and not row.rejection_reason:
+				frappe.throw(
+					_("Row #{0}: Rejection Reason is mandatory when Qty Rejected is greater than 0.").format(
+						row.idx
+					)
+				)
+
 	def on_update(self):
 		self.refresh_purchase_receipt_link()
 

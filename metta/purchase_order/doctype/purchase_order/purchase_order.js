@@ -9,6 +9,29 @@ frappe.ui.form.on("Purchase Order", {
 			filters: { item_type: ["in", ["Medicine", "Consumable", "Asset"]] },
 		}));
 	},
+	onload(frm) {
+		// Best-effort UX: grey out today and earlier in the calendar widget
+		// itself. Not guaranteed to re-apply on every render, so the
+		// expected_delivery change handler below is what actually enforces this.
+		if (frm.fields_dict.expected_delivery) {
+			frm.fields_dict.expected_delivery.df.min_date = frappe.datetime.str_to_obj(
+				frappe.datetime.add_days(frappe.datetime.get_today(), 1)
+			);
+		}
+	},
+	expected_delivery(frm) {
+		// The real gate is validate_expected_delivery() on the server - this
+		// is just an instant popup instead of making the user wait for Save to fail.
+		if (!frm.doc.expected_delivery) return;
+		if (frappe.datetime.get_diff(frm.doc.expected_delivery, frappe.datetime.get_today()) <= 0) {
+			frappe.msgprint({
+				title: __("Invalid Expected Delivery Date"),
+				indicator: "red",
+				message: __("Expected Delivery must be a date after today. Please pick a later date."),
+			});
+			frm.set_value("expected_delivery", "");
+		}
+	},
 	refresh(frm) {
 		calculate_total(frm);
 		frm.toggle_display("item_search_area", frm.doc.docstatus === 0);

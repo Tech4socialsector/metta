@@ -4,7 +4,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import flt, now_datetime
+from frappe.utils import flt, getdate, now_datetime, today
 
 # Statuses reached only after Approved - a Purchase Receipt can move the
 # order forward through these, but must never touch a Rejected/Cancelled/
@@ -22,6 +22,18 @@ class PurchaseOrder(Document):
 			row.amount = flt(row.qty_ordered) * flt(row.rate)
 			total += row.amount
 		self.total_amount = total
+		self.validate_expected_delivery()
+
+	def validate_expected_delivery(self):
+		# A delivery date that's already passed (or is today) isn't a real
+		# future commitment from the supplier. The client blocks this the
+		# moment it's picked, but that's only a convenience - this is the
+		# check an API call or import can't bypass.
+		if self.expected_delivery and getdate(self.expected_delivery) <= getdate(today()):
+			frappe.throw(
+				_("Expected Delivery must be a date after today."),
+				title=_("Invalid Expected Delivery Date"),
+			)
 
 	def on_submit(self):
 		# Status is fully code-driven from here on - nobody types it in, it

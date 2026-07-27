@@ -2,8 +2,9 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
-from frappe.utils import flt
+from frappe.utils import flt, getdate, today
 
 # Statuses reached only after Submitted - a Stock Transfer can move the
 # indent forward through these, but must never touch a Draft/Cancelled indent.
@@ -11,7 +12,20 @@ ISSUING_STATUSES = ("Submitted", "Partially Issued", "Issued")
 
 
 class StockIndent(Document):
-	pass
+	def validate(self):
+		self.validate_required_by()
+
+	def validate_required_by(self):
+		# Required By marks when the requesting ward actually needs this
+		# stock - a date that's already passed (or is today) isn't a real
+		# future deadline. The client blocks this the moment it's picked, but
+		# that's only a convenience - this is the check an API call or import
+		# can't bypass.
+		if self.required_by and getdate(self.required_by) <= getdate(today()):
+			frappe.throw(
+				_("Required By must be a date after today."),
+				title=_("Invalid Required By Date"),
+			)
 
 
 def refresh_issuing_status(stock_indent_name):
