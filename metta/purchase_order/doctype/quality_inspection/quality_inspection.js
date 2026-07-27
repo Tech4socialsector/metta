@@ -10,6 +10,9 @@ frappe.ui.form.on("Quality Inspection", {
 		}));
 	},
 	refresh(frm) {
+		if (frm.is_new() && !frm.doc.inspected_by) {
+			frm.set_value("inspected_by", frappe.session.user);
+		}
 		show_get_items_button(frm);
 		show_create_return_button(frm);
 	},
@@ -120,5 +123,22 @@ frappe.ui.form.on("Quality Inspection Item", {
 		frappe.db.get_value("Item", row.item, "item_name", (r) => {
 			frappe.model.set_value(cdt, cdn, "item_name", r.item_name || "");
 		});
+	},
+	// Qty Accepted and Qty Rejected are two sides of the same number - only
+	// one ever needs to be typed in, the other is always Qty Delivered minus
+	// whichever one was just entered. Whichever field the inspector types
+	// into drives the other, so either workflow (type what passed, or type
+	// what's damaged) works the same way.
+	qty_accepted(frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		if (!row.qty_delivered) return;
+		const qty_rejected = Math.max(0, flt(row.qty_delivered) - flt(row.qty_accepted));
+		frappe.model.set_value(cdt, cdn, "qty_rejected", qty_rejected);
+	},
+	qty_rejected(frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		if (!row.qty_delivered) return;
+		const qty_accepted = Math.max(0, flt(row.qty_delivered) - flt(row.qty_rejected));
+		frappe.model.set_value(cdt, cdn, "qty_accepted", qty_accepted);
 	},
 });

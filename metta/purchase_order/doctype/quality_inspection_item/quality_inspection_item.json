@@ -66,9 +66,11 @@
    "label": "Qty Rejected"
   },
   {
+   "depends_on": "eval:doc.qty_rejected > 0",
    "fieldname": "rejection_reason",
    "fieldtype": "Select",
    "label": "Rejection Reason",
+   "mandatory_depends_on": "eval:doc.qty_rejected > 0",
    "options": "\nDamaged\nExpired\nShort Expiry\nWrong Item\nQuantity Mismatch"
   },
   {

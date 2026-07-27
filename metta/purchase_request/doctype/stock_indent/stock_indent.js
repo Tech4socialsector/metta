@@ -2,11 +2,34 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Stock Indent", {
+	onload(frm) {
+		// Best-effort UX: grey out today and earlier in the calendar widget
+		// itself. Not guaranteed to re-apply on every render, so the
+		// required_by change handler below is what actually enforces this.
+		if (frm.fields_dict.required_by) {
+			frm.fields_dict.required_by.df.min_date = frappe.datetime.str_to_obj(
+				frappe.datetime.add_days(frappe.datetime.get_today(), 1)
+			);
+		}
+	},
 	refresh(frm) {
 		if (frm.is_new() && !frm.doc.requested_by) {
 			frm.set_value("requested_by", frappe.session.user);
 		}
 		render_item_search(frm);
+	},
+	required_by(frm) {
+		// The real gate is validate_required_by() on the server - this is
+		// just an instant popup instead of making the user wait for Save to fail.
+		if (!frm.doc.required_by) return;
+		if (frappe.datetime.get_diff(frm.doc.required_by, frappe.datetime.get_today()) <= 0) {
+			frappe.msgprint({
+				title: __("Invalid Required By Date"),
+				indicator: "red",
+				message: __("Required By must be a date after today. Please pick a later date."),
+			});
+			frm.set_value("required_by", "");
+		}
 	},
 	requesting_warehouse(frm) {
 		// Avail Qty in the search results depends on which warehouse is
