@@ -9,6 +9,8 @@
  "field_order": [
   "purchase_bill",
   "supplier",
+  "total_amount",
+  "balance_due",
   "payment_date",
   "amount_paid",
   "payment_mode",
@@ -30,6 +32,20 @@
    "fieldname": "supplier",
    "fieldtype": "Data",
    "label": "Supplier",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "purchase_bill.total_amount",
+   "fieldname": "total_amount",
+   "fieldtype": "Currency",
+   "label": "Total Bill Amount",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "purchase_bill.balance_due",
+   "fieldname": "balance_due",
+   "fieldtype": "Currency",
+   "label": "Balance Due (Before This Payment)",
    "read_only": 1
   },
   {

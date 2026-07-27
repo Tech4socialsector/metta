@@ -6,7 +6,36 @@ from frappe.model.document import Document
 
 
 class QualityInspection(Document):
-	pass
+	def on_update(self):
+		self.refresh_purchase_receipt_link()
+
+	def on_cancel(self):
+		self.refresh_purchase_receipt_link()
+
+	def on_trash(self):
+		self.refresh_purchase_receipt_link()
+
+	def refresh_purchase_receipt_link(self):
+		# Keeps the Purchase Receipt list's "Linked Quality Inspection" column
+		# accurate regardless of how this was created, cancelled, or deleted -
+		# not just when it happened via the receipt's own button.
+		if not self.purchase_receipt:
+			return
+		existing = get_existing_inspection_for_purchase_receipt(self.purchase_receipt)
+		frappe.db.set_value("Purchase Receipt", self.purchase_receipt, "linked_quality_inspection", existing or "")
+
+
+@frappe.whitelist()
+def get_existing_inspection_for_purchase_receipt(purchase_receipt):
+	# One Purchase Receipt should only ever get one Quality Inspection (it
+	# already covers every item on the receipt in one go) - without this, a
+	# "Create Quality Inspection" button on the receipt would keep spawning
+	# duplicates for the same delivery.
+	if not purchase_receipt:
+		return None
+	return frappe.db.get_value(
+		"Quality Inspection", {"purchase_receipt": purchase_receipt, "docstatus": ["!=", 2]}, "name"
+	)
 
 
 @frappe.whitelist()

@@ -92,10 +92,24 @@ frappe.ui.form.on("Purchase Return Item", {
 					calculate_amount(frm, cdt, cdn);
 				},
 			});
+			// Qty Returned is in the same Purchase UOM the item was received
+			// in - the conversion factor to Stock UOM has to come from that
+			// same Purchase Receipt, not guessed from the Item master alone.
+			frappe.call({
+				method: "metta.purchase_order.doctype.purchase_return.purchase_return.get_uom_details_for_item",
+				args: { against_purchase_receipt: frm.doc.against_purchase_receipt, item: row.item },
+				callback(r) {
+					const details = r.message || {};
+					frappe.model.set_value(cdt, cdn, "unit_of_measure", details.unit_of_measure || "");
+					frappe.model.set_value(cdt, cdn, "conversion_factor", flt(details.conversion_factor) || 1);
+					calculate_stock_qty(frm, cdt, cdn);
+				},
+			});
 		}
 	},
 	qty_returned(frm, cdt, cdn) {
 		calculate_amount(frm, cdt, cdn);
+		calculate_stock_qty(frm, cdt, cdn);
 	},
 	rate(frm, cdt, cdn) {
 		calculate_amount(frm, cdt, cdn);
@@ -112,6 +126,11 @@ function calculate_amount(frm, cdt, cdn) {
 	const row = locals[cdt][cdn];
 	frappe.model.set_value(cdt, cdn, "amount", flt(row.qty_returned) * flt(row.rate));
 	calculate_total(frm);
+}
+
+function calculate_stock_qty(frm, cdt, cdn) {
+	const row = locals[cdt][cdn];
+	frappe.model.set_value(cdt, cdn, "stock_qty", flt(row.qty_returned) * (flt(row.conversion_factor) || 1));
 }
 
 function calculate_total(frm) {

@@ -13,6 +13,8 @@
   "receiving_warehouse",
   "replacement_for",
   "items",
+  "linked_quality_inspection",
+  "linked_purchase_bill",
   "amended_from"
  ],
  "fields": [
@@ -57,6 +59,24 @@
    "label": "Items",
    "options": "Purchase Receipt Item",
    "reqd": 1
+  },
+  {
+   "fieldname": "linked_quality_inspection",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Linked Quality Inspection",
+   "options": "Quality Inspection",
+   "read_only": 1
+  },
+  {
+   "fieldname": "linked_purchase_bill",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Linked Purchase Bill",
+   "options": "Purchase Bill",
+   "read_only": 1
   },
   {
    "fieldname": "amended_from",

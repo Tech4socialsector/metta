@@ -32,6 +32,24 @@ class PurchaseBill(Document):
 		else:
 			self.payment_status = "Paid"
 
+	def on_update(self):
+		self.refresh_purchase_receipt_link()
+
+	def on_cancel(self):
+		self.refresh_purchase_receipt_link()
+
+	def on_trash(self):
+		self.refresh_purchase_receipt_link()
+
+	def refresh_purchase_receipt_link(self):
+		# Keeps the Purchase Receipt list's "Linked Purchase Bill" column
+		# accurate regardless of how this was created, cancelled, or deleted -
+		# not just when it happened via the receipt's own button.
+		if not self.purchase_receipt:
+			return
+		existing = get_existing_bill_for_purchase_receipt(self.purchase_receipt)
+		frappe.db.set_value("Purchase Receipt", self.purchase_receipt, "linked_purchase_bill", existing or "")
+
 
 def update_amount_paid(purchase_bill_name, delta):
 	# Payment Entry calls this on submit/cancel instead of going through a
@@ -52,6 +70,18 @@ def update_amount_paid(purchase_bill_name, delta):
 	bill.db_set("amount_paid", new_amount_paid, update_modified=False)
 	bill.db_set("balance_due", balance_due, update_modified=False)
 	bill.db_set("payment_status", status, update_modified=False)
+
+
+@frappe.whitelist()
+def get_existing_bill_for_purchase_receipt(purchase_receipt):
+	# One Purchase Receipt should only ever get one Purchase Bill - without
+	# this, a "Create Purchase Bill" button on the receipt would keep
+	# spawning duplicate bills for the same delivery.
+	if not purchase_receipt:
+		return None
+	return frappe.db.get_value(
+		"Purchase Bill", {"purchase_receipt": purchase_receipt, "docstatus": ["!=", 2]}, "name"
+	)
 
 
 @frappe.whitelist()

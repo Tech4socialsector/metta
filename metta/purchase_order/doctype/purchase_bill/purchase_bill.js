@@ -10,6 +10,7 @@ frappe.ui.form.on("Purchase Bill", {
 	refresh(frm) {
 		calculate_totals(frm);
 		show_get_items_button(frm);
+		show_create_payment_entry_button(frm);
 	},
 	purchase_receipt(frm) {
 		frm.refresh();
@@ -50,6 +51,12 @@ frappe.ui.form.on("Purchase Bill Item", {
 function show_get_items_button(frm) {
 	if (frm.doc.docstatus !== 0 || !frm.doc.purchase_receipt) return;
 
+	// The button always clears the table before repopulating, so once real
+	// items are already present, showing it again would only risk wiping out
+	// billing work already entered.
+	const has_real_items = (frm.doc.items || []).some((row) => row.item);
+	if (has_real_items) return;
+
 	frm.add_custom_button(__("Get Items From Purchase Receipt"), () => {
 		frappe.call({
 			method: "metta.purchase_order.doctype.purchase_bill.purchase_bill.get_items_from_receipt",
@@ -69,6 +76,21 @@ function show_get_items_button(frm) {
 					indicator: "green",
 				});
 			},
+		});
+	}).addClass("btn-primary");
+}
+
+function show_create_payment_entry_button(frm) {
+	// Multiple partial payments against the same bill are expected (pay 40
+	// now, 60 later) - no duplicate check needed here, unlike the other
+	// "Create X" buttons that should only ever produce one linked document.
+	if (frm.doc.docstatus !== 1 || flt(frm.doc.balance_due) <= 0) return;
+
+	frm.add_custom_button(__("Create Payment Entry"), () => {
+		frappe.new_doc("Payment Entry", {
+			purchase_bill: frm.doc.name,
+			amount_paid: frm.doc.balance_due,
+			paid_by: frappe.session.user,
 		});
 	}).addClass("btn-primary");
 }

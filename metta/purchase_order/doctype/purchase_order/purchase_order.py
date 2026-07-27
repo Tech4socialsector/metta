@@ -81,3 +81,54 @@ def refresh_receiving_status(purchase_order_name):
 
 	if new_status != po.status:
 		po.db_set("status", new_status, update_modified=False)
+
+
+@frappe.whitelist()
+def get_available_qty(item):
+	# Store is the central stock point everything is ordered into - checked
+	# here specifically (not summed across every warehouse) so the number
+	# reflects what's actually usable to fulfil new demand from.
+	if not item:
+		return 0
+	return flt(frappe.db.get_value("Stock Balance", {"item": item, "warehouse": "Store"}, "actual_qty")) or 0
+
+
+@frappe.whitelist()
+def get_item_defaults_for_order(item):
+	if not item:
+		return {}
+	data = frappe.db.get_value("Item", item, ["purchase_uom", "standard_purchase_rate"], as_dict=True) or {}
+	return {"unit_of_measure": data.get("purchase_uom") or "", "rate": flt(data.get("standard_purchase_rate"))}
+
+
+@frappe.whitelist()
+def search_items_for_order(search_term=""):
+	# Same search-and-add pattern as Stock Indent's item widget, but Avail Qty
+	# here is Store's balance specifically - the point is to catch, right at
+	# the moment of ordering, whether Store already has enough on hand.
+	filters = {"item_type": ["in", ["Medicine", "Consumable", "Asset"]]}
+	if search_term:
+		filters["item_name"] = ["like", f"%{search_term}%"]
+
+	items = frappe.get_all(
+		"Item",
+		fields=["name as item_code", "item_name", "manufacturer", "rack_location"],
+		filters=filters,
+		limit=20,
+	)
+
+	result = []
+	for it in items:
+		avail_qty = (
+			frappe.db.get_value("Stock Balance", {"item": it.item_code, "warehouse": "Store"}, "actual_qty") or 0
+		)
+		result.append(
+			{
+				"item_code": it.item_code,
+				"name": it.item_name,
+				"avail_qty": avail_qty,
+				"manufacturer": it.manufacturer or "",
+				"rack_location": it.rack_location or "",
+			}
+		)
+	return result

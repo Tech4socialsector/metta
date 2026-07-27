@@ -29,12 +29,18 @@ class PurchaseReturn(Document):
 		total = 0
 		for row in self.items:
 			row.amount = flt(row.qty_returned) * flt(row.rate)
+			# Qty Returned is in the Purchase UOM (e.g. "1 box"), same as it
+			# was recorded on the original Purchase Receipt - stock itself is
+			# tracked in the Stock UOM, so the actual ledger impact has to go
+			# through the same conversion the receipt applied, not the raw
+			# Purchase UOM quantity.
+			row.stock_qty = flt(row.qty_returned) * flt(row.conversion_factor or 1)
 			total += row.amount
 		self.total_credit_amount = total
 
 	def on_submit(self):
 		for row in self.items:
-			validate_sufficient_stock(row.item, self.from_warehouse, row.qty_returned)
+			validate_sufficient_stock(row.item, self.from_warehouse, row.stock_qty)
 			create_stock_ledger_entry(
 				item=row.item,
 				warehouse=self.from_warehouse,
@@ -42,7 +48,7 @@ class PurchaseReturn(Document):
 				posting_datetime=self.return_date_time,
 				voucher_type="Purchase Return",
 				voucher_no=self.name,
-				qty_change=-row.qty_returned,
+				qty_change=-row.stock_qty,
 			)
 		self.db_set("status", "Submitted", update_modified=False)
 
@@ -100,6 +106,25 @@ def get_rate_for_item(against_purchase_receipt, item):
 
 
 @frappe.whitelist()
+def get_uom_details_for_item(against_purchase_receipt, item):
+	# Qty Returned is entered in the same Purchase UOM the item was received
+	# in - the exact conversion factor used back then lives on that Purchase
+	# Receipt Item row, so reusing it here (rather than re-deriving it) keeps
+	# the return's stock impact consistent with what the receipt recorded.
+	if not (against_purchase_receipt and item):
+		return {"unit_of_measure": "", "conversion_factor": 1}
+	row = frappe.db.get_value(
+		"Purchase Receipt Item",
+		{"parent": against_purchase_receipt, "item": item},
+		["unit_of_measure", "conversion_factor"],
+		as_dict=True,
+	)
+	if not row:
+		return {"unit_of_measure": "", "conversion_factor": 1}
+	return {"unit_of_measure": row.unit_of_measure or "", "conversion_factor": flt(row.conversion_factor) or 1}
+
+
+@frappe.whitelist()
 def get_return_details_from_quality_inspection(quality_inspection):
 	# Only the quantity that actually failed inspection should go back to the
 	# supplier - not the full delivered amount - so this pulls qty_rejected
@@ -115,12 +140,17 @@ def get_return_details_from_quality_inspection(quality_inspection):
 		if not flt(row.qty_rejected):
 			continue
 		rate = get_rate_for_item(qi.purchase_receipt, row.item)
+		uom_details = get_uom_details_for_item(qi.purchase_receipt, row.item)
+		conversion_factor = uom_details["conversion_factor"]
 		items.append(
 			{
 				"item": row.item,
 				"item_name": frappe.db.get_value("Item", row.item, "item_name") or "",
 				"batch": f"{row.item}-{row.batch_no}",
 				"qty_returned": row.qty_rejected,
+				"unit_of_measure": uom_details["unit_of_measure"],
+				"conversion_factor": conversion_factor,
+				"stock_qty": flt(row.qty_rejected) * conversion_factor,
 				"rate": rate,
 				"amount": flt(row.qty_rejected) * flt(rate),
 				"return_reason": QUALITY_INSPECTION_TO_RETURN_REASON.get(row.rejection_reason, ""),
@@ -152,7 +182,19 @@ def get_replacement_receipt_details(purchase_return):
 
 	items = []
 	for row in pret.items:
-		unit_of_measure = frappe.db.get_value("Item", row.item, "purchase_uom") or ""
+		# The original Purchase Order Item always has this filled in (it's
+		# mandatory there) - Item.purchase_uom isn't reliably set on every
+		# item, so falling back to it directly left this blank.
+		unit_of_measure = ""
+		if purchase_order:
+			unit_of_measure = (
+				frappe.db.get_value(
+					"Purchase Order Item", {"parent": purchase_order, "item": row.item}, "unit_of_measure"
+				)
+				or ""
+			)
+		if not unit_of_measure:
+			unit_of_measure = frappe.db.get_value("Item", row.item, "purchase_uom") or ""
 		conversion_factor = (
 			frappe.db.get_value(
 				"Item UOM Conversion", {"parent": row.item, "uom": unit_of_measure}, "conversion_factor"

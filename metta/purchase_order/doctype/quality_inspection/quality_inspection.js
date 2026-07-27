@@ -24,6 +24,12 @@ frappe.ui.form.on("Quality Inspection", {
 function show_get_items_button(frm) {
 	if (frm.doc.docstatus !== 0 || !frm.doc.purchase_receipt) return;
 
+	// The button always clears the table before repopulating, so once real
+	// items are already present, showing it again would only risk wiping out
+	// inspection work already entered.
+	const has_real_items = (frm.doc.items || []).some((row) => row.item);
+	if (has_real_items) return;
+
 	frm.add_custom_button(__("Get Items From Purchase Receipt"), () => {
 		frappe.call({
 			method: "metta.purchase_order.doctype.quality_inspection.quality_inspection.get_items_to_inspect",

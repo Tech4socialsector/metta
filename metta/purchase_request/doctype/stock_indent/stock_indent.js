@@ -139,6 +139,17 @@ function render_item_search(frm) {
 			frappe.msgprint(__("Please enter a Req. Qty greater than 0."));
 			return;
 		}
+
+		// Frappe auto-adds one blank starter row to a new document's required
+		// Table field - remove it before adding the first real item, so it
+		// doesn't linger as an empty Row 1 forever. Only do this when every
+		// existing row is still blank, so later Add clicks keep appending
+		// alongside items already added.
+		const existing_rows = frm.doc.items || [];
+		if (existing_rows.length && existing_rows.every((r) => !r.item)) {
+			frm.clear_table("items");
+		}
+
 		const row = frm.add_child("items", {
 			item: selected.item_code,
 			item_name: selected.name,

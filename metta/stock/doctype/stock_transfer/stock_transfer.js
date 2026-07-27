@@ -64,6 +64,12 @@ frappe.ui.form.on("Stock Transfer", {
 function show_get_items_button(frm) {
 	if (frm.doc.docstatus !== 0 || !frm.doc.against_indent) return;
 
+	// The button always clears the table before repopulating, so once real
+	// items are already present, showing it again would only risk wiping out
+	// batch numbers already entered.
+	const has_real_items = (frm.doc.items || []).some((row) => row.item);
+	if (has_real_items) return;
+
 	frm.add_custom_button(__("Get Items From Stock Indent"), () => {
 		frappe.call({
 			method: "metta.stock.doctype.stock_transfer.stock_transfer.get_pending_items_for_transfer",

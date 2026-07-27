@@ -11,6 +11,7 @@ frappe.ui.form.on("Purchase Receipt", {
 	},
 	refresh(frm) {
 		show_get_items_button(frm);
+		show_create_document_button(frm);
 	},
 	// Selecting a value in a Link field doesn't fire "refresh" on its own in
 	// Frappe - only a reload/save does - so without this the button would
@@ -26,6 +27,12 @@ function show_get_items_button(frm) {
 	// instead would wipe that out and pull in the rest of the order's
 	// pending items, which has nothing to do with this replacement.
 	if (frm.doc.docstatus !== 0 || !frm.doc.purchase_order || frm.doc.replacement_for) return;
+
+	// The button always clears the table before repopulating, so once real
+	// items are already present (pulled in earlier, or entered by hand),
+	// showing it again would only risk wiping out work already done.
+	const has_real_items = (frm.doc.items || []).some((row) => row.item);
+	if (has_real_items) return;
 
 	frm.add_custom_button(__("Get Items From Purchase Order"), () => {
 		frappe.call({
@@ -53,6 +60,124 @@ function show_get_items_button(frm) {
 			},
 		});
 	}).addClass("btn-primary");
+}
+
+function show_create_document_button(frm) {
+	// Quality Inspection can start the moment the receipt is saved (even
+	// still Draft) - inspecting before deciding to finalize the receipt is a
+	// normal order of work here. Billing, though, needs the receipt's
+	// quantities to be final, so that option only ever appears once Submitted.
+	if (frm.is_new() || frm.doc.docstatus === 2) return;
+
+	Promise.all([
+		frappe.call({
+			method:
+				"metta.purchase_order.doctype.quality_inspection.quality_inspection.get_existing_inspection_for_purchase_receipt",
+			args: { purchase_receipt: frm.doc.name },
+		}),
+		frappe.call({
+			method: "metta.purchase_order.doctype.purchase_bill.purchase_bill.get_existing_bill_for_purchase_receipt",
+			args: { purchase_receipt: frm.doc.name },
+		}),
+	]).then(([qiResult, billResult]) => {
+		const existingQI = qiResult.message;
+		const existingBill = billResult.message;
+
+		if (existingQI) {
+			frm.add_custom_button(__("View Quality Inspection"), () => {
+				frappe.set_route("Form", "Quality Inspection", existingQI);
+			});
+		}
+		if (existingBill) {
+			frm.add_custom_button(__("View Purchase Bill"), () => {
+				frappe.set_route("Form", "Purchase Bill", existingBill);
+			});
+		}
+
+		// One button offering only whichever of the two hasn't been created
+		// yet (and are actually valid at this docstatus), instead of two
+		// separate "Create X" buttons sitting side by side.
+		const options = [];
+		if (!existingQI) options.push("Quality Inspection");
+		if (!existingBill && frm.doc.docstatus === 1) options.push("Purchase Bill");
+		if (!options.length) return;
+
+		frm.add_custom_button(__("Create Follow-up Document"), () => {
+			frappe.prompt(
+				[
+					{
+						fieldname: "doctype_choice",
+						label: __("What do you want to create?"),
+						fieldtype: "Select",
+						options: options.join("\n"),
+						reqd: 1,
+					},
+				],
+				(values) => {
+					if (values.doctype_choice === "Quality Inspection") {
+						create_quality_inspection(frm);
+					} else {
+						create_purchase_bill(frm);
+					}
+				},
+				__("Create Follow-up Document")
+			);
+		}).addClass("btn-primary");
+	});
+}
+
+function create_quality_inspection(frm) {
+	frappe.call({
+		method: "metta.purchase_order.doctype.quality_inspection.quality_inspection.get_items_to_inspect",
+		args: { purchase_receipt: frm.doc.name },
+		callback(r) {
+			const rows = r.message || [];
+			frappe.new_doc("Quality Inspection", { purchase_receipt: frm.doc.name }).then(() => {
+				const new_frm = cur_frm;
+				if (rows.length) {
+					new_frm.clear_table("items");
+					rows.forEach((row) => new_frm.add_child("items", row));
+					new_frm.refresh_field("items");
+					new_frm.dirty();
+				}
+				frappe.show_alert({
+					message: __(
+						"{0} item(s) pulled in with Batch No, Expiry Date and Qty already filled in - just record the inspection result.",
+						[rows.length]
+					),
+					indicator: "green",
+				});
+			});
+		},
+	});
+}
+
+function create_purchase_bill(frm) {
+	frappe.call({
+		method: "metta.purchase_order.doctype.purchase_bill.purchase_bill.get_items_from_receipt",
+		args: { purchase_receipt: frm.doc.name },
+		callback(r) {
+			const rows = r.message || [];
+			frappe.new_doc("Purchase Bill", {
+				supplier: frm.doc.supplier,
+				purchase_receipt: frm.doc.name,
+			}).then(() => {
+				const new_frm = cur_frm;
+				if (rows.length) {
+					new_frm.clear_table("items");
+					rows.forEach((row) => new_frm.add_child("items", row));
+					new_frm.refresh_field("items");
+					new_frm.dirty();
+				}
+				frappe.show_alert({
+					message: __("{0} item(s) pulled in - fill in the supplier's Invoice No and Date, then Save.", [
+						rows.length,
+					]),
+					indicator: "green",
+				});
+			});
+		},
+	});
 }
 
 frappe.ui.form.on("Purchase Receipt Item", {

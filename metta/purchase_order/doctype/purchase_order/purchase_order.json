@@ -13,6 +13,7 @@
   "approved_by",
   "approved_date_time",
   "rejection_reason",
+  "item_search_area",
   "items",
   "total_amount",
   "amended_from"
@@ -66,6 +67,11 @@
    "fieldtype": "Small Text",
    "label": "Rejection Reason",
    "read_only": 1
+  },
+  {
+   "fieldname": "item_search_area",
+   "fieldtype": "HTML",
+   "label": "Add Item"
   },
   {
    "fieldname": "items",

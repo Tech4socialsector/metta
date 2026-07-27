@@ -8,6 +8,7 @@
  "field_order": [
   "item",
   "item_name",
+  "available_qty",
   "qty_ordered",
   "unit_of_measure",
   "rate",
@@ -29,6 +30,13 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Item Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "available_qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Available Qty (Store)",
    "read_only": 1
   },
   {

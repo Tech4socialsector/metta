@@ -10,6 +10,9 @@
   "item_name",
   "batch",
   "qty_returned",
+  "unit_of_measure",
+  "conversion_factor",
+  "stock_qty",
   "rate",
   "amount",
   "return_reason"
@@ -48,6 +51,26 @@
    "in_standard_filter": 1,
    "label": "Qty Returned",
    "reqd": 1
+  },
+  {
+   "fieldname": "unit_of_measure",
+   "fieldtype": "Data",
+   "label": "Unit of Measure",
+   "read_only": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "conversion_factor",
+   "fieldtype": "Float",
+   "label": "Conversion Factor",
+   "read_only": 1
+  },
+  {
+   "fieldname": "stock_qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Stock Qty",
+   "read_only": 1
   },
   {
    "fieldname": "rate",
