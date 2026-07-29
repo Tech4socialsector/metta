@@ -48,7 +48,16 @@ class PurchaseBill(Document):
 		if not self.purchase_receipt:
 			return
 		existing = get_existing_bill_for_purchase_receipt(self.purchase_receipt)
-		frappe.db.set_value("Purchase Receipt", self.purchase_receipt, "linked_purchase_bill", existing or "")
+		# update_modified=False - this is a side effect of saving a *different*
+		# document, not something someone editing this Purchase Receipt did;
+		# bumping its timestamp would wrongly collide with their own edit.
+		frappe.db.set_value(
+			"Purchase Receipt",
+			self.purchase_receipt,
+			"linked_purchase_bill",
+			existing or "",
+			update_modified=False,
+		)
 
 
 def update_amount_paid(purchase_bill_name, delta):

@@ -13,6 +13,7 @@
   "unit_of_measure",
   "rate",
   "amount",
+  "qty_received",
   "indent_reference"
  ],
  "fields": [
@@ -70,6 +71,14 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Amount",
+   "read_only": 1
+  },
+  {
+   "fieldname": "qty_received",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Qty Received",
    "read_only": 1
   },
   {
