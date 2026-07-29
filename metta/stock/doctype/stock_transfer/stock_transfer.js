@@ -135,10 +135,24 @@ frappe.ui.form.on("Stock Transfer Item", {
 		const row = locals[cdt][cdn];
 		if (!row.item) {
 			frappe.model.set_value(cdt, cdn, "item_name", "");
+			frappe.model.set_value(cdt, cdn, "batch", "");
 			return;
 		}
 		frappe.db.get_value("Item", row.item, "item_name", (r) => {
 			frappe.model.set_value(cdt, cdn, "item_name", r.item_name || "");
+		});
+		// If this Item already has a Batch on record, pre-fill it as a
+		// convenience - still just a starting point, not a lock; change it
+		// if this transfer is actually moving stock from a different batch.
+		frappe.call({
+			method:
+				"metta.purchase_order.doctype.purchase_receipt.purchase_receipt.get_latest_batch_for_item",
+			args: { item: row.item },
+			callback(r) {
+				const batch = r.message;
+				if (!batch) return;
+				frappe.model.set_value(cdt, cdn, "batch", batch.name || "");
+			},
 		});
 	},
 	qty_dispatched(frm, cdt, cdn) {

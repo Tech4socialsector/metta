@@ -137,7 +137,7 @@ def get_latest_batch_for_item(item):
 	batches = frappe.get_all(
 		"Batch",
 		filters={"item": item, "disabled": 0},
-		fields=["batch_no", "expiry_date"],
+		fields=["name", "batch_no", "expiry_date"],
 		order_by="creation desc",
 		limit=1,
 	)

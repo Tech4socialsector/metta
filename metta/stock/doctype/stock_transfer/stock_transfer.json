@@ -42,6 +42,7 @@
    "fieldname": "from_warehouse",
    "fieldtype": "Link",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "From Warehouse",
    "options": "Warehouse",
    "reqd": 1
@@ -50,6 +51,7 @@
    "fieldname": "to_warehouse",
    "fieldtype": "Link",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "To Warehouse",
    "options": "Warehouse",
    "reqd": 1
@@ -57,15 +59,17 @@
   {
    "default": "Now",
    "fieldname": "dispatch_date_time",
-   "fieldtype": "Datetime",
+   "fieldtype": "Date",
    "in_list_view": 1,
-   "label": "Dispatch Date Time",
+   "in_standard_filter": 1,
+   "label": "Dispatch Date",
    "reqd": 1
   },
   {
    "fieldname": "issued_by",
    "fieldtype": "Link",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Issued By",
    "options": "User",
    "reqd": 1
@@ -142,7 +146,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-07-21 15:20:40.796073",
+ "modified": "2026-07-28 17:06:42.535888",
  "modified_by": "Administrator",
  "module": "Stock",
  "name": "Stock Transfer",
