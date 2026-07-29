@@ -26,17 +26,42 @@ class SalesBill(Document):
 
 		# JS keeps this live while editing, but validate() is the authoritative
 		# recompute, same as Purchase Bill's subtotal/gst/total.
-		discount_percent = flt(self.discount_percent)
+		#
+		# discount_percent is fetched straight from the Category Price
+		# Adjustment record, but that record's own adjustment_type ("Discount"
+		# vs "Increase") and discount_status ("Active"/"Inactive") aren't
+		# fetched onto Sales Bill anywhere - so they have to be looked up here
+		# to actually be enforced, not just displayed.
+		adjustment_type = None
+		if self.billing_category:
+			category = frappe.db.get_value(
+				"Category Price Adjustment", self.billing_category, ["adjustment_type", "discount_status"], as_dict=True
+			)
+			if category and category.discount_status == "Active":
+				adjustment_type = category.adjustment_type
+
+		if adjustment_type not in ("Discount", "Increase"):
+			# No active adjustment applies - an Inactive category, or one with
+			# no adjustment_type set, contributes nothing to the bill.
+			self.discount_percent = 0
+
+		# Signed so "Discount" shrinks the taxable value and "Increase" grows
+		# it, using the same +/- formula either way.
+		signed_percent = -flt(self.discount_percent) if adjustment_type == "Increase" else flt(self.discount_percent)
+
 		subtotal = 0
 		gst_total = 0
 		for row in self.items:
 			row.amount = flt(row.qty) * flt(row.rate)
-			taxable_value = row.amount * (1 - discount_percent / 100)
+			taxable_value = row.amount * (1 - signed_percent / 100)
 			row.gst_amount = taxable_value * flt(row.gst_percent) / 100
 			subtotal += row.amount
 			gst_total += row.gst_amount
 		self.subtotal = subtotal
-		self.discount_amount = subtotal * discount_percent / 100
+		# discount_amount stays signed too, so the same subtraction below
+		# works for both directions: positive shrinks net_amount (Discount),
+		# negative grows it (Increase).
+		self.discount_amount = subtotal * signed_percent / 100
 		self.gst_amount = gst_total
 		self.net_amount = subtotal - self.discount_amount + gst_total
 
@@ -58,3 +83,15 @@ class SalesBill(Document):
 
 	def on_cancel(self):
 		reverse_stock_ledger_entries("Sales Bill", self.name)
+
+
+@frappe.whitelist()
+def get_category_adjustment(billing_category):
+	# JS needs the same adjustment_type/discount_status check validate() does,
+	# so the live total preview matches what actually gets saved.
+	if not billing_category:
+		return {"adjustment_type": None, "discount_status": None}
+	category = frappe.db.get_value(
+		"Category Price Adjustment", billing_category, ["adjustment_type", "discount_status"], as_dict=True
+	)
+	return category or {"adjustment_type": None, "discount_status": None}

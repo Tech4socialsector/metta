@@ -101,6 +101,7 @@
    "fieldname": "uid",
    "fieldtype": "Data",
    "label": "Identification Number (UID)",
+   "reqd": 1,
    "unique": 1
   },
   {

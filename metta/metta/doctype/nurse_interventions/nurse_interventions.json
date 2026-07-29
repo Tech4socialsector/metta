@@ -73,12 +73,12 @@
    "label": "Patient name"
   },
   {
-   "fetch_from": "patient_unique_id.address",
    "fieldname": "age",
    "fieldtype": "Int",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Age"
+   "label": "Age",
+   "read_only": 1
   },
   {
    "fieldname": "gender",
@@ -157,7 +157,8 @@
   {
    "fieldname": "bmi",
    "fieldtype": "Data",
-   "label": "BMI"
+   "label": "BMI",
+   "read_only": 1
   },
   {
    "fieldname": "bmi_category",
@@ -165,7 +166,8 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "BMI category",
-   "options": "\nUnderweight\nNormal\nOverweight\nObese"
+   "options": "\nUnderweight\nNormal\nOverweight\nObese",
+   "read_only": 1
   },
   {
    "fieldname": "blood_pressure_mmhg",

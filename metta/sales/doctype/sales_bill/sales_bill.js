@@ -15,6 +15,25 @@ frappe.ui.form.on("Sales Bill", {
 	discount_percent(frm) {
 		calculate_totals(frm);
 	},
+	// billing_category is itself a fetch_from off "patient" - its change event
+	// still fires normally (this is a plain top-level field, not a grid row),
+	// so this catches it either way: picked by hand, or arriving via the
+	// patient fetch.
+	billing_category(frm) {
+		if (!frm.doc.billing_category) {
+			frm._category_adjustment = null;
+			calculate_totals(frm);
+			return;
+		}
+		frappe.call({
+			method: "metta.sales.doctype.sales_bill.sales_bill.get_category_adjustment",
+			args: { billing_category: frm.doc.billing_category },
+			callback(r) {
+				frm._category_adjustment = r.message || null;
+				calculate_totals(frm);
+			},
+		});
+	},
 });
 
 frappe.ui.form.on("Sales Bill Item", {
@@ -65,20 +84,28 @@ function calculate_amount(frm, cdt, cdn) {
 }
 
 function calculate_totals(frm) {
-	const discount_percent = flt(frm.doc.discount_percent);
+	// Mirrors the server's validate() exactly: an Inactive category (or one
+	// with no adjustment_type) contributes nothing, and "Increase" flips the
+	// sign so it grows the bill instead of shrinking it.
+	const adjustment = frm._category_adjustment;
+	const adjustment_type =
+		adjustment && adjustment.discount_status === "Active" ? adjustment.adjustment_type : null;
+	const raw_percent = ["Discount", "Increase"].includes(adjustment_type) ? flt(frm.doc.discount_percent) : 0;
+	const signed_percent = adjustment_type === "Increase" ? -raw_percent : raw_percent;
+
 	let subtotal = 0;
 	let gst_total = 0;
 
 	(frm.doc.items || []).forEach((row) => {
 		const amount = flt(row.amount);
-		const taxable_value = amount * (1 - discount_percent / 100);
+		const taxable_value = amount * (1 - signed_percent / 100);
 		const gst_amount = (taxable_value * flt(row.gst_percent)) / 100;
 		frappe.model.set_value(row.doctype, row.name, "gst_amount", gst_amount);
 		subtotal += amount;
 		gst_total += gst_amount;
 	});
 
-	const discount_amount = (subtotal * discount_percent) / 100;
+	const discount_amount = (subtotal * signed_percent) / 100;
 	frm.set_value("subtotal", subtotal);
 	frm.set_value("discount_amount", discount_amount);
 	frm.set_value("gst_amount", gst_total);

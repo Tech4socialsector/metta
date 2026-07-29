@@ -1,7 +1,7 @@
 {
  "actions": [],
  "autoname": "SLE-.YYYY.-.#####",
- "creation": "2026-07-17 21:00:00.000000",
+ "creation": "2026-07-17 21:00:00",
  "description": "System doctype - created on_submit of stock transactions, reversed on cancel. No manual entry.",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -23,6 +23,7 @@
    "fieldname": "item",
    "fieldtype": "Link",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Item",
    "options": "Item",
    "reqd": 1
@@ -32,6 +33,7 @@
    "fieldname": "item_name",
    "fieldtype": "Data",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Item Name",
    "read_only": 1
   },
@@ -39,6 +41,7 @@
    "fieldname": "warehouse",
    "fieldtype": "Link",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Warehouse",
    "options": "Warehouse",
    "reqd": 1
@@ -53,9 +56,10 @@
   },
   {
    "fieldname": "posting_datetime",
-   "fieldtype": "Datetime",
+   "fieldtype": "Date",
    "in_list_view": 1,
-   "label": "Posting Date & Time",
+   "in_standard_filter": 1,
+   "label": "Posting Date",
    "reqd": 1
   },
   {
@@ -102,7 +106,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-17 21:00:00.000000",
+ "modified": "2026-07-28 16:50:41.298394",
  "modified_by": "Administrator",
  "module": "Stock",
  "name": "Stock Ledger Entry",
@@ -110,16 +114,13 @@
  "owner": "Administrator",
  "permissions": [
   {
-   "create": 0,
-   "delete": 0,
    "email": 1,
    "export": 1,
    "print": 1,
    "read": 1,
    "report": 1,
    "role": "System Manager",
-   "share": 1,
-   "write": 0
+   "share": 1
   }
  ],
  "row_format": "Dynamic",

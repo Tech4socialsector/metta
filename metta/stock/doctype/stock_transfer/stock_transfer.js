@@ -26,6 +26,40 @@ frappe.ui.form.on("Stock Transfer", {
 			}).addClass("btn-primary");
 		}
 
+		if (frm.doc.docstatus === 1 && frm.doc.status === "Confirmed") {
+			frm.add_custom_button(__("Create Return Transfer"), () => {
+				frappe.call({
+					method: "metta.stock.doctype.stock_transfer.stock_transfer.get_return_transfer_details",
+					args: { stock_transfer: frm.doc.name },
+					callback(r) {
+						const details = r.message;
+						if (!details || !details.items.length) {
+							frappe.msgprint(__("Nothing was actually received on this transfer to return."));
+							return;
+						}
+						frappe.new_doc("Stock Transfer", {
+							from_warehouse: details.from_warehouse,
+							to_warehouse: details.to_warehouse,
+							against_transfer: details.against_transfer,
+						}).then(() => {
+							const new_frm = cur_frm;
+							new_frm.clear_table("items");
+							details.items.forEach((row) => new_frm.add_child("items", row));
+							new_frm.refresh_field("items");
+							new_frm.dirty();
+							frappe.show_alert({
+								message: __(
+									"{0} item(s) pulled in - fill in Batch No, and change To Warehouse if this is going somewhere other than back to {1}.",
+									[details.items.length, details.to_warehouse]
+								),
+								indicator: "green",
+							});
+						});
+					},
+				});
+			});
+		}
+
 		if (frm.doc.has_discrepancy && frm.doc.discrepancy_status === "Pending Review") {
 			frm.add_custom_button(__("Resolve Discrepancy"), () => {
 				frappe.prompt(

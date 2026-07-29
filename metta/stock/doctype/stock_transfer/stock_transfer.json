@@ -7,6 +7,7 @@
  "engine": "InnoDB",
  "field_order": [
   "against_indent",
+  "against_transfer",
   "from_warehouse",
   "to_warehouse",
   "dispatch_date_time",
@@ -23,10 +24,19 @@
  ],
  "fields": [
   {
+   "depends_on": "eval:!doc.against_transfer",
    "fieldname": "against_indent",
    "fieldtype": "Link",
    "label": "Against Indent",
    "options": "Stock Indent"
+  },
+  {
+   "depends_on": "eval:!doc.against_indent",
+   "fieldname": "against_transfer",
+   "fieldtype": "Link",
+   "label": "Return Of Transfer",
+   "options": "Stock Transfer",
+   "read_only": 1
   },
   {
    "fieldname": "from_warehouse",

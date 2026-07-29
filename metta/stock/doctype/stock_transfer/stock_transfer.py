@@ -128,6 +128,42 @@ class StockTransfer(Document):
 
 
 @frappe.whitelist()
+def get_return_transfer_details(stock_transfer):
+	# A "return" isn't a special document - it's just a normal Stock Transfer
+	# in the opposite direction, using whatever was actually confirmed as
+	# received (not what was originally dispatched, in case a discrepancy
+	# meant less arrived). The suggested destination is where it came from,
+	# but that's an ordinary editable field - it can just as easily go
+	# onward to a different warehouse instead of back to the source.
+	original = frappe.get_doc("Stock Transfer", stock_transfer)
+	if original.status != "Confirmed":
+		frappe.throw(_("Only a Confirmed Stock Transfer has stock on hand to return."))
+
+	items = []
+	for row in original.items:
+		qty = flt(row.qty_confirmed)
+		if qty <= 0:
+			continue
+		items.append(
+			{
+				"item": row.item,
+				"item_name": row.item_name,
+				"batch": row.batch,
+				"qty_dispatched": qty,
+				"qty_confirmed": qty,
+				"unit_of_measure": row.unit_of_measure,
+			}
+		)
+
+	return {
+		"from_warehouse": original.to_warehouse,
+		"to_warehouse": original.from_warehouse,
+		"against_transfer": original.name,
+		"items": items,
+	}
+
+
+@frappe.whitelist()
 def get_pending_items_for_transfer(stock_indent):
 	# Only what's still outstanding is worth pulling in - if part of the
 	# indent was already fulfilled by an earlier Stock Transfer, that portion

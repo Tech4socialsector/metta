@@ -5,7 +5,6 @@
  "creation": "2026-07-17 15:18:31.639330",
  "doctype": "DocType",
  "engine": "InnoDB",
- "is_submittable": 1,
  "field_order": [
   "supplier",
   "against_purchase_receipt",
@@ -28,6 +27,7 @@
   {
    "fieldname": "against_purchase_receipt",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Against Purchase Receipt",
    "options": "Purchase Receipt"
   },
@@ -47,6 +47,7 @@
   {
    "fieldname": "from_warehouse",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "From Warehouse",
    "options": "Warehouse",
    "reqd": 1
@@ -84,14 +85,17 @@
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
+ "is_submittable": 1,
  "links": [],
- "modified": "2026-07-17 15:25:15.429852",
+ "modified": "2026-07-28 16:55:11.372259",
  "modified_by": "Administrator",
  "module": "Purchase Order",
  "name": "Purchase Return",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {
+   "cancel": 1,
    "create": 1,
    "delete": 1,
    "email": 1,
@@ -102,7 +106,6 @@
    "role": "System Manager",
    "share": 1,
    "submit": 1,
-   "cancel": 1,
    "write": 1
   }
  ],

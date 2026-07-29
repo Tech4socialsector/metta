@@ -162,6 +162,7 @@
    "label": "Age",
    "no_copy": 1,
    "print_hide": 1,
+   "read_only": 1,
    "report_hide": 1
   },
   {
@@ -497,7 +498,20 @@
   }
  ],
  "icon": "fa fa-user",
- "links": [],
+ "links": [
+  {
+   "link_doctype": "Nurse Interventions",
+   "link_fieldname": "patient_registration"
+  },
+  {
+   "link_doctype": "Sales Bill",
+   "link_fieldname": "patient"
+  },
+  {
+   "link_doctype": "Material Issue",
+   "link_fieldname": "visit_reference"
+  }
+ ],
  "max_attachments": 50,
  "modified": "2026-07-15 23:42:40.802291",
  "modified_by": "Administrator",

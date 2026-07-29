@@ -2,6 +2,11 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Patient Registration", {
+	setup(frm) {
+		// The server blocks admitting into an inactive room regardless - this
+		// just keeps it from being offered as an option in the first place.
+		frm.set_query("room", () => ({ filters: { is_active: 1 } }));
+	},
 	refresh(frm) {
 		// Only meaningful once the registration is saved (frm.doc.name is a
 		// real document to render a receipt for).

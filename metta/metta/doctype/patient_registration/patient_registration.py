@@ -5,6 +5,8 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
+from metta.metta.doctype.patient_details.patient_details import calculate_age
+
 
 class PatientRegistration(Document):
 	def validate(self):
@@ -19,6 +21,12 @@ class PatientRegistration(Document):
 				_("Please select an existing patient, or create their Patient Details record first."),
 				title=_("Patient Not Linked"),
 			)
+		self.update_age()
+
+	def update_age(self):
+		dob = frappe.db.get_value("Patient Details", self.uhin_id, "dob")
+		age = calculate_age(dob)
+		self.age = str(age) if age is not None else ""
 
 	def after_insert(self):
 		# Every registered patient needs a triage/vitals check - creating this
@@ -80,6 +88,14 @@ class PatientRegistration(Document):
 			return
 		if self.admission_status != "Admitted":
 			return
+
+		# A room taken out of service shouldn't accept new admissions, even if
+		# some of its beds still show as unoccupied.
+		if not frappe.db.get_value("Room Master", self.room, "is_active"):
+			frappe.throw(
+				_("Room {0} is not active and cannot accept new admissions.").format(frappe.bold(self.room)),
+				title=_("Room Not Active"),
+			)
 
 		existing = frappe.db.get_value(
 			"Patient Registration",
