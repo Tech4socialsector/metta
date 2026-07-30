@@ -1,0 +1,93 @@
+[
+ {
+  "desk_access": 1,
+  "disabled": 0,
+  "docstatus": 0,
+  "doctype": "Role",
+  "home_page": null,
+  "is_custom": 0,
+  "modified": "2026-07-30 14:56:01.701773",
+  "name": "Pharmacy Staff",
+  "restrict_to_domain": null,
+  "role_name": "Pharmacy Staff",
+  "two_factor_auth": 0
+ },
+ {
+  "desk_access": 1,
+  "disabled": 0,
+  "docstatus": 0,
+  "doctype": "Role",
+  "home_page": null,
+  "is_custom": 0,
+  "modified": "2026-07-30 14:56:15.506739",
+  "name": "Front Desk",
+  "restrict_to_domain": null,
+  "role_name": "Front Desk",
+  "two_factor_auth": 0
+ },
+ {
+  "desk_access": 1,
+  "disabled": 0,
+  "docstatus": 0,
+  "doctype": "Role",
+  "home_page": null,
+  "is_custom": 0,
+  "modified": "2026-07-30 14:56:25.530517",
+  "name": "Nurse",
+  "restrict_to_domain": null,
+  "role_name": "Nurse",
+  "two_factor_auth": 0
+ },
+ {
+  "desk_access": 1,
+  "disabled": 0,
+  "docstatus": 0,
+  "doctype": "Role",
+  "home_page": null,
+  "is_custom": 0,
+  "modified": "2026-07-30 15:23:50.215729",
+  "name": "Store Staff",
+  "restrict_to_domain": null,
+  "role_name": "Store Staff",
+  "two_factor_auth": 0
+ },
+ {
+  "desk_access": 1,
+  "disabled": 0,
+  "docstatus": 0,
+  "doctype": "Role",
+  "home_page": null,
+  "is_custom": 0,
+  "modified": "2026-07-30 15:24:07.739398",
+  "name": "Purchase Approver",
+  "restrict_to_domain": null,
+  "role_name": "Purchase Approver",
+  "two_factor_auth": 0
+ },
+ {
+  "desk_access": 1,
+  "disabled": 0,
+  "docstatus": 0,
+  "doctype": "Role",
+  "home_page": null,
+  "is_custom": 0,
+  "modified": "2026-07-30 15:24:21.910145",
+  "name": "Warehouse Staffs",
+  "restrict_to_domain": null,
+  "role_name": "Warehouse Staffs",
+  "two_factor_auth": 0
+ },
+ {
+  "desk_access": 1,
+  "disabled": 0,
+  "docstatus": 0,
+  "doctype": "Role",
+  "home_page": null,
+  "is_custom": 0,
+  "modified": "2026-07-30 15:42:46.066060",
+  "name": "Account Staff",
+  "restrict_to_domain": null,
+  "role_name": "Account Staff",
+  "two_factor_auth": 0
+ }
+]

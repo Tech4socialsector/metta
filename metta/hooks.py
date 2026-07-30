@@ -22,6 +22,24 @@ fixtures = [
 		"doctype": "Desktop Icon",
 		"filters": [["name", "in", ["HMIS", "Master Form", "Stock and Pharmacy"]]],
 	},
+	{
+		"doctype": "Role",
+		"filters": [
+			[
+				"name",
+				"in",
+				[
+					"Front Desk",
+					"Nurse",
+					"Pharmacy Staff",
+					"Store Staff",
+					"Warehouse Staffs",
+					"Purchase Approver",
+					"Account Staff",
+				],
+			]
+		],
+	},
 ]
 # Workspace is exported as a module file (metta/workspace/hmis/hmis.json), not a
 # fixture - migrate's orphan-cleanup deletes public+module+app workspaces that

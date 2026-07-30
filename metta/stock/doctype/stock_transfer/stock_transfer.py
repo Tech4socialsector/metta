@@ -6,6 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt, now_datetime
 
+from metta.purchase_order.doctype.purchase_receipt.purchase_receipt import get_latest_batch_for_item
 from metta.purchase_request.doctype.stock_indent.stock_indent import refresh_issuing_status
 from metta.stock.doctype.stock_ledger_entry.stock_ledger_entry import (
 	create_stock_ledger_entry,
@@ -175,10 +176,16 @@ def get_pending_items_for_transfer(stock_indent):
 		if pending_qty <= 0:
 			continue
 		unit_of_measure = frappe.db.get_value("Item", indent_row.item, "stock_uom") or ""
+		# Rows added by this button skip the Item field's own change event
+		# (they're inserted directly, not picked by hand), so the batch
+		# auto-fetch that runs on a manual pick never fires here - fetched
+		# explicitly instead, reusing the same lookup either way.
+		batch = get_latest_batch_for_item(indent_row.item)
 		rows.append(
 			{
 				"item": indent_row.item,
 				"item_name": indent_row.item_name or frappe.db.get_value("Item", indent_row.item, "item_name") or "",
+				"batch": batch.name if batch else "",
 				"qty_requested": indent_row.qty_requested,
 				"qty_dispatched": pending_qty,
 				# Confirmed defaults alongside Dispatched, same as a manually
