@@ -40,7 +40,12 @@ frappe.ui.form.on("Purchase Order", {
 		}
 		if (frm.doc.docstatus !== 1) return;
 
-		if (frm.doc.status === "Pending Approval") {
+		// The real gate is server-side (validate_can_approve) - this just
+		// avoids showing a button that would only error out for someone
+		// without the role, like Store Staff who created the order.
+		const can_approve = frappe.user_roles.includes("Purchase Approver") || frappe.user_roles.includes("System Manager");
+
+		if (frm.doc.status === "Pending Approval" && can_approve) {
 			frm.add_custom_button(__("Approve"), () => {
 				frm.call("approve_order").then(() => frm.reload_doc());
 			}).addClass("btn-primary");

@@ -40,6 +40,7 @@ fixtures = [
 			]
 		],
 	},
+	{"doctype": "Notification", "filters": [["name", "in", ["Stock Indent Submitted"]]]},
 ]
 # Workspace is exported as a module file (metta/workspace/hmis/hmis.json), not a
 # fixture - migrate's orphan-cleanup deletes public+module+app workspaces that
@@ -55,15 +56,13 @@ fixtures = [
 # required_apps = []
 
 # Each item in the list will be shown as an app in the apps page
-# add_to_apps_screen = [
-# 	{
-# 		"name": "metta",
-# 		"logo": "/assets/metta/logo.png",
-# 		"title": "metta",
-# 		"route": "/metta",
-# 		"has_permission": "metta.api.permission.has_app_permission"
-# 	}
-# ]
+add_to_apps_screen = [
+	{
+		"name": "metta",
+		"title": "metta",
+		"route": "/app/stock-and-pharmacy",
+	}
+]
 
 # Includes in <head>
 # ------------------
