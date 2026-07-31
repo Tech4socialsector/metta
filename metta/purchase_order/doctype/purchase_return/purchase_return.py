@@ -85,6 +85,7 @@ def get_existing_return_for_quality_inspection(quality_inspection):
 	# One Quality Inspection should only ever produce one Purchase Return -
 	# without this check, re-clicking "Create Purchase Return" would keep
 	# generating duplicates for the same already-returned rejected qty.
+	frappe.has_permission("Purchase Return", "read", throw=True)
 	if not quality_inspection:
 		return None
 	return frappe.db.get_value(
@@ -97,6 +98,7 @@ def get_rate_for_item(against_purchase_receipt, item):
 	# The Rate being credited back is what was actually paid for it - that
 	# lives on the original Purchase Order, not the Purchase Receipt itself
 	# (which only ever records physical qty/batch, never a price).
+	frappe.has_permission("Purchase Return", "read", throw=True)
 	if not (against_purchase_receipt and item):
 		return 0
 	purchase_order = frappe.db.get_value("Purchase Receipt", against_purchase_receipt, "purchase_order")
@@ -111,6 +113,7 @@ def get_uom_details_for_item(against_purchase_receipt, item):
 	# in - the exact conversion factor used back then lives on that Purchase
 	# Receipt Item row, so reusing it here (rather than re-deriving it) keeps
 	# the return's stock impact consistent with what the receipt recorded.
+	frappe.has_permission("Purchase Return", "read", throw=True)
 	if not (against_purchase_receipt and item):
 		return {"unit_of_measure": "", "conversion_factor": 1}
 	row = frappe.db.get_value(
@@ -129,6 +132,7 @@ def get_return_details_from_quality_inspection(quality_inspection):
 	# Only the quantity that actually failed inspection should go back to the
 	# supplier - not the full delivered amount - so this pulls qty_rejected
 	# per row, never qty_delivered/qty_accepted.
+	frappe.has_permission("Purchase Return", "read", throw=True)
 	qi = frappe.get_doc("Quality Inspection", quality_inspection)
 	pr = frappe.get_doc("Purchase Receipt", qi.purchase_receipt)
 
@@ -173,6 +177,7 @@ def get_replacement_receipt_details(purchase_return):
 	# replacing exactly what was sent back) so those are prefilled too - but
 	# Batch No/Expiry Date are left blank, since the replacement is very
 	# likely a different batch to the one that was returned.
+	frappe.has_permission("Purchase Return", "read", throw=True)
 	pret = frappe.get_doc("Purchase Return", purchase_return)
 	purchase_order = None
 	if pret.against_purchase_receipt:

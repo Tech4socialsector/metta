@@ -87,6 +87,7 @@ def get_pending_items(purchase_order):
 	# Only what's still outstanding is worth pulling in - if part of the order
 	# was already received on an earlier Purchase Receipt, that portion must
 	# not be offered again here.
+	frappe.has_permission("Purchase Receipt", "read", throw=True)
 	po = frappe.get_doc("Purchase Order", purchase_order)
 	rows = []
 	for po_row in po.items:
@@ -119,6 +120,7 @@ def get_qty_ordered(purchase_order, item):
 	# Qty Ordered is only meaningful in relation to a specific Purchase Order
 	# Item row, so it can't be a plain fetch_from - needed when someone picks
 	# an Item by hand instead of using Get Items From Purchase Order.
+	frappe.has_permission("Purchase Receipt", "read", throw=True)
 	if not (purchase_order and item):
 		return 0
 	return (
@@ -132,6 +134,10 @@ def get_latest_batch_for_item(item):
 	# typed in by hand to match the physical packaging. This just saves
 	# re-typing when the Item picked already has a Batch on record (e.g.
 	# receiving more of an existing batch).
+	# Gated on Item (not Purchase Receipt) since Stock Transfer and Sales
+	# Return also call this same helper - restricting it to Purchase Receipt
+	# would wrongly block a user who only has access to those doctypes.
+	frappe.has_permission("Item", "read", throw=True)
 	if not item:
 		return None
 	batches = frappe.get_all(
@@ -150,6 +156,7 @@ def find_matching_quality_inspection(purchase_receipt, item, batch_no):
 	# inspected (not just the Purchase Order, which can have several receipts
 	# against it) - so the match has to join into its child table filtering by
 	# this exact receipt, item and batch.
+	frappe.has_permission("Purchase Receipt", "read", throw=True)
 	if not (purchase_receipt and item and batch_no):
 		return None
 	rows = frappe.db.sql(

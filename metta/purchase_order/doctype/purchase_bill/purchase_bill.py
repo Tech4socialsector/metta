@@ -86,6 +86,7 @@ def get_existing_bill_for_purchase_receipt(purchase_receipt):
 	# One Purchase Receipt should only ever get one Purchase Bill - without
 	# this, a "Create Purchase Bill" button on the receipt would keep
 	# spawning duplicate bills for the same delivery.
+	frappe.has_permission("Purchase Bill", "read", throw=True)
 	if not purchase_receipt:
 		return None
 	return frappe.db.get_value(
@@ -102,6 +103,7 @@ def get_items_from_receipt(purchase_receipt):
 	# bulk-adding rows via frm.add_child skips the field-change events that
 	# would normally trigger those calculations client-side, the same issue
 	# already hit on Purchase Order/Purchase Receipt's own fetch_from fields.
+	frappe.has_permission("Purchase Bill", "read", throw=True)
 	pr = frappe.get_doc("Purchase Receipt", purchase_receipt)
 	rows = []
 	for pr_row in pr.items:

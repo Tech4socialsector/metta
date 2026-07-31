@@ -172,6 +172,7 @@ def check_bed_availability(ward, bed_no, registration=None):
 	# Client-side counterpart to validate_bed_availability() above - gives an
 	# instant popup instead of making the user wait for a failed save. Not a
 	# substitute for the server-side check, since this one is skippable.
+	frappe.has_permission("Patient Registration", "read", throw=True)
 	if not ward or not bed_no:
 		return {"occupied": False}
 	filters = {"ward": ward, "bed_no": bed_no, "admission_status": "Admitted"}
@@ -202,6 +203,7 @@ def get_admission_defaults(op_registration):
 def get_room_details(room):
 	# Mirrors get_ward_bed_summary() - occupancy is computed live via Room
 	# Master's own property/get_bed_status_list() rather than stored.
+	frappe.has_permission("Room Master", "read", throw=True)
 	if not room:
 		return {}
 	room_doc = frappe.get_doc("Room Master", room)
@@ -221,6 +223,7 @@ def check_room_availability(room, room_bed_no, registration=None):
 	# Client-side counterpart to validate_room_availability() above - gives an
 	# instant popup instead of making the user wait for a failed save. Not a
 	# substitute for the server-side check, since this one is skippable.
+	frappe.has_permission("Patient Registration", "read", throw=True)
 	if not room or not room_bed_no:
 		return {"occupied": False}
 	filters = {"room": room, "room_bed_no": room_bed_no, "admission_status": "Admitted"}

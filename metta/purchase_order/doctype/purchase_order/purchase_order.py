@@ -64,6 +64,18 @@ class PurchaseOrder(Document):
 		self.db_set("approved_by", frappe.session.user, update_modified=False)
 		self.db_set("approved_date_time", now_datetime(), update_modified=False)
 
+	@frappe.whitelist()
+	def mark_sent_to_dealer(self):
+		if self.status != "Approved":
+			frappe.throw(_("Only an Approved order can be marked as Sent to Dealer."))
+		self.db_set("status", "Sent to Dealer", update_modified=False)
+
+	@frappe.whitelist()
+	def close_order(self):
+		if self.status != "Received":
+			frappe.throw(_("Only a fully Received order can be closed."))
+		self.db_set("status", "Closed", update_modified=False)
+
 
 def validate_can_approve():
 	# Store Staff needs "write" access on Purchase Order for the rest of the
@@ -77,18 +89,6 @@ def validate_can_approve():
 			_("Only a Purchase Approver can approve or reject a Purchase Order."),
 			frappe.PermissionError,
 		)
-
-	@frappe.whitelist()
-	def mark_sent_to_dealer(self):
-		if self.status != "Approved":
-			frappe.throw(_("Only an Approved order can be marked as Sent to Dealer."))
-		self.db_set("status", "Sent to Dealer", update_modified=False)
-
-	@frappe.whitelist()
-	def close_order(self):
-		if self.status != "Received":
-			frappe.throw(_("Only a fully Received order can be closed."))
-		self.db_set("status", "Closed", update_modified=False)
 
 
 def refresh_receiving_status(purchase_order_name):
@@ -116,6 +116,7 @@ def get_available_qty(item):
 	# Store is the central stock point everything is ordered into - checked
 	# here specifically (not summed across every warehouse) so the number
 	# reflects what's actually usable to fulfil new demand from.
+	frappe.has_permission("Purchase Order", "read", throw=True)
 	if not item:
 		return 0
 	return flt(frappe.db.get_value("Stock Balance", {"item": item, "warehouse": "Store"}, "actual_qty")) or 0
@@ -123,6 +124,7 @@ def get_available_qty(item):
 
 @frappe.whitelist()
 def get_item_defaults_for_order(item):
+	frappe.has_permission("Purchase Order", "read", throw=True)
 	if not item:
 		return {}
 	data = frappe.db.get_value("Item", item, ["purchase_uom", "standard_purchase_rate"], as_dict=True) or {}
@@ -134,6 +136,7 @@ def search_items_for_order(search_term=""):
 	# Same search-and-add pattern as Stock Indent's item widget, but Avail Qty
 	# here is Store's balance specifically - the point is to catch, right at
 	# the moment of ordering, whether Store already has enough on hand.
+	frappe.has_permission("Purchase Order", "read", throw=True)
 	filters = {"item_type": ["in", ["Medicine", "Consumable", "Asset"]]}
 	if search_term:
 		filters["item_name"] = ["like", f"%{search_term}%"]

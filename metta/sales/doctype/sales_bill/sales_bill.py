@@ -89,6 +89,7 @@ class SalesBill(Document):
 def get_category_adjustment(billing_category):
 	# JS needs the same adjustment_type/discount_status check validate() does,
 	# so the live total preview matches what actually gets saved.
+	frappe.has_permission("Sales Bill", "read", throw=True)
 	if not billing_category:
 		return {"adjustment_type": None, "discount_status": None}
 	category = frappe.db.get_value(

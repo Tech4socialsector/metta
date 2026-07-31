@@ -136,6 +136,7 @@ def get_return_transfer_details(stock_transfer):
 	# meant less arrived). The suggested destination is where it came from,
 	# but that's an ordinary editable field - it can just as easily go
 	# onward to a different warehouse instead of back to the source.
+	frappe.has_permission("Stock Transfer", "read", throw=True)
 	original = frappe.get_doc("Stock Transfer", stock_transfer)
 	if original.status != "Confirmed":
 		frappe.throw(_("Only a Confirmed Stock Transfer has stock on hand to return."))
@@ -169,6 +170,7 @@ def get_pending_items_for_transfer(stock_indent):
 	# Only what's still outstanding is worth pulling in - if part of the
 	# indent was already fulfilled by an earlier Stock Transfer, that portion
 	# must not be offered again here.
+	frappe.has_permission("Stock Transfer", "read", throw=True)
 	indent = frappe.get_doc("Stock Indent", stock_indent)
 	rows = []
 	for indent_row in indent.items:

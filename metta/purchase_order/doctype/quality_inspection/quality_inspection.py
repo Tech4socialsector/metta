@@ -60,6 +60,7 @@ def get_existing_inspection_for_purchase_receipt(purchase_receipt):
 	# already covers every item on the receipt in one go) - without this, a
 	# "Create Quality Inspection" button on the receipt would keep spawning
 	# duplicates for the same delivery.
+	frappe.has_permission("Quality Inspection", "read", throw=True)
 	if not purchase_receipt:
 		return None
 	return frappe.db.get_value(
@@ -74,6 +75,7 @@ def get_items_to_inspect(purchase_receipt):
 	# Purchase Order, which only knows what was ordered) means those three
 	# fields come across automatically too, and only the actual inspection
 	# outcome (Qty Accepted/Rejected, Result) is left for the inspector.
+	frappe.has_permission("Quality Inspection", "read", throw=True)
 	pr = frappe.get_doc("Purchase Receipt", purchase_receipt)
 	return [
 		{
