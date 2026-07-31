@@ -12,6 +12,7 @@
  "field_order": [
   "basic_info",
   "registration_category",
+  "converted_from_registration",
   "registration_type",
   "uhin_id",
   "first_name",
@@ -88,6 +89,17 @@
    "label": "Registration Category",
    "options": "\nOP\nIP",
    "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.registration_category==\"IP\"",
+   "description": "Set automatically when this admission was created from an OP visit via the \"Admit Patient\" button - never typed by hand.",
+   "fieldname": "converted_from_registration",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Converted From OP Registration",
+   "options": "Patient Registration",
+   "read_only": 1
   },
   {
    "fieldname": "registration_type",
@@ -500,6 +512,10 @@
  "icon": "fa fa-user",
  "links": [
   {
+   "link_doctype": "Patient Registration",
+   "link_fieldname": "converted_from_registration"
+  },
+  {
    "link_doctype": "Nurse Interventions",
    "link_fieldname": "patient_registration"
   },
@@ -513,7 +529,7 @@
   }
  ],
  "max_attachments": 50,
- "modified": "2026-07-15 23:42:40.802291",
+ "modified": "2026-07-31 10:17:00.451905",
  "modified_by": "Administrator",
  "module": "metta",
  "name": "Patient Registration",
