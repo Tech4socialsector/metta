@@ -64,6 +64,18 @@ class PurchaseOrder(Document):
 		self.db_set("approved_by", frappe.session.user, update_modified=False)
 		self.db_set("approved_date_time", now_datetime(), update_modified=False)
 
+	@frappe.whitelist()
+	def mark_sent_to_dealer(self):
+		if self.status != "Approved":
+			frappe.throw(_("Only an Approved order can be marked as Sent to Dealer."))
+		self.db_set("status", "Sent to Dealer", update_modified=False)
+
+	@frappe.whitelist()
+	def close_order(self):
+		if self.status != "Received":
+			frappe.throw(_("Only a fully Received order can be closed."))
+		self.db_set("status", "Closed", update_modified=False)
+
 
 def validate_can_approve():
 	# Store Staff needs "write" access on Purchase Order for the rest of the
@@ -77,18 +89,6 @@ def validate_can_approve():
 			_("Only a Purchase Approver can approve or reject a Purchase Order."),
 			frappe.PermissionError,
 		)
-
-	@frappe.whitelist()
-	def mark_sent_to_dealer(self):
-		if self.status != "Approved":
-			frappe.throw(_("Only an Approved order can be marked as Sent to Dealer."))
-		self.db_set("status", "Sent to Dealer", update_modified=False)
-
-	@frappe.whitelist()
-	def close_order(self):
-		if self.status != "Received":
-			frappe.throw(_("Only a fully Received order can be closed."))
-		self.db_set("status", "Closed", update_modified=False)
 
 
 def refresh_receiving_status(purchase_order_name):

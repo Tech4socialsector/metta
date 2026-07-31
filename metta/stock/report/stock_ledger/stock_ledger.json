@@ -1,7 +1,8 @@
 {
  "add_total_row": 0,
+ "add_translate_data": 0,
  "columns": [],
- "creation": "2026-07-30 00:00:00.000000",
+ "creation": "2026-07-30 00:00:00",
  "disabled": 0,
  "docstatus": 0,
  "doctype": "Report",
@@ -10,51 +11,53 @@
    "fieldname": "item",
    "fieldtype": "Link",
    "label": "Item",
-   "options": "Item"
+   "mandatory": 0,
+   "options": "Item",
+   "wildcard_filter": 0
   },
   {
    "fieldname": "warehouse",
    "fieldtype": "Link",
    "label": "Warehouse",
-   "options": "Warehouse"
+   "mandatory": 0,
+   "options": "Warehouse",
+   "wildcard_filter": 0
   },
   {
    "fieldname": "batch_no",
    "fieldtype": "Link",
    "label": "Batch",
-   "options": "Batch"
+   "mandatory": 0,
+   "options": "Batch",
+   "wildcard_filter": 0
   },
   {
    "fieldname": "voucher_type",
    "fieldtype": "Select",
    "label": "Voucher Type",
-   "options": "\nPurchase Receipt\nPurchase Return\nStock Transfer\nMaterial Issue\nStock Adjustment\nStock Reconciliation\nSales Bill"
+   "mandatory": 0,
+   "options": "\nPurchase Receipt\nPurchase Return\nStock Transfer\nMaterial Issue\nStock Adjustment\nStock Reconciliation\nSales Bill",
+   "wildcard_filter": 0
   },
   {
    "fieldname": "from_date",
    "fieldtype": "Datetime",
-   "label": "From Date"
+   "label": "From Date",
+   "mandatory": 0,
+   "wildcard_filter": 0
   },
   {
    "fieldname": "to_date",
    "fieldtype": "Datetime",
-   "label": "To Date"
-  },
-  {
-   "fieldname": "year",
-   "fieldtype": "Int",
-   "label": "Year"
-  },
-  {
-   "fieldname": "month",
-   "fieldtype": "Select",
-   "label": "Month",
-   "options": "\nJanuary\nFebruary\nMarch\nApril\nMay\nJune\nJuly\nAugust\nSeptember\nOctober\nNovember\nDecember"
+   "label": "To Date",
+   "mandatory": 0,
+   "wildcard_filter": 0
   }
  ],
+ "idx": 0,
  "is_standard": "Yes",
  "letter_head": null,
- "modified": "2026-07-30 00:00:00.000000",
+ "modified": "2026-07-30 17:33:29.636194",
  "modified_by": "Administrator",
  "module": "Stock",
  "name": "Stock Ledger",
@@ -67,5 +70,6 @@
   {
    "role": "System Manager"
   }
- ]
+ ],
+ "timeout": 0
 }
