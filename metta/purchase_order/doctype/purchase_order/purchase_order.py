@@ -45,6 +45,7 @@ class PurchaseOrder(Document):
 
 	@frappe.whitelist()
 	def approve_order(self):
+		validate_can_approve()
 		if self.status != "Pending Approval":
 			frappe.throw(_("Only an order Pending Approval can be approved."))
 		self.db_set("status", "Approved", update_modified=False)
@@ -53,6 +54,7 @@ class PurchaseOrder(Document):
 
 	@frappe.whitelist()
 	def reject_order(self, reason):
+		validate_can_approve()
 		if self.status != "Pending Approval":
 			frappe.throw(_("Only an order Pending Approval can be rejected."))
 		if not reason:
@@ -61,6 +63,20 @@ class PurchaseOrder(Document):
 		self.db_set("rejection_reason", reason, update_modified=False)
 		self.db_set("approved_by", frappe.session.user, update_modified=False)
 		self.db_set("approved_date_time", now_datetime(), update_modified=False)
+
+
+def validate_can_approve():
+	# Store Staff needs "write" access on Purchase Order for the rest of the
+	# create/receive flow, which would otherwise be enough on its own to let
+	# them call this same whitelisted method - a plain DocPerm can't express
+	# "write, but not this one action", so approval rights are enforced here
+	# instead, keeping order-creation and order-approval genuinely separate.
+	user_roles = frappe.get_roles(frappe.session.user)
+	if "Purchase Approver" not in user_roles and "System Manager" not in user_roles:
+		frappe.throw(
+			_("Only a Purchase Approver can approve or reject a Purchase Order."),
+			frappe.PermissionError,
+		)
 
 	@frappe.whitelist()
 	def mark_sent_to_dealer(self):
