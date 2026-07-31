@@ -10,6 +10,7 @@ from metta.metta.doctype.patient_details.patient_details import calculate_age
 
 class PatientRegistration(Document):
 	def validate(self):
+		self.validate_registration_category()
 		self.validate_bed_availability()
 		self.validate_room_availability()
 		# Front-desk process requires checking Patient Details first: link the
@@ -22,6 +23,31 @@ class PatientRegistration(Document):
 				title=_("Patient Not Linked"),
 			)
 		self.update_age()
+
+	def validate_registration_category(self):
+		# The client hides "IP" from the dropdown and locks the field after
+		# save, but that's only a convenience - this is the check an API call
+		# or import can't bypass.
+		if self.is_new():
+			# A brand-new IP registration is only ever valid coming from
+			# "Admit Patient" on an existing OP visit, never picked from
+			# scratch - that's what converted_from_registration proves.
+			if self.registration_category == "IP" and not self.converted_from_registration:
+				frappe.throw(
+					_("A new registration must start as OP. Use \"Admit Patient\" on an existing OP visit to create an IP admission."),
+					title=_("Invalid Registration Category"),
+				)
+			return
+
+		# Once saved, Registration Category can never change - flipping it
+		# would silently rewrite this visit's billing history instead of
+		# creating the separate admission record "Admit Patient" is for.
+		existing_category = frappe.db.get_value("Patient Registration", self.name, "registration_category")
+		if existing_category and existing_category != self.registration_category:
+			frappe.throw(
+				_("Registration Category cannot be changed after saving. Use \"Admit Patient\" instead."),
+				title=_("Invalid Registration Category"),
+			)
 
 	def update_age(self):
 		dob = frappe.db.get_value("Patient Details", self.uhin_id, "dob")
@@ -129,6 +155,7 @@ def get_ward_bed_summary(ward):
 	# Counts/beds are computed live (via Ward Master's virtual fields and
 	# get_bed_status_list) rather than stored, so this can never drift out of
 	# sync with actual admissions the way a manually-maintained counter would.
+	frappe.has_permission("Ward Master", "read", throw=True)
 	if not ward:
 		return {}
 	ward_doc = frappe.get_doc("Ward Master", ward)
@@ -152,6 +179,23 @@ def check_bed_availability(ward, bed_no, registration=None):
 		filters["name"] = ["!=", registration]
 	existing = frappe.db.get_value("Patient Registration", filters, "name")
 	return {"occupied": bool(existing), "occupied_by": existing}
+
+
+@frappe.whitelist()
+def get_admission_defaults(op_registration):
+	# Only the patient and consulting doctor carry over automatically - ward/
+	# bed, registration type, and billing are genuinely different for an
+	# admission and are deliberately left blank for whoever is admitting the
+	# patient to fill in fresh, not copied from the OP visit.
+	op = frappe.get_doc("Patient Registration", op_registration)
+	op.check_permission("read")
+	if op.registration_category != "OP":
+		frappe.throw(_("Only an OP registration can be converted into an admission."))
+	return {
+		"uhin_id": op.uhin_id,
+		"doctor_name": op.doctor_name,
+		"converted_from_registration": op.name,
+	}
 
 
 @frappe.whitelist()

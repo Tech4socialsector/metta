@@ -8,9 +8,50 @@ frappe.ui.form.on("Patient Registration", {
 		frm.set_query("room", () => ({ filters: { is_active: 1 } }));
 	},
 	refresh(frm) {
+		if (frm.is_new()) {
+			if (frm.doc.converted_from_registration) {
+				// Opened by "Admit Patient" - already correctly set to IP, so
+				// there's nothing to restrict, but no reason to allow changing
+				// it either.
+				frm.set_df_property("registration_category", "read_only", 1);
+			} else {
+				// A genuinely fresh registration only ever starts as OP - IP
+				// is never picked directly here, only ever reached by clicking
+				// "Admit Patient" on an existing OP visit.
+				frm.set_df_property("registration_category", "options", "\nOP");
+			}
+		} else {
+			// Once saved, the category is locked for good - changing it after
+			// the fact would silently rewrite whichever visit's billing
+			// history, exactly what "Admit Patient" exists to avoid.
+			frm.set_df_property("registration_category", "read_only", 1);
+		}
+
 		// Only meaningful once the registration is saved (frm.doc.name is a
 		// real document to render a receipt for).
 		if (!frm.is_new()) {
+			if (frm.doc.registration_category === "OP") {
+				frm.add_custom_button(__("Admit Patient"), () => {
+					frappe.call({
+						method:
+							"metta.metta.doctype.patient_registration.patient_registration.get_admission_defaults",
+						args: { op_registration: frm.doc.name },
+						callback(r) {
+							if (!r.message) return;
+							// The OP visit's own record (fee, receipt) is left untouched -
+							// this opens a brand-new IP registration instead of converting
+							// the current one in place.
+							frappe.new_doc("Patient Registration", {
+								registration_category: "IP",
+								uhin_id: r.message.uhin_id,
+								doctor_name: r.message.doctor_name,
+								converted_from_registration: r.message.converted_from_registration,
+							});
+						},
+					});
+				}).addClass("btn-primary");
+			}
+
 			frm.add_custom_button(__("Receipt Preview"), () => {
 				frappe.call({
 					method:
