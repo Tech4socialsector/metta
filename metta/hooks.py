@@ -40,7 +40,20 @@ fixtures = [
 			]
 		],
 	},
-	{"doctype": "Notification", "filters": [["name", "in", ["Stock Indent Submitted"]]]},
+	{
+		"doctype": "Notification",
+		"filters": [
+			[
+				"name",
+				"in",
+				[
+					"Stock Indent Submitted",
+					"Purchase Order Pending Approval",
+					"Purchase Order Sent to Dealer",
+				],
+			]
+		],
+	},
 ]
 # Workspace is exported as a module file (metta/workspace/hmis/hmis.json), not a
 # fixture - migrate's orphan-cleanup deletes public+module+app workspaces that
