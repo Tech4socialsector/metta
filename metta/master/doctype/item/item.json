@@ -1,12 +1,13 @@
 {
  "actions": [],
  "autoname": "field:item_code",
- "creation": "2026-07-21 15:00:00.000000",
+ "creation": "2026-07-21 15:00:00",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "item_code",
   "item_name",
+  "generic_name",
   "item_type",
   "column_break_item_common",
   "is_active",
@@ -82,10 +83,10 @@
   },
   {
    "depends_on": "eval:doc.item_type!=\"Asset\"",
+   "description": "MRP for Medicine/Consumable, or the standard charge for a Service.",
    "fieldname": "standard_selling_rate",
    "fieldtype": "Currency",
-   "label": "Standard Selling Rate",
-   "description": "MRP for Medicine/Consumable, or the standard charge for a Service."
+   "label": "Standard Selling Rate"
   },
   {
    "fieldname": "description",
@@ -261,17 +262,21 @@
    "fieldname": "is_taxable",
    "fieldtype": "Check",
    "label": "Is Taxable"
+  },
+  {
+   "fieldname": "generic_name",
+   "fieldtype": "Data",
+   "label": "Generic Name"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-21 15:00:00.000000",
+ "modified": "2026-08-03 16:38:24.569922",
  "modified_by": "Administrator",
  "module": "Master",
  "name": "Item",
  "naming_rule": "By fieldname",
- "title_field": "item_name",
  "owner": "Administrator",
  "permissions": [
   {
@@ -291,5 +296,6 @@
  "rows_threshold_for_grid_search": 20,
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "item_name"
 }
