@@ -50,6 +50,7 @@ fixtures = [
 					"Stock Indent Submitted",
 					"Purchase Order Pending Approval",
 					"Purchase Order Sent to Dealer",
+					"Purchase Return Submitted",
 				],
 			]
 		],
