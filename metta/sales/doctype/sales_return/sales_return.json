@@ -2,10 +2,9 @@
  "actions": [],
  "allow_rename": 1,
  "autoname": "SRET-.YYYY.-.#####",
- "creation": "2026-07-28 10:00:00.000000",
+ "creation": "2026-07-28 10:00:00",
  "doctype": "DocType",
  "engine": "InnoDB",
- "is_submittable": 1,
  "field_order": [
   "patient",
   "against_sales_bill",
@@ -24,7 +23,7 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Patient",
-   "options": "Patient Registration"
+   "options": "Patient Consultation"
   },
   {
    "fieldname": "against_sales_bill",
@@ -95,8 +94,9 @@
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
+ "is_submittable": 1,
  "links": [],
- "modified": "2026-07-28 10:00:00.000000",
+ "modified": "2026-08-03 15:26:06.041310",
  "modified_by": "Administrator",
  "module": "Sales",
  "name": "Sales Return",

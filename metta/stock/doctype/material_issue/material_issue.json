@@ -2,11 +2,10 @@
  "actions": [],
  "allow_rename": 1,
  "autoname": "MIC-.YYYY.-.#####",
- "creation": "2026-07-17 21:00:00.000000",
+ "creation": "2026-07-17 21:00:00",
  "description": "Material Issue / Consumption - OT/ICU/Ward material used directly on a patient, no point-of-sale bill.",
  "doctype": "DocType",
  "engine": "InnoDB",
- "is_submittable": 1,
  "field_order": [
   "warehouse",
   "patient",
@@ -30,13 +29,13 @@
    "fieldname": "patient",
    "fieldtype": "Link",
    "label": "Patient",
-   "options": "Patient Details"
+   "options": "Patient Registration"
   },
   {
    "fieldname": "visit_reference",
    "fieldtype": "Link",
    "label": "OPD Visit / Admission Reference",
-   "options": "Patient Registration"
+   "options": "Patient Consultation"
   },
   {
    "default": "Now",
@@ -79,14 +78,16 @@
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
+ "is_submittable": 1,
  "links": [],
- "modified": "2026-07-17 21:00:00.000000",
+ "modified": "2026-08-03 15:26:07.796987",
  "modified_by": "Administrator",
  "module": "Stock",
  "name": "Material Issue",
  "owner": "Administrator",
  "permissions": [
   {
+   "cancel": 1,
    "create": 1,
    "delete": 1,
    "email": 1,
@@ -97,7 +98,6 @@
    "role": "System Manager",
    "share": 1,
    "submit": 1,
-   "cancel": 1,
    "write": 1
   }
  ],

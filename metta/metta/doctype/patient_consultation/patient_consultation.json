@@ -1,0 +1,571 @@
+{
+ "actions": [],
+ "allow_events_in_timeline": 1,
+ "allow_import": 1,
+ "autoname": "PRG-.#######",
+ "creation": "2026-07-15 18:28:57.183762",
+ "default_view": "List",
+ "description": "Patient",
+ "doctype": "DocType",
+ "document_type": "Document",
+ "engine": "InnoDB",
+ "field_order": [
+  "basic_info",
+  "registration_category",
+  "converted_from_registration",
+  "registration_type",
+  "uhin_id",
+  "first_name",
+  "last_name",
+  "patient_name",
+  "sex",
+  "dob",
+  "age",
+  "blood_group",
+  "column_break_14",
+  "middle_name",
+  "marital_status",
+  "uid",
+  "phone",
+  "email",
+  "date",
+  "time",
+  "address",
+  "ip_section",
+  "accommodation_type",
+  "ward",
+  "bed_no",
+  "room",
+  "room_bed_no",
+  "admission_status",
+  "column_break_ip",
+  "admission_date",
+  "expected_discharge_date",
+  "discharge_date",
+  "consultation_details_section",
+  "doctor_name",
+  "column_break_uycx",
+  "department_name",
+  "customer_details_section",
+  "fee_amount",
+  "default_currency",
+  "column_break_24",
+  "billing_category",
+  "discount_percent",
+  "adjustment_type",
+  "medical_history_tab",
+  "personal_and_social_history",
+  "occupation",
+  "column_break_25",
+  "allergy_medical_and_surgical_history",
+  "allergies",
+  "medication",
+  "column_break_20",
+  "medical_history",
+  "surgical_history",
+  "risk_factors",
+  "tobacco_past_use",
+  "tobacco_current_use",
+  "alcohol_past_use",
+  "alcohol_current_use",
+  "column_break_32",
+  "surrounding_factors",
+  "other_risk_factors",
+  "dashboard_tab"
+ ],
+ "fields": [
+  {
+   "fieldname": "basic_info",
+   "fieldtype": "Section Break",
+   "label": "Patient Demographics",
+   "oldfieldtype": "Section Break",
+   "options": "fa fa-user"
+  },
+  {
+   "fieldname": "registration_category",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Registration Category",
+   "options": "\nOP\nIP",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.registration_category==\"IP\"",
+   "description": "Set automatically when this admission was created from an OP visit via the \"Admit Patient\" button - never typed by hand.",
+   "fieldname": "converted_from_registration",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Converted From OP Registration",
+   "options": "Patient Consultation",
+   "read_only": 1
+  },
+  {
+   "fieldname": "registration_type",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Registration Type",
+   "options": "Registration type Master"
+  },
+  {
+   "fieldname": "uhin_id",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "UHIN ID",
+   "options": "Patient Registration"
+  },
+  {
+   "fetch_from": "uhin_id.first_name",
+   "fieldname": "first_name",
+   "fieldtype": "Data",
+   "label": "First Name",
+   "no_copy": 1,
+   "oldfieldtype": "Data",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "uhin_id.last_name",
+   "fieldname": "last_name",
+   "fieldtype": "Data",
+   "label": "Last Name",
+   "no_copy": 1
+  },
+  {
+   "bold": 1,
+   "fetch_from": "uhin_id.patient_name",
+   "fieldname": "patient_name",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Full Name",
+   "no_copy": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fetch_from": "uhin_id.sex",
+   "fieldname": "sex",
+   "fieldtype": "Select",
+   "in_preview": 1,
+   "label": "Gender",
+   "options": "\nMale\nFemale\nOthers",
+   "reqd": 1
+  },
+  {
+   "bold": 1,
+   "fetch_from": "uhin_id.dob",
+   "fieldname": "dob",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "in_standard_filter": 1,
+   "label": "Date of birth",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "age",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Age",
+   "no_copy": 1,
+   "print_hide": 1,
+   "read_only": 1,
+   "report_hide": 1
+  },
+  {
+   "bold": 1,
+   "fetch_from": "uhin_id.blood_group",
+   "fieldname": "blood_group",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "in_standard_filter": 1,
+   "label": "Blood Group",
+   "no_copy": 1,
+   "options": "\nA Positive\nA Negative\nAB Positive\nAB Negative\nB Positive\nB Negative\nO Positive\nO Negative"
+  },
+  {
+   "fieldname": "column_break_14",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "uhin_id.middle_name",
+   "fieldname": "middle_name",
+   "fieldtype": "Data",
+   "label": "Middle Name (optional)",
+   "no_copy": 1
+  },
+  {
+   "fetch_from": "uhin_id.marital_status",
+   "fieldname": "marital_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Marital Status",
+   "no_copy": 1,
+   "options": "\nSingle\nMarried\nDivorced\nWidow"
+  },
+  {
+   "allow_in_quick_entry": 1,
+   "bold": 1,
+   "fetch_from": "uhin_id.uid",
+   "fieldname": "uid",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "in_standard_filter": 1,
+   "label": "Identification Number (UID)"
+  },
+  {
+   "fieldname": "phone",
+   "fieldtype": "Data",
+   "in_filter": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Phone",
+   "no_copy": 1,
+   "options": "Phone"
+  },
+  {
+   "bold": 1,
+   "fetch_from": "uhin_id.email",
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Email",
+   "no_copy": 1,
+   "options": "Email"
+  },
+  {
+   "default": "Today",
+   "fieldname": "date",
+   "fieldtype": "Date",
+   "label": "Date"
+  },
+  {
+   "default": "Now",
+   "fieldname": "time",
+   "fieldtype": "Time",
+   "label": "Time",
+   "options": "Now"
+  },
+  {
+   "fetch_from": "uhin_id.address",
+   "fieldname": "address",
+   "fieldtype": "Small Text",
+   "label": "Address"
+  },
+  {
+   "depends_on": "eval:doc.registration_category==\"IP\"",
+   "fieldname": "ip_section",
+   "fieldtype": "Section Break",
+   "label": "IP Details"
+  },
+  {
+   "fieldname": "accommodation_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Accommodation Type",
+   "options": "\nWard\nRoom"
+  },
+  {
+   "depends_on": "eval:doc.accommodation_type==\"Ward\"",
+   "fieldname": "ward",
+   "fieldtype": "Link",
+   "label": "Ward",
+   "options": "Ward Master"
+  },
+  {
+   "depends_on": "eval:doc.accommodation_type==\"Ward\"",
+   "fieldname": "bed_no",
+   "fieldtype": "Data",
+   "label": "Bed No"
+  },
+  {
+   "depends_on": "eval:doc.accommodation_type==\"Room\"",
+   "fieldname": "room",
+   "fieldtype": "Link",
+   "label": "Room",
+   "options": "Room Master"
+  },
+  {
+   "depends_on": "eval:doc.accommodation_type==\"Room\"",
+   "fieldname": "room_bed_no",
+   "fieldtype": "Data",
+   "label": "Bed No"
+  },
+  {
+   "default": "Admitted",
+   "fieldname": "admission_status",
+   "fieldtype": "Select",
+   "label": "Admission Status",
+   "options": "Admitted\nDischarged"
+  },
+  {
+   "fieldname": "column_break_ip",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "admission_date",
+   "fieldtype": "Date",
+   "label": "Admission Date"
+  },
+  {
+   "fieldname": "expected_discharge_date",
+   "fieldtype": "Date",
+   "label": "Expected Discharge Date"
+  },
+  {
+   "depends_on": "eval:doc.admission_status==\"Discharged\"",
+   "fieldname": "discharge_date",
+   "fieldtype": "Date",
+   "label": "Discharge Date"
+  },
+  {
+   "fieldname": "consultation_details_section",
+   "fieldtype": "Section Break",
+   "label": "Consultation Details"
+  },
+  {
+   "fieldname": "doctor_name",
+   "fieldtype": "Link",
+   "label": "Doctor name",
+   "options": "Doctor Master"
+  },
+  {
+   "fieldname": "column_break_uycx",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "doctor_name.department",
+   "fieldname": "department_name",
+   "fieldtype": "Data",
+   "label": "Department Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "customer_details_section",
+   "fieldtype": "Section Break",
+   "label": "Billing Category"
+  },
+  {
+   "fetch_from": "registration_type.fee_amount",
+   "fieldname": "fee_amount",
+   "fieldtype": "Currency",
+   "label": "Fee Amount",
+   "read_only": 1
+  },
+  {
+   "default": "INR",
+   "fieldname": "default_currency",
+   "fieldtype": "Select",
+   "label": "Billing Currency",
+   "options": "\nINR\nUSD\nAED"
+  },
+  {
+   "fieldname": "column_break_24",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "billing_category",
+   "fieldtype": "Link",
+   "label": "Billing Category",
+   "options": "Category Price Adjustment"
+  },
+  {
+   "fetch_from": "billing_category.discount_percent",
+   "fieldname": "discount_percent",
+   "fieldtype": "Data",
+   "label": "Discount Percent"
+  },
+  {
+   "fetch_from": "billing_category.adjustment_type",
+   "fieldname": "adjustment_type",
+   "fieldtype": "Select",
+   "label": "Adjustment Type",
+   "options": "\nDiscount\nIncrease"
+  },
+  {
+   "fieldname": "medical_history_tab",
+   "fieldtype": "Tab Break",
+   "hidden": 1,
+   "label": "Medical History"
+  },
+  {
+   "fieldname": "personal_and_social_history",
+   "fieldtype": "Section Break",
+   "label": "Personal and Social History"
+  },
+  {
+   "fieldname": "occupation",
+   "fieldtype": "Data",
+   "ignore_xss_filter": 1,
+   "label": "Occupation",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "column_break_25",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "allergy_medical_and_surgical_history",
+   "fieldtype": "Section Break",
+   "label": "Allergies, Medical and Surgical History"
+  },
+  {
+   "fieldname": "allergies",
+   "fieldtype": "Small Text",
+   "ignore_xss_filter": 1,
+   "label": "Allergies",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "medication",
+   "fieldtype": "Small Text",
+   "ignore_xss_filter": 1,
+   "label": "Medication",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "column_break_20",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "medical_history",
+   "fieldtype": "Small Text",
+   "ignore_xss_filter": 1,
+   "label": "Medical History",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "surgical_history",
+   "fieldtype": "Small Text",
+   "ignore_xss_filter": 1,
+   "label": "Surgical History",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "risk_factors",
+   "fieldtype": "Section Break",
+   "label": "Risk Factors"
+  },
+  {
+   "fieldname": "tobacco_past_use",
+   "fieldtype": "Data",
+   "ignore_xss_filter": 1,
+   "label": "Tobacco Consumption (Past)",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "tobacco_current_use",
+   "fieldtype": "Data",
+   "ignore_xss_filter": 1,
+   "label": "Tobacco Consumption (Present)",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "alcohol_past_use",
+   "fieldtype": "Data",
+   "ignore_xss_filter": 1,
+   "label": "Alcohol Consumption (Past)",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "alcohol_current_use",
+   "fieldtype": "Data",
+   "ignore_user_permissions": 1,
+   "label": "Alcohol Consumption (Present)",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "column_break_32",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "surrounding_factors",
+   "fieldtype": "Small Text",
+   "ignore_xss_filter": 1,
+   "label": "Occupational Hazards and Environmental Factors",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "other_risk_factors",
+   "fieldtype": "Small Text",
+   "ignore_xss_filter": 1,
+   "label": "Other Risk Factors",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "dashboard_tab",
+   "fieldtype": "Tab Break",
+   "hidden": 1,
+   "label": "Dashboard",
+   "show_dashboard": 1
+  }
+ ],
+ "icon": "fa fa-user",
+ "links": [
+  {
+   "link_doctype": "Patient Consultation",
+   "link_fieldname": "converted_from_registration"
+  },
+  {
+   "link_doctype": "Nurse Interventions",
+   "link_fieldname": "patient_registration"
+  },
+  {
+   "link_doctype": "Sales Bill",
+   "link_fieldname": "patient"
+  },
+  {
+   "link_doctype": "Material Issue",
+   "link_fieldname": "visit_reference"
+  }
+ ],
+ "max_attachments": 50,
+ "modified": "2026-08-03 16:19:54.815424",
+ "modified_by": "Administrator",
+ "module": "metta",
+ "name": "Patient Consultation",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Front Desk",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "search_fields": "patient_name,phone",
+ "show_name_in_global_search": 1,
+ "sort_field": "creation",
+ "sort_order": "ASC",
+ "states": [],
+ "title_field": "patient_name",
+ "track_changes": 1
+}

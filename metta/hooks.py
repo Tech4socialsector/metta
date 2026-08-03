@@ -12,7 +12,7 @@ fixtures = [
 	{"doctype": "Print Format", "filters": [["name", "=", "Patient Registration Receipt"]]},
 	{
 		"doctype": "Number Card",
-		"filters": [["name", "in", ["Patient Details", "Patient Registration", "Nurse Interventions"]]],
+		"filters": [["name", "in", ["Nurse Interventions", "Patient Consultation", "Patient Registration-1"]]],
 	},
 	{
 		"doctype": "Workspace Sidebar",

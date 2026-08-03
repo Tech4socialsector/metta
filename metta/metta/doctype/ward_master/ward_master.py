@@ -19,7 +19,7 @@ class WardMaster(Document):
 		# Computed live rather than stored, so this can't go stale the way a
 		# manually-maintained counter field would.
 		return frappe.db.count(
-			"Patient Registration",
+			"Patient Consultation",
 			{
 				"ward": self.name,
 				"registration_category": "IP",
@@ -37,7 +37,7 @@ class WardMaster(Document):
 		# ward's bed list is available.
 		occupied_bed_nos = set(
 			frappe.get_all(
-				"Patient Registration",
+				"Patient Consultation",
 				filters={
 					"ward": self.name,
 					"registration_category": "IP",

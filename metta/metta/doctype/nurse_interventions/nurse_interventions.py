@@ -6,7 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt
 
-from metta.metta.doctype.patient_details.patient_details import calculate_age
+from metta.metta.doctype.patient_registration.patient_registration import calculate_age
 
 
 class NurseInterventions(Document):
@@ -16,7 +16,7 @@ class NurseInterventions(Document):
 		self.validate_completion()
 
 	def update_age(self):
-		dob = frappe.db.get_value("Patient Details", self.patient_unique_id, "dob") if self.patient_unique_id else None
+		dob = frappe.db.get_value("Patient Registration", self.patient_unique_id, "dob") if self.patient_unique_id else None
 		age = calculate_age(dob)
 		self.age = age if age is not None else None
 
