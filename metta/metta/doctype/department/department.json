@@ -2,33 +2,25 @@
  "actions": [],
  "allow_rename": 1,
  "autoname": "prompt",
- "creation": "2026-07-15 19:49:33.550507",
+ "creation": "2026-08-04 11:21:29.128295",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "department",
-  "fee_amount"
+  "section_break_vmyn"
  ],
  "fields": [
   {
-   "fieldname": "department",
-   "fieldtype": "Link",
-   "label": "Department",
-   "options": "Department"
-  },
-  {
-   "fieldname": "fee_amount",
-   "fieldtype": "Currency",
-   "label": "Fee amount"
+   "fieldname": "section_break_vmyn",
+   "fieldtype": "Section Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-04 11:21:51.627619",
+ "modified": "2026-08-04 11:21:35.425517",
  "modified_by": "Administrator",
  "module": "metta",
- "name": "Doctor Master",
+ "name": "Department",
  "naming_rule": "Set by user",
  "owner": "Administrator",
  "permissions": [
