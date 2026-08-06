@@ -6,10 +6,12 @@ from frappe import _
 from frappe.model.document import Document
 
 from metta.metta.doctype.patient_registration.patient_registration import calculate_age
+from metta.metta.utils import validate_phone_number
 
 
 class PatientConsultation(Document):
 	def validate(self):
+		validate_phone_number(self.phone, "Phone")
 		self.validate_registration_category()
 		self.validate_bed_availability()
 		self.validate_room_availability()

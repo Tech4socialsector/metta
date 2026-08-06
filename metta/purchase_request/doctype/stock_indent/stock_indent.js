@@ -11,6 +11,11 @@ frappe.ui.form.on("Stock Indent", {
 				frappe.datetime.add_days(frappe.datetime.get_today(), 1)
 			);
 		}
+		// Central Store is who *fulfils* an indent (via Stock Transfer), never
+		// who raises one - only the sub-stores/wards it serves belong here.
+		frm.set_query("requesting_warehouse", () => ({
+			filters: { warehouse_type: ["!=", "Central Store"] },
+		}));
 	},
 	refresh(frm) {
 		if (frm.is_new() && !frm.doc.requested_by) {

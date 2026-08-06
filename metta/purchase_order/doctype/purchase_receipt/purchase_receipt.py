@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt
 
@@ -14,6 +15,23 @@ from metta.stock.doctype.stock_ledger_entry.stock_ledger_entry import (
 
 
 class PurchaseReceipt(Document):
+	def validate(self):
+		self.validate_receiving_warehouse()
+
+	def validate_receiving_warehouse(self):
+		# A supplier delivery always lands at Central Store first - sub-stores
+		# only ever get stock afterward, via a Stock Transfer out of it. The
+		# client hides the sub-stores from the picker, but that's only a
+		# convenience this check can't be bypassed by an API call or import.
+		if not self.receiving_warehouse:
+			return
+		warehouse_type = frappe.db.get_value("Warehouse", self.receiving_warehouse, "warehouse_type")
+		if warehouse_type != "Central Store":
+			frappe.throw(
+				_("Receiving Warehouse must be Central Store - supplier deliveries can't be received directly into a sub-store."),
+				title=_("Invalid Receiving Warehouse"),
+			)
+
 	def on_submit(self):
 		for row in self.items:
 			batch_name = self.get_or_create_batch(row)

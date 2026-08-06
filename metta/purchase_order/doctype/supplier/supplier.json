@@ -35,7 +35,8 @@
   {
    "fieldname": "contact_number",
    "fieldtype": "Data",
-   "label": "Contact Number"
+   "label": "Contact Number",
+   "length": 10
   },
   {
    "fieldname": "email",

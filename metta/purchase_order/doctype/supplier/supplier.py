@@ -3,6 +3,9 @@
 
 from frappe.model.document import Document
 
+from metta.metta.utils import validate_phone_number
+
 
 class Supplier(Document):
-	pass
+	def validate(self):
+		validate_phone_number(self.contact_number, "Contact Number")

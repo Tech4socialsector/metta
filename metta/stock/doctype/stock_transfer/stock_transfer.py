@@ -5,6 +5,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt, now_datetime
+from frappe.utils.pdf import get_pdf
 
 from metta.purchase_order.doctype.purchase_receipt.purchase_receipt import get_latest_batch_for_item
 from metta.purchase_request.doctype.stock_indent.stock_indent import refresh_issuing_status
@@ -126,6 +127,100 @@ class StockTransfer(Document):
 		self.db_set("discrepancy_status", resolution, update_modified=False)
 		self.db_set("resolved_by", frappe.session.user, update_modified=False)
 		self.db_set("resolution_date", frappe.utils.today(), update_modified=False)
+
+	@frappe.whitelist()
+	def notify_requesting_warehouse(self):
+		if self.docstatus != 1:
+			frappe.throw(_("Only a submitted Stock Transfer can send a shortfall notice."))
+		if not self.against_indent:
+			frappe.throw(_("This Stock Transfer isn't against a Stock Indent - there's nothing to compare against."))
+		if self.shortfall_notice_sent:
+			frappe.throw(_("A shortfall notice has already been sent for this Stock Transfer."))
+
+		indent = frappe.get_doc("Stock Indent", self.against_indent)
+		rows = self.get_shortfall_rows(indent)
+		if not rows:
+			frappe.throw(
+				_("Everything requested on Indent {0} has been fully transferred - there's nothing pending to notify about.").format(
+					indent.name
+				)
+			)
+
+		recipient = frappe.db.get_value("User", indent.requested_by, "email")
+		if not recipient:
+			frappe.throw(
+				_("Could not notify anyone - Indent {0}'s Requested By user has no email set.").format(indent.name)
+			)
+
+		html = frappe.render_template(
+			"""
+			<div style="font-family: sans-serif;">
+			<h3>Stock Transfer Shortfall Notice</h3>
+			<p>Stock Transfer <b>{{ doc.name }}</b> against Indent <b>{{ indent.name }}</b></p>
+			<p>
+				Requesting Warehouse: {{ indent.requesting_warehouse }}<br>
+				From Warehouse: {{ doc.from_warehouse }}<br>
+				Dispatch Date: {{ doc.dispatch_date_time }}
+			</p>
+			<table border="1" cellpadding="6" style="border-collapse:collapse;">
+				<tr><th>Item</th><th>Qty Requested</th><th>Qty Transferred</th><th>Qty Pending</th></tr>
+				{% for row in rows %}
+				<tr>
+					<td>{{ row.item_name }}</td>
+					<td>{{ row.qty_requested }}</td>
+					<td>{{ row.qty_transferred }}</td>
+					<td>{{ row.qty_pending }}</td>
+				</tr>
+				{% endfor %}
+			</table>
+			</div>
+			""",
+			{"doc": self, "indent": indent, "rows": rows},
+		)
+
+		frappe.sendmail(
+			recipients=[recipient],
+			subject=_("Stock Transfer {0}: items still pending on Indent {1}").format(self.name, indent.name),
+			message=html,
+			attachments=[{"fname": f"{self.name}-shortfall.pdf", "fcontent": get_pdf(html)}],
+			reference_doctype="Stock Transfer",
+			reference_name=self.name,
+		)
+		self.db_set("shortfall_notice_sent", 1, update_modified=False)
+
+	def get_shortfall_rows(self, indent):
+		# Qty Pending lives on the Indent (it's a running total across every
+		# transfer against it, not just this one) - Qty Requested/Transferred
+		# are read straight off this transfer's own rows, which already carry
+		# them from when they were pulled in.
+		indent_items_by_item = {row.item: row for row in indent.items}
+		rows = []
+		for row in self.items:
+			indent_row = indent_items_by_item.get(row.item)
+			if not indent_row or flt(indent_row.qty_pending) <= 0:
+				continue
+			rows.append(
+				{
+					"item_name": row.item_name,
+					"qty_requested": indent_row.qty_requested,
+					"qty_transferred": row.qty_dispatched,
+					"qty_pending": indent_row.qty_pending,
+				}
+			)
+		return rows
+
+
+@frappe.whitelist()
+def has_pending_shortfall(stock_transfer):
+	# Lets the client decide whether to show the "Notify Requesting Warehouse"
+	# button at all - nothing to report (or already reported) means no button,
+	# rather than a button that just says "nothing pending" when clicked.
+	frappe.has_permission("Stock Transfer", "read", throw=True)
+	doc = frappe.get_doc("Stock Transfer", stock_transfer)
+	if doc.docstatus != 1 or not doc.against_indent or doc.shortfall_notice_sent:
+		return False
+	indent = frappe.get_doc("Stock Indent", doc.against_indent)
+	return bool(doc.get_shortfall_rows(indent))
 
 
 @frappe.whitelist()

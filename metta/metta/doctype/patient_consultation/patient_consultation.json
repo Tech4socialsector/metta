@@ -228,7 +228,8 @@
    "in_standard_filter": 1,
    "label": "Phone",
    "no_copy": 1,
-   "options": "Phone"
+   "options": "Phone",
+   "length": 10
   },
   {
    "bold": 1,

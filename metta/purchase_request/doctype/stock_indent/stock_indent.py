@@ -14,6 +14,21 @@ ISSUING_STATUSES = ("Submitted", "Partially Issued", "Issued")
 class StockIndent(Document):
 	def validate(self):
 		self.validate_required_by()
+		self.validate_requesting_warehouse()
+
+	def validate_requesting_warehouse(self):
+		# Central Store is who fulfils an indent (via Stock Transfer), never
+		# who raises one - the client hides it from the picker, but that's
+		# only a convenience this check can't be bypassed by an API call or
+		# import.
+		if not self.requesting_warehouse:
+			return
+		warehouse_type = frappe.db.get_value("Warehouse", self.requesting_warehouse, "warehouse_type")
+		if warehouse_type == "Central Store":
+			frappe.throw(
+				_("Central Store cannot be the Requesting Warehouse - it fulfils indents, it doesn't raise them."),
+				title=_("Invalid Requesting Warehouse"),
+			)
 
 	def validate_required_by(self):
 		# Required By marks when the requesting ward actually needs this

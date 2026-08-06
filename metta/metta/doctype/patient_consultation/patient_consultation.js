@@ -7,6 +7,11 @@ frappe.ui.form.on("Patient Consultation", {
 		// just keeps it from being offered as an option in the first place.
 		frm.set_query("room", () => ({ filters: { is_active: 1 } }));
 	},
+	phone(frm) {
+		if (!frm.doc.phone) return;
+		const digits = frm.doc.phone.replace(/\D/g, "").slice(0, 10);
+		if (digits !== frm.doc.phone) frm.set_value("phone", digits);
+	},
 	refresh(frm) {
 		if (frm.is_new()) {
 			if (frm.doc.converted_from_registration) {

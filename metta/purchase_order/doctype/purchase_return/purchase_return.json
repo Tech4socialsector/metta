@@ -8,8 +8,8 @@
  "field_order": [
   "supplier",
   "supplier_email",
-  "against_purchase_receipt",
   "quality_inspection",
+  "against_purchase_receipt",
   "return_date_time",
   "from_warehouse",
   "items",
@@ -35,18 +35,17 @@
    "read_only": 1
   },
   {
-   "fieldname": "against_purchase_receipt",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Against Purchase Receipt",
-   "options": "Purchase Receipt"
-  },
-  {
    "fieldname": "quality_inspection",
    "fieldtype": "Link",
-   "label": "Created From Quality Inspection",
-   "options": "Quality Inspection",
-   "read_only": 1
+   "in_list_view": 1,
+   "label": "Quality Inspection",
+   "options": "Quality Inspection"
+  },
+  {
+   "fieldname": "against_purchase_receipt",
+   "fieldtype": "Link",
+   "label": "Against Purchase Receipt",
+   "options": "Purchase Receipt"
   },
   {
    "fieldname": "return_date_time",

@@ -8,6 +8,11 @@ frappe.ui.form.on("Purchase Receipt", {
 		frm.set_query("item", "items", () => ({
 			filters: { item_type: ["in", ["Medicine", "Consumable", "Asset"]] },
 		}));
+		// A supplier delivery always lands at Central Store first - sub-stores
+		// only ever get stock afterward, via a Stock Transfer out of it.
+		frm.set_query("receiving_warehouse", () => ({
+			filters: { warehouse_type: "Central Store" },
+		}));
 	},
 	refresh(frm) {
 		show_get_items_button(frm);

@@ -4,9 +4,12 @@
 from frappe.model.document import Document
 from frappe.utils import getdate, today
 
+from metta.metta.utils import validate_phone_number
+
 
 class PatientRegistration(Document):
-	pass
+	def validate(self):
+		validate_phone_number(self.phone, "Phone")
 
 
 def calculate_age(dob):

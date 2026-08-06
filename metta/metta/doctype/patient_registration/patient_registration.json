@@ -108,7 +108,8 @@
    "fieldname": "phone",
    "fieldtype": "Data",
    "label": "Phone",
-   "options": "Phone"
+   "options": "Phone",
+   "length": 10
   },
   {
    "fieldname": "email",

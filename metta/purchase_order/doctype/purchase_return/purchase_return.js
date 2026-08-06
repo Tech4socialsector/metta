@@ -9,6 +9,58 @@ frappe.ui.form.on("Purchase Return", {
 	},
 	refresh(frm) {
 		calculate_total(frm);
+
+		if (frm.doc.docstatus === 0) {
+			// The Quality Inspection is what actually determined a rejection
+			// happened and how much/why - Purchase Receipt only ever recorded
+			// what physically arrived. This pulls the rejected rows straight
+			// from the inspection instead of re-entering them by hand.
+			frm.add_custom_button(__("Get Rejected Items"), () => {
+				if (!frm.doc.quality_inspection) {
+					frappe.msgprint(__("Please select a Quality Inspection first."));
+					return;
+				}
+				frappe.call({
+					method:
+						"metta.purchase_order.doctype.purchase_return.purchase_return.get_existing_return_for_quality_inspection",
+					args: { quality_inspection: frm.doc.quality_inspection },
+					callback(r) {
+						if (r.message && r.message !== frm.doc.name) {
+							frappe.msgprint(
+								__("Purchase Return {0} already exists for this Quality Inspection.", [r.message])
+							);
+							return;
+						}
+						frappe.call({
+							method:
+								"metta.purchase_order.doctype.purchase_return.purchase_return.get_return_details_from_quality_inspection",
+							args: { quality_inspection: frm.doc.quality_inspection },
+							callback(res) {
+								const details = res.message || {};
+								if (!details.items || !details.items.length) {
+									frappe.msgprint(__("No rejected items found on this Quality Inspection."));
+									return;
+								}
+								frm.set_value("supplier", details.supplier);
+								frm.set_value("against_purchase_receipt", details.against_purchase_receipt);
+								frm.set_value("from_warehouse", details.from_warehouse);
+								frm.clear_table("items");
+								details.items.forEach((row) => frm.add_child("items", row));
+								frm.refresh_field("items");
+								calculate_total(frm);
+								frappe.show_alert({
+									message: __("{0} rejected item(s) pulled in from the Quality Inspection.", [
+										details.items.length,
+									]),
+									indicator: "green",
+								});
+							},
+						});
+					},
+				});
+			}).addClass("btn-primary");
+		}
+
 		if (frm.doc.docstatus !== 1) return;
 
 		if (frm.doc.status === "Submitted") {
