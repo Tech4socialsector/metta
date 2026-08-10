@@ -48,6 +48,7 @@
    "options": "Purchase Receipt"
   },
   {
+   "default": "Now",
    "fieldname": "return_date_time",
    "fieldtype": "Datetime",
    "label": "Return Date Time",

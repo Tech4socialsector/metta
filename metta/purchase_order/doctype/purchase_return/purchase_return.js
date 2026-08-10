@@ -7,19 +7,20 @@ frappe.ui.form.on("Purchase Return", {
 			filters: { item_type: ["in", ["Medicine", "Consumable", "Asset"]] },
 		}));
 	},
+	quality_inspection(frm) {
+		// Toolbar buttons are only (re)built on refresh, so without this the
+		// "Get Rejected Items" button wouldn't appear until the next save/reload.
+		frm.refresh();
+	},
 	refresh(frm) {
 		calculate_total(frm);
 
-		if (frm.doc.docstatus === 0) {
+		if (frm.doc.docstatus === 0 && frm.doc.quality_inspection) {
 			// The Quality Inspection is what actually determined a rejection
 			// happened and how much/why - Purchase Receipt only ever recorded
 			// what physically arrived. This pulls the rejected rows straight
 			// from the inspection instead of re-entering them by hand.
 			frm.add_custom_button(__("Get Rejected Items"), () => {
-				if (!frm.doc.quality_inspection) {
-					frappe.msgprint(__("Please select a Quality Inspection first."));
-					return;
-				}
 				frappe.call({
 					method:
 						"metta.purchase_order.doctype.purchase_return.purchase_return.get_existing_return_for_quality_inspection",

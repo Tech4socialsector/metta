@@ -15,6 +15,8 @@ from metta.stock.doctype.stock_ledger_entry.stock_ledger_entry import (
 
 class SalesBill(Document):
 	def validate(self):
+		self.validate_warehouse()
+
 		# mandatory_depends_on only blocks the Save button in the browser -
 		# it isn't checked by Frappe's server-side mandatory-field validation,
 		# so API calls/imports could skip this without a check here.
@@ -65,6 +67,20 @@ class SalesBill(Document):
 		self.gst_amount = gst_total
 		self.net_amount = subtotal - self.discount_amount + gst_total
 
+	def validate_warehouse(self):
+		# Central Store only ever receives from suppliers and distributes to
+		# sub-stores - it never dispenses directly to a patient. The client
+		# hides it from the picker, but that's only a convenience this check
+		# can't be bypassed by an API call or import.
+		if not self.warehouse:
+			return
+		warehouse_type = frappe.db.get_value("Warehouse", self.warehouse, "warehouse_type")
+		if warehouse_type == "Central Store":
+			frappe.throw(
+				_("Warehouse cannot be Central Store - a Sales Bill has to be dispensed from a sub-store."),
+				title=_("Invalid Warehouse"),
+			)
+
 	def on_submit(self):
 		for row in self.items:
 			row.stock_qty = flt(row.qty) * flt(row.conversion_factor or 1)
@@ -96,3 +112,27 @@ def get_category_adjustment(billing_category):
 		"Category Price Adjustment", billing_category, ["adjustment_type", "discount_status"], as_dict=True
 	)
 	return category or {"adjustment_type": None, "discount_status": None}
+
+
+@frappe.whitelist()
+def get_patient_name(patient):
+	# Patient Consultation doesn't carry the patient's actual name itself -
+	# only a link (uhin_id) to the demographics record that does.
+	frappe.has_permission("Sales Bill", "read", throw=True)
+	if not patient:
+		return ""
+	uhin_id = frappe.db.get_value("Patient Consultation", patient, "uhin_id")
+	if not uhin_id:
+		return ""
+	registration = frappe.db.get_value(
+		"Patient Registration", uhin_id, ["patient_name", "first_name", "middle_name", "last_name"], as_dict=True
+	)
+	if not registration:
+		return ""
+	if registration.patient_name:
+		return registration.patient_name
+	# "Full Name" is a separate, manually-entered field - it's easy for it to
+	# be left blank even when First/Last Name were filled in, so fall back to
+	# building it from those rather than surfacing a name that's technically
+	# on file but just wasn't copied into this one field.
+	return " ".join(filter(None, [registration.first_name, registration.middle_name, registration.last_name]))

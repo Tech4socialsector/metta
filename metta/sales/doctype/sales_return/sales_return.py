@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt
 
@@ -19,6 +20,15 @@ RESTOCK_ELIGIBLE_REASONS = {"Not Required", "Discontinued by Doctor", "Excess Di
 
 class SalesReturn(Document):
 	def validate(self):
+		# Without a real source document behind it, a return has no proof the
+		# item was ever actually dispensed to this patient - anyone could
+		# otherwise submit a fabricated return and add unverified qty to stock.
+		if not (self.against_sales_bill or self.against_material_issue):
+			frappe.throw(
+				_("Please link either Against Sales Bill or Against Material Issue - a return needs a source document."),
+				title=_("Source Document Required"),
+			)
+
 		# JS keeps this live while editing, but validate() is the authoritative
 		# recompute, same as every other total in this app.
 		total = 0

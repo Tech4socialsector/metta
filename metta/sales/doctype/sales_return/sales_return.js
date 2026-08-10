@@ -8,12 +8,52 @@ frappe.ui.form.on("Sales Return", {
 		frm.set_query("item", "items", () => ({
 			filters: { item_type: ["in", ["Medicine", "Consumable"]] },
 		}));
+		// Only show bills/issues belonging to the selected patient, so the
+		// picker doesn't force scrolling through every patient's documents.
+		frm.set_query("against_sales_bill", () => {
+			if (!frm.doc.patient) return {};
+			return { filters: { patient: frm.doc.patient, docstatus: 1 } };
+		});
+		frm.set_query("against_material_issue", () => {
+			if (!frm.doc.patient) return {};
+			return { filters: { visit_reference: frm.doc.patient, docstatus: 1 } };
+		});
 	},
 	refresh(frm) {
 		if (frm.is_new() && !frm.doc.returned_by) {
 			frm.set_value("returned_by", frappe.session.user);
 		}
 		calculate_total(frm);
+	},
+	patient(frm) {
+		// Prefill with the patient's most recent bill/issue as a starting
+		// point - still just a convenience, not a lock; staff can pick a
+		// different one via the (patient-filtered) link query if needed.
+		frm.set_value("against_sales_bill", "");
+		frm.set_value("against_material_issue", "");
+		if (!frm.doc.patient) return;
+
+		frappe.db
+			.get_list("Sales Bill", {
+				filters: { patient: frm.doc.patient, docstatus: 1 },
+				fields: ["name"],
+				order_by: "sale_datetime desc",
+				limit: 1,
+			})
+			.then((rows) => {
+				if (rows.length) frm.set_value("against_sales_bill", rows[0].name);
+			});
+
+		frappe.db
+			.get_list("Material Issue", {
+				filters: { visit_reference: frm.doc.patient, docstatus: 1 },
+				fields: ["name"],
+				order_by: "issue_date_time desc",
+				limit: 1,
+			})
+			.then((rows) => {
+				if (rows.length) frm.set_value("against_material_issue", rows[0].name);
+			});
 	},
 });
 

@@ -261,7 +261,7 @@ def get_return_transfer_details(stock_transfer):
 
 
 @frappe.whitelist()
-def get_pending_items_for_transfer(stock_indent):
+def get_pending_items_for_transfer(stock_indent, from_warehouse=None):
 	# Only what's still outstanding is worth pulling in - if part of the
 	# indent was already fulfilled by an earlier Stock Transfer, that portion
 	# must not be offered again here.
@@ -284,6 +284,10 @@ def get_pending_items_for_transfer(stock_indent):
 				"item_name": indent_row.item_name or frappe.db.get_value("Item", indent_row.item, "item_name") or "",
 				"batch": batch.name if batch else "",
 				"qty_requested": indent_row.qty_requested,
+				# Lets the store person see straight away whether the
+				# requested qty can actually be fulfilled, before they touch
+				# Qty Dispatched at all.
+				"available_qty": get_available_qty(indent_row.item, from_warehouse),
 				"qty_dispatched": pending_qty,
 				# Confirmed defaults alongside Dispatched, same as a manually
 				# added row - see the JS qty_dispatched trigger for why.
@@ -295,3 +299,16 @@ def get_pending_items_for_transfer(stock_indent):
 			}
 		)
 	return rows
+
+
+@frappe.whitelist()
+def get_available_qty(item, warehouse):
+	# Same balance validate_sufficient_stock checks at submit time - shown
+	# here up front so a shortfall is visible while filling the row in,
+	# not just as a throw after the fact.
+	frappe.has_permission("Stock Transfer", "read", throw=True)
+	if not (item and warehouse):
+		return 0
+	from metta.stock.doctype.stock_balance.stock_balance import get_or_create_stock_balance
+
+	return flt(get_or_create_stock_balance(item, warehouse).actual_qty)

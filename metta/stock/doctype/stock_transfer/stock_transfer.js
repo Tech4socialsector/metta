@@ -84,25 +84,26 @@ frappe.ui.form.on("Stock Transfer", {
 			});
 		}
 
-		if (frm.doc.has_discrepancy && frm.doc.discrepancy_status === "Pending Review") {
-			frm.add_custom_button(__("Resolve Discrepancy"), () => {
-				frappe.prompt(
-					[
-						{
-							fieldname: "resolution",
-							label: __("How was this discrepancy resolved?"),
-							fieldtype: "Select",
-							options: "Written Off\nReissued",
-							reqd: 1,
-						},
-					],
-					(values) => {
-						frm.call("resolve_discrepancy", { resolution: values.resolution }).then(() => frm.reload_doc());
-					},
-					__("Resolve Discrepancy")
-				);
-			}).addClass("btn-primary");
-		}
+		// Temporarily hidden - re-enable by restoring this block.
+		// if (frm.doc.has_discrepancy && frm.doc.discrepancy_status === "Pending Review") {
+		// 	frm.add_custom_button(__("Resolve Discrepancy"), () => {
+		// 		frappe.prompt(
+		// 			[
+		// 				{
+		// 					fieldname: "resolution",
+		// 					label: __("How was this discrepancy resolved?"),
+		// 					fieldtype: "Select",
+		// 					options: "Written Off\nReissued",
+		// 					reqd: 1,
+		// 				},
+		// 			],
+		// 			(values) => {
+		// 				frm.call("resolve_discrepancy", { resolution: values.resolution }).then(() => frm.reload_doc());
+		// 			},
+		// 			__("Resolve Discrepancy")
+		// 		);
+		// 	}).addClass("btn-primary");
+		// }
 	},
 	// Selecting a value in a Link field doesn't fire "refresh" on its own in
 	// Frappe - only a reload/save does - so without this the button would
@@ -114,6 +115,16 @@ frappe.ui.form.on("Stock Transfer", {
 					frm.set_value("to_warehouse", r.requesting_warehouse);
 				}
 			});
+			// Central Store is always who fulfils an Indent - a sub-store can
+			// never be the requester (enforced on Stock Indent itself), so
+			// there's nothing to actually choose here unless it's already set.
+			if (!frm.doc.from_warehouse) {
+				frappe.db
+					.get_list("Warehouse", { filters: { warehouse_type: "Central Store" }, fields: ["name"], limit: 1 })
+					.then((rows) => {
+						if (rows.length) frm.set_value("from_warehouse", rows[0].name);
+					});
+			}
 		}
 		frm.refresh();
 	},
@@ -129,9 +140,13 @@ function show_get_items_button(frm) {
 	if (has_real_items) return;
 
 	frm.add_custom_button(__("Get Items From Stock Indent"), () => {
+		if (!frm.doc.from_warehouse) {
+			frappe.msgprint(__("Please set From Warehouse first, so Available Qty can be checked against it."));
+			return;
+		}
 		frappe.call({
 			method: "metta.stock.doctype.stock_transfer.stock_transfer.get_pending_items_for_transfer",
-			args: { stock_indent: frm.doc.against_indent },
+			args: { stock_indent: frm.doc.against_indent, from_warehouse: frm.doc.from_warehouse },
 			callback(r) {
 				const rows = r.message || [];
 				if (!rows.length) {

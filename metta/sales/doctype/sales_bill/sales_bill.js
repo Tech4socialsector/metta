@@ -8,9 +8,31 @@ frappe.ui.form.on("Sales Bill", {
 		frm.set_query("item", "items", () => ({
 			filters: { item_type: ["in", ["Medicine", "Consumable", "Service"]] },
 		}));
+		// Central Store only ever receives from suppliers and distributes to
+		// sub-stores - it never dispenses directly to a patient, so it has no
+		// business being billed from here.
+		frm.set_query("warehouse", () => ({
+			filters: { warehouse_type: ["!=", "Central Store"] },
+		}));
 	},
 	refresh(frm) {
 		calculate_totals(frm);
+	},
+	// Patient Consultation doesn't carry the patient's actual name itself -
+	// only a link (uhin_id) to the demographics record that does, so this
+	// can't be a plain fetch_from.
+	patient(frm) {
+		if (!frm.doc.patient) {
+			frm.set_value("customer_name", "");
+			return;
+		}
+		frappe.call({
+			method: "metta.sales.doctype.sales_bill.sales_bill.get_patient_name",
+			args: { patient: frm.doc.patient },
+			callback(r) {
+				frm.set_value("customer_name", r.message || "");
+			},
+		});
 	},
 	discount_percent(frm) {
 		calculate_totals(frm);
