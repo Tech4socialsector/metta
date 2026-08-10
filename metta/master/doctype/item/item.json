@@ -171,10 +171,12 @@
   },
   {
    "fieldname": "hsn_code",
-   "fieldtype": "Data",
-   "label": "HSN Code"
+   "fieldtype": "Link",
+   "label": "HSN Code",
+   "options": "HSN Master"
   },
   {
+   "fetch_from": "hsn_code.gst_percent",
    "fieldname": "gst_percent",
    "fieldtype": "Percent",
    "label": "GST %"

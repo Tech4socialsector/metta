@@ -19,7 +19,8 @@ def create_stock_ledger_entry(
 	from metta.stock.doctype.stock_balance.stock_balance import get_or_create_stock_balance
 
 	stock_balance_doc = get_or_create_stock_balance(item, warehouse)
-	new_qty = flt(stock_balance_doc.actual_qty) + flt(qty_change)
+	old_qty = flt(stock_balance_doc.actual_qty)
+	new_qty = old_qty + flt(qty_change)
 
 	sle = frappe.get_doc(
 		{
@@ -38,7 +39,74 @@ def create_stock_ledger_entry(
 	)
 	sle.insert(ignore_permissions=True)
 	stock_balance_doc.db_set("actual_qty", new_qty, update_modified=False)
+	_notify_if_reorder_crossed(item, warehouse, old_qty, new_qty)
 	return sle
+
+
+def _notify_if_reorder_crossed(item, warehouse, old_qty, new_qty):
+	# Only fire the moment stock crosses downward through the reorder level -
+	# comparing old vs new (not just checking new <= level) means someone
+	# already below the level doesn't get re-emailed on every further
+	# transaction, but does get a fresh email if it dips again after a restock.
+	if new_qty >= old_qty:
+		return
+
+	reorder_row = frappe.db.get_value(
+		"Item Reorder Level",
+		{"parent": item, "warehouse": warehouse},
+		["reorder_level", "reorder_qty", "notify_user"],
+		as_dict=True,
+	)
+	if not reorder_row or not reorder_row.notify_user:
+		return
+	if not (old_qty > flt(reorder_row.reorder_level) >= new_qty):
+		return
+
+	# notify_user is a Link to User, which stores the account's name, not
+	# necessarily its email - the two happen to match for ordinary staff
+	# accounts, but not for "Administrator", so the real email is looked
+	# up explicitly rather than assumed.
+	recipient_email = frappe.db.get_value("User", reorder_row.notify_user, "email")
+	if not recipient_email:
+		return
+
+	item_details = frappe.db.get_value(
+		"Item", item, ["item_name", "stock_uom", "rack_location", "standard_purchase_rate"], as_dict=True
+	) or {}
+	reorder_qty = flt(reorder_row.reorder_qty)
+	estimated_cost = reorder_qty * flt(item_details.get("standard_purchase_rate"))
+
+	frappe.sendmail(
+		recipients=[recipient_email],
+		subject=frappe._("Reorder Level Reached: {0} at {1}").format(
+			item_details.get("item_name") or item, warehouse
+		),
+		message=frappe.render_template(
+			"""
+			<p>Stock of <b>{{ item_name }}</b> ({{ item }}) at <b>{{ warehouse }}</b> has
+			dropped to <b>{{ new_qty }} {{ stock_uom }}</b>, at or below the configured
+			reorder level of <b>{{ reorder_level }} {{ stock_uom }}</b>.</p>
+			<p>
+				Suggested reorder quantity: <b>{{ reorder_qty }} {{ stock_uom }}</b>
+				{% if estimated_cost %}(estimated cost: <b>{{ estimated_cost }}</b>){% endif %}<br>
+				{% if rack_location %}Rack / Shelf: <b>{{ rack_location }}</b><br>{% endif %}
+			</p>
+			<p><a href="{{ item_link }}">View {{ item_name }}</a></p>
+			""",
+			{
+				"item": item,
+				"item_name": item_details.get("item_name") or item,
+				"warehouse": warehouse,
+				"new_qty": new_qty,
+				"stock_uom": item_details.get("stock_uom") or "",
+				"reorder_level": reorder_row.reorder_level,
+				"reorder_qty": reorder_qty,
+				"estimated_cost": estimated_cost,
+				"rack_location": item_details.get("rack_location"),
+				"item_link": frappe.utils.get_url_to_form("Item", item),
+			},
+		),
+	)
 
 
 def validate_sufficient_stock(item, warehouse, qty_needed):
