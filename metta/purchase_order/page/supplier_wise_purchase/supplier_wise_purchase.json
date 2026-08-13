@@ -1,0 +1,27 @@
+{
+ "content": null,
+ "creation": "2026-08-12 00:00:00",
+ "docstatus": 0,
+ "doctype": "Page",
+ "modified": "2026-08-12 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Purchase Order",
+ "name": "supplier-wise-purchase",
+ "owner": "Administrator",
+ "page_name": "supplier-wise-purchase",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Store Staff"
+  },
+  {
+   "role": "Purchase Approver"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "title": "Supplier Wise Purchase"
+}

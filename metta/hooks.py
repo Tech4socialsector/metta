@@ -83,7 +83,7 @@ add_to_apps_screen = [
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/metta/css/metta.css"
-# app_include_js = "/assets/metta/js/metta.js"
+app_include_js = "/assets/metta/js/report_export.js"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/metta/css/metta.css"

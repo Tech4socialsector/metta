@@ -91,7 +91,7 @@
  },
  {
   "attach_files": "",
-  "attach_print": 1,
+  "attach_print": 0,
   "channel": "Email",
   "condition": "doc.status == \"Sent to Dealer\"",
   "condition_type": "Python",

@@ -9,13 +9,13 @@ frappe.ui.form.on("Sales Return", {
 			filters: { item_type: ["in", ["Medicine", "Consumable"]] },
 		}));
 		// Only show bills/issues belonging to the selected patient, so the
-		// picker doesn't force scrolling through every patient's documents.
-		frm.set_query("against_sales_bill", () => {
-			if (!frm.doc.patient) return {};
-			return { filters: { patient: frm.doc.patient, docstatus: 1 } };
-		});
-		frm.set_query("against_material_issue", () => {
-			if (!frm.doc.patient) return {};
+		// picker doesn't force scrolling through every patient's documents -
+		// which field to filter on depends on which type is currently chosen.
+		frm.set_query("against_document", () => {
+			if (!frm.doc.source_type || !frm.doc.patient) return {};
+			if (frm.doc.source_type === "Sales Bill") {
+				return { filters: { patient: frm.doc.patient, docstatus: 1 } };
+			}
 			return { filters: { visit_reference: frm.doc.patient, docstatus: 1 } };
 		});
 	},
@@ -26,34 +26,59 @@ frappe.ui.form.on("Sales Return", {
 		calculate_total(frm);
 	},
 	patient(frm) {
-		// Prefill with the patient's most recent bill/issue as a starting
-		// point - still just a convenience, not a lock; staff can pick a
-		// different one via the (patient-filtered) link query if needed.
-		frm.set_value("against_sales_bill", "");
-		frm.set_value("against_material_issue", "");
+		// Prefill with the patient's single most recent bill/issue (whichever
+		// type that turns out to be) as a starting point - still just a
+		// convenience, not a lock; staff can pick a different one via the
+		// (patient-filtered) link query if needed.
+		frm.set_value("source_type", "");
+		frm.set_value("against_document", "");
 		if (!frm.doc.patient) return;
 
-		frappe.db
-			.get_list("Sales Bill", {
+		Promise.all([
+			frappe.db.get_list("Sales Bill", {
 				filters: { patient: frm.doc.patient, docstatus: 1 },
-				fields: ["name"],
+				fields: ["name", "sale_datetime"],
 				order_by: "sale_datetime desc",
 				limit: 1,
-			})
-			.then((rows) => {
-				if (rows.length) frm.set_value("against_sales_bill", rows[0].name);
-			});
-
-		frappe.db
-			.get_list("Material Issue", {
+			}),
+			frappe.db.get_list("Material Issue", {
 				filters: { visit_reference: frm.doc.patient, docstatus: 1 },
-				fields: ["name"],
+				fields: ["name", "issue_date_time"],
 				order_by: "issue_date_time desc",
 				limit: 1,
-			})
-			.then((rows) => {
-				if (rows.length) frm.set_value("against_material_issue", rows[0].name);
-			});
+			}),
+		]).then(([bills, issues]) => {
+			const bill = bills[0];
+			const issue = issues[0];
+			if (!bill && !issue) return;
+			const use_bill = bill && (!issue || bill.sale_datetime >= issue.issue_date_time);
+			// source_type's own change-trigger clears against_document (see
+			// below) - awaiting it here means that clear runs BEFORE this sets
+			// the real value, instead of racing it and wiping it out after.
+			if (use_bill) {
+				frm.set_value("source_type", "Sales Bill").then(() => {
+					frm.set_value("against_document", bill.name).then(() => {
+						// Changing source_type rebuilds the Dynamic Link's input
+						// control - without this, the value is set on the doc
+						// but the box on screen can be left showing empty.
+						frm.refresh_field("against_document");
+					});
+				});
+			} else {
+				frm.set_value("source_type", "Material Issue").then(() => {
+					frm.set_value("against_document", issue.name).then(() => {
+						frm.refresh_field("against_document");
+					});
+				});
+			}
+		});
+	},
+	source_type(frm) {
+		// Whatever was picked under the previous type doesn't belong to the
+		// new one - clear it rather than leave a mismatched value sitting there.
+		// (The patient handler above awaits this before setting a fresh value,
+		// so a real auto-fetched ID never gets wiped out by this.)
+		frm.set_value("against_document", "");
 	},
 });
 

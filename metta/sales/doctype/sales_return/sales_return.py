@@ -23,9 +23,9 @@ class SalesReturn(Document):
 		# Without a real source document behind it, a return has no proof the
 		# item was ever actually dispensed to this patient - anyone could
 		# otherwise submit a fabricated return and add unverified qty to stock.
-		if not (self.against_sales_bill or self.against_material_issue):
+		if not (self.source_type and self.against_document):
 			frappe.throw(
-				_("Please link either Against Sales Bill or Against Material Issue - a return needs a source document."),
+				_("Please select a Source Type and link the document it's against - a return needs a source document."),
 				title=_("Source Document Required"),
 			)
 

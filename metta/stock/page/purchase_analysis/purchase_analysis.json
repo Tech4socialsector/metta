@@ -1,0 +1,29 @@
+{
+ "content": null,
+ "creation": "2026-08-11 15:15:34.200655",
+ "docstatus": 0,
+ "doctype": "Page",
+ "idx": 0,
+ "modified": "2026-08-11 15:15:34.200655",
+ "modified_by": "Administrator",
+ "module": "Stock",
+ "name": "purchase-analysis",
+ "owner": "Administrator",
+ "page_name": "purchase-analysis",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Store Staff"
+  },
+  {
+   "role": "Warehouse Staffs"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 0,
+ "title": "Purchase Analysis"
+}

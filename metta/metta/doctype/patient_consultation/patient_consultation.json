@@ -227,9 +227,9 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Phone",
+   "length": 10,
    "no_copy": 1,
-   "options": "Phone",
-   "length": 10
+   "options": "Phone"
   },
   {
    "bold": 1,
@@ -374,6 +374,7 @@
    "fieldtype": "Column Break"
   },
   {
+   "fetch_from": "uhin_id.billing_category",
    "fieldname": "billing_category",
    "fieldtype": "Link",
    "label": "Billing Category",
@@ -530,7 +531,7 @@
   }
  ],
  "max_attachments": 50,
- "modified": "2026-08-03 16:19:54.815424",
+ "modified": "2026-08-10 12:19:25.454213",
  "modified_by": "Administrator",
  "module": "metta",
  "name": "Patient Consultation",
