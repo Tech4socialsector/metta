@@ -4,17 +4,28 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.model.naming import make_autoname
+from frappe.utils import flt, getdate
 
 from metta.metta.doctype.patient_registration.patient_registration import calculate_age
 from metta.metta.utils import validate_phone_number
 
 
-class PatientConsultation(Document):
+class PatientVisit(Document):
+	def autoname(self):
+		# OP and IP need to be visually distinguishable from the ID alone -
+		# each prefix keeps its own independent counter (Frappe's Series
+		# storage is keyed by the exact pattern string), so OP-2026-00001
+		# and IP-2026-00001 can both exist without colliding.
+		prefix = "IP" if self.registration_category == "IP" else "OP"
+		self.name = make_autoname(f"{prefix}-.YYYY.-.#####")
+
 	def validate(self):
 		validate_phone_number(self.phone, "Phone")
 		self.validate_registration_category()
 		self.validate_bed_availability()
 		self.validate_room_availability()
+		self.validate_discharge()
 		# Front-desk process requires checking Patient Registration first: link the
 		# existing record, or create one there if the patient is genuinely new.
 		# Registration should never silently invent a patient - it must always
@@ -25,18 +36,78 @@ class PatientConsultation(Document):
 				title=_("Patient Not Linked"),
 			)
 		self.update_age()
+		self.calculate_billing_totals()
+
+	def calculate_billing_totals(self):
+		# Re-derived from Category Price Adjustment directly (not trusted from
+		# the fetched fields) since discount_status could have changed since
+		# this doc last fetched it - same authoritative-recompute pattern
+		# Billing uses for its own discount math.
+		adjustment_type = None
+		if self.billing_category:
+			category = frappe.db.get_value(
+				"Category Price Adjustment", self.billing_category, ["adjustment_type", "discount_status"], as_dict=True
+			)
+			if category and category.discount_status == "Active":
+				adjustment_type = category.adjustment_type
+
+		raw_percent = flt(self.discount_percent) if adjustment_type in ("Discount", "Increase") else 0
+		# discount_percent isn't read-only, so this can't just trust the
+		# category's own bound (see Category Price Adjustment.validate) -
+		# someone could still type a value directly on the visit itself.
+		if adjustment_type == "Discount" and raw_percent > 100:
+			frappe.throw(
+				_("Discount Percent cannot exceed 100% - that would make the bill negative."),
+				title=_("Invalid Discount"),
+			)
+		# "Increase" grows the bill instead of shrinking it, same sign flip
+		# Billing applies for the same two adjustment types.
+		signed_percent = -raw_percent if adjustment_type == "Increase" else raw_percent
+
+		self.discount_amount = flt(self.fee_amount) * signed_percent / 100
+		self.net_amount = flt(self.fee_amount) - self.discount_amount
+
+		# Charity is a full waiver, not a discount - what the patient would
+		# otherwise have owed is recorded (for the collection report) and then
+		# zeroed out, rather than left to just silently disappear.
+		if self.payment_mode == "Charity":
+			if not self.charity_category:
+				frappe.throw(_("Charity Category is mandatory when Payment Mode is Charity."))
+			self.charity_amount = self.net_amount
+			self.net_amount = 0
+		else:
+			self.charity_category = None
+			self.charity_amount = 0
+			self.charity_remarks = None
+
+		# Recorded the first time a payment mode is actually picked - not
+		# reset on every subsequent edit, so it keeps showing who originally
+		# collected the fee even if someone else corrects a typo later.
+		if self.payment_mode and not self.collected_by:
+			self.collected_by = frappe.session.user
 
 	def validate_registration_category(self):
 		# The client hides "IP" from the dropdown and locks the field after
 		# save, but that's only a convenience - this is the check an API call
 		# or import can't bypass.
 		if self.is_new():
-			# A brand-new IP registration is only ever valid coming from
-			# "Admit Patient" on an existing OP visit, never picked from
-			# scratch - that's what converted_from_registration proves.
-			if self.registration_category == "IP" and not self.converted_from_registration:
+			# A brand-new IP registration is normally only ever valid coming
+			# from "Admit Patient" on an existing OP visit - converted_from_registration
+			# proves that. The one deliberate exception is a genuine emergency
+			# (accident, urgent delivery) where waiting to create an OP visit
+			# first would cost real time - emergency_admission is the explicit,
+			# audited confirmation that this is that case, not a shortcut
+			# anyone can tick by habit.
+			if (
+				self.registration_category == "IP"
+				and not self.converted_from_registration
+				and not self.emergency_admission
+			):
 				frappe.throw(
-					_("A new registration must start as OP. Use \"Admit Patient\" on an existing OP visit to create an IP admission."),
+					_(
+						"A new registration must start as OP. Use \"Admit Patient\" on an existing OP visit to create an IP admission, "
+						"or check \"Emergency Admission\" if this patient genuinely needs to be admitted directly."
+					),
 					title=_("Invalid Registration Category"),
 				)
 			return
@@ -44,12 +115,32 @@ class PatientConsultation(Document):
 		# Once saved, Registration Category can never change - flipping it
 		# would silently rewrite this visit's billing history instead of
 		# creating the separate admission record "Admit Patient" is for.
-		existing_category = frappe.db.get_value("Patient Consultation", self.name, "registration_category")
+		existing_category = frappe.db.get_value("Patient Visit", self.name, "registration_category")
 		if existing_category and existing_category != self.registration_category:
 			frappe.throw(
 				_("Registration Category cannot be changed after saving. Use \"Admit Patient\" instead."),
 				title=_("Invalid Registration Category"),
 			)
+
+	def validate_discharge(self):
+		# Only IP admissions go through Admitted/Discharged at all.
+		if self.registration_category != "IP":
+			return
+		if self.admission_status == "Discharged":
+			# Whoever flips the status is doing it right now, at the moment
+			# the patient is actually leaving - not backdating it, so "today"
+			# is the correct default whenever it's left blank.
+			if not self.discharge_date:
+				self.discharge_date = frappe.utils.today()
+			if self.admission_date and getdate(self.discharge_date) < getdate(self.admission_date):
+				frappe.throw(
+					_("Discharge Date cannot be before Admission Date ({0}).").format(self.admission_date),
+					title=_("Invalid Discharge Date"),
+				)
+		else:
+			# Re-admitting after a correction shouldn't leave a stale discharge
+			# date lingering on an otherwise-active admission.
+			self.discharge_date = None
 
 	def update_age(self):
 		dob = frappe.db.get_value("Patient Registration", self.uhin_id, "dob")
@@ -86,7 +177,7 @@ class PatientConsultation(Document):
 		# popup is just a convenience; this check can't be bypassed by the UI,
 		# an API call, or two staff saving at nearly the same time.
 		existing = frappe.db.get_value(
-			"Patient Consultation",
+			"Patient Visit",
 			{
 				"ward": self.ward,
 				"bed_no": self.bed_no,
@@ -126,7 +217,7 @@ class PatientConsultation(Document):
 			)
 
 		existing = frappe.db.get_value(
-			"Patient Consultation",
+			"Patient Visit",
 			{
 				"room": self.room,
 				"room_bed_no": self.room_bed_no,
@@ -143,10 +234,55 @@ class PatientConsultation(Document):
 				title=_("Bed Already Occupied"),
 			)
 
+def get_permission_query_conditions(user=None):
+	# A Doctor only ever needs their own patients in list/report views - System
+	# Manager and Front Desk keep seeing everyone, since their own DocPerm row
+	# already grants that and this hook must not narrow it further for them.
+	user = user or frappe.session.user
+	roles = frappe.get_roles(user)
+	if "System Manager" in roles or "Front Desk" in roles or "Doctor" not in roles:
+		return ""
+
+	doctor = frappe.db.get_value("Doctor Master", {"user": user}, "name")
+	if not doctor:
+		return "1=0"
+	return f"""`tabPatient Visit`.doctor_name = {frappe.db.escape(doctor)}"""
+
+
+def has_permission(doc, ptype, user):
+	# Controllers can only ever narrow permission, never grant it beyond the
+	# role's own DocPerm - so every branch here defaults to True ("no
+	# objection from this check") and only turns False for the one case this
+	# exists to block: a Doctor opening a patient that isn't theirs directly
+	# by name, bypassing the list-view filter above.
+	roles = frappe.get_roles(user)
+	if "System Manager" in roles or "Front Desk" in roles or "Doctor" not in roles:
+		return True
+
+	doctor = frappe.db.get_value("Doctor Master", {"user": user}, "name")
+	return bool(doctor) and doc.doctor_name == doctor
+
+
+@frappe.whitelist()
+def get_category_adjustment(billing_category):
+	# A dedicated copy rather than reusing Billing's version of this same
+	# lookup - that one gates on Billing read permission, which Front
+	# Desk (who bills the consultation fee here, not medicines) was never granted.
+	frappe.has_permission("Patient Visit", "read", throw=True)
+	if not billing_category:
+		return {}
+	return frappe.db.get_value(
+		"Category Price Adjustment",
+		billing_category,
+		["adjustment_type", "discount_status", "discount_percent"],
+		as_dict=True,
+	) or {}
+
+
 # Returns just the receipt fragment so the client can show it in a dialog instead of navigating to Frappe's print view.
 @frappe.whitelist()
 def get_receipt_html(registration):
-	doc = frappe.get_doc("Patient Consultation", registration)
+	doc = frappe.get_doc("Patient Visit", registration)
 	doc.check_permission("read")
 	print_format = frappe.get_doc("Print Format", "Patient Registration Receipt")
 	return frappe.render_template(print_format.html, {"doc": doc.as_dict()})
@@ -174,23 +310,25 @@ def check_bed_availability(ward, bed_no, registration=None):
 	# Client-side counterpart to validate_bed_availability() above - gives an
 	# instant popup instead of making the user wait for a failed save. Not a
 	# substitute for the server-side check, since this one is skippable.
-	frappe.has_permission("Patient Consultation", "read", throw=True)
+	frappe.has_permission("Patient Visit", "read", throw=True)
 	if not ward or not bed_no:
 		return {"occupied": False}
 	filters = {"ward": ward, "bed_no": bed_no, "admission_status": "Admitted"}
 	if registration:
 		filters["name"] = ["!=", registration]
-	existing = frappe.db.get_value("Patient Consultation", filters, "name")
+	existing = frappe.db.get_value("Patient Visit", filters, "name")
 	return {"occupied": bool(existing), "occupied_by": existing}
 
 
 @frappe.whitelist()
 def get_admission_defaults(op_registration):
-	# Only the patient and consulting doctor carry over automatically - ward/
-	# bed, registration type, and billing are genuinely different for an
-	# admission and are deliberately left blank for whoever is admitting the
-	# patient to fill in fresh, not copied from the OP visit.
-	op = frappe.get_doc("Patient Consultation", op_registration)
+	# Patient, consulting doctor, and billing category all carry over -
+	# billing_category is the person's own discount/rate policy (e.g. staff
+	# concession, corporate), not something tied to OP vs IP specifically.
+	# Ward/bed, registration type, and the actual fee are genuinely different
+	# for an admission and are deliberately left blank for whoever is
+	# admitting the patient to fill in fresh, not copied from the OP visit.
+	op = frappe.get_doc("Patient Visit", op_registration)
 	op.check_permission("read")
 	if op.registration_category != "OP":
 		frappe.throw(_("Only an OP registration can be converted into an admission."))
@@ -198,6 +336,9 @@ def get_admission_defaults(op_registration):
 		"uhin_id": op.uhin_id,
 		"doctor_name": op.doctor_name,
 		"converted_from_registration": op.name,
+		"billing_category": op.billing_category,
+		"discount_percent": op.discount_percent,
+		"adjustment_type": op.adjustment_type,
 	}
 
 
@@ -225,11 +366,11 @@ def check_room_availability(room, room_bed_no, registration=None):
 	# Client-side counterpart to validate_room_availability() above - gives an
 	# instant popup instead of making the user wait for a failed save. Not a
 	# substitute for the server-side check, since this one is skippable.
-	frappe.has_permission("Patient Consultation", "read", throw=True)
+	frappe.has_permission("Patient Visit", "read", throw=True)
 	if not room or not room_bed_no:
 		return {"occupied": False}
 	filters = {"room": room, "room_bed_no": room_bed_no, "admission_status": "Admitted"}
 	if registration:
 		filters["name"] = ["!=", registration]
-	existing = frappe.db.get_value("Patient Consultation", filters, "name")
+	existing = frappe.db.get_value("Patient Visit", filters, "name")
 	return {"occupied": bool(existing), "occupied_by": existing}

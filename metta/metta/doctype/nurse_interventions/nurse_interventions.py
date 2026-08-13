@@ -58,3 +58,32 @@ class NurseInterventions(Document):
 				),
 				title=_("Vitals Missing"),
 			)
+
+
+def get_permission_query_conditions(user=None):
+	# patient_registration is actually a Link to Patient Visit (the
+	# visit), not Patient Registration (the person) - despite the field name -
+	# so a Doctor's own patients are found the same way as on that doctype.
+	user = user or frappe.session.user
+	roles = frappe.get_roles(user)
+	if "System Manager" in roles or "Nurse" in roles or "Doctor" not in roles:
+		return ""
+
+	doctor = frappe.db.get_value("Doctor Master", {"user": user}, "name")
+	if not doctor:
+		return "1=0"
+	return f"""`tabNurse Interventions`.patient_registration in (
+		select name from `tabPatient Visit` where doctor_name = {frappe.db.escape(doctor)}
+	)"""
+
+
+def has_permission(doc, ptype, user):
+	roles = frappe.get_roles(user)
+	if "System Manager" in roles or "Nurse" in roles or "Doctor" not in roles:
+		return True
+
+	doctor = frappe.db.get_value("Doctor Master", {"user": user}, "name")
+	if not doctor:
+		return False
+	visit_doctor = frappe.db.get_value("Patient Visit", doc.patient_registration, "doctor_name")
+	return visit_doctor == doctor

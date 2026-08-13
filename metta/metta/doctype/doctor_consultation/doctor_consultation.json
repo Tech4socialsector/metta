@@ -1,0 +1,159 @@
+{
+ "actions": [],
+ "autoname": "DC-.YYYY.-.#####",
+ "creation": "2026-08-10 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "patient_consultation",
+  "patient_name",
+  "doctor",
+  "consultation_datetime",
+  "diagnosis",
+  "prescribed_items",
+  "investigations_section",
+  "suggested_tests",
+  "column_break_dc",
+  "follow_up_date",
+  "referred_to",
+  "patient_history_section",
+  "patient_history_html"
+ ],
+ "fields": [
+  {
+   "fieldname": "patient_consultation",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Visit",
+   "options": "Patient Visit",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "patient_consultation.patient_name",
+   "fieldname": "patient_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Patient Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "doctor",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Doctor",
+   "options": "Doctor Master",
+   "reqd": 1
+  },
+  {
+   "default": "Now",
+   "fieldname": "consultation_datetime",
+   "fieldtype": "Datetime",
+   "label": "Consultation Date Time",
+   "reqd": 1
+  },
+  {
+   "fieldname": "diagnosis",
+   "fieldtype": "Small Text",
+   "ignore_xss_filter": 1,
+   "label": "Diagnosis / Clinical Notes"
+  },
+  {
+   "fieldname": "prescribed_items",
+   "fieldtype": "Table",
+   "label": "Prescription",
+   "options": "Prescription Item"
+  },
+  {
+   "fieldname": "investigations_section",
+   "fieldtype": "Section Break",
+   "label": "Suggested Investigations"
+  },
+  {
+   "fieldname": "suggested_tests",
+   "fieldtype": "Table",
+   "label": "Lab / X-Ray Tests Suggested",
+   "options": "Suggested Test"
+  },
+  {
+   "fieldname": "column_break_dc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "follow_up_date",
+   "fieldtype": "Date",
+   "label": "Follow-up Date"
+  },
+  {
+   "fieldname": "referred_to",
+   "fieldtype": "Link",
+   "label": "Referred To",
+   "options": "Doctor Master"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "patient_history_section",
+   "fieldtype": "Section Break",
+   "label": "Patient History"
+  },
+  {
+   "fieldname": "patient_history_html",
+   "fieldtype": "HTML",
+   "label": "Past Visits"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-08-12 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "metta",
+ "name": "Doctor Consultation",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Doctor",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Pharmacy Staff"
+  },
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Billing Staff"
+  }
+ ],
+ "row_format": "Dynamic",
+ "search_fields": "patient_name",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "patient_name"
+}

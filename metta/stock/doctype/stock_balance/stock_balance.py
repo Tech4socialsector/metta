@@ -12,7 +12,7 @@ class StockBalance(Document):
 def get_or_create_stock_balance(item, warehouse):
 	# Stock Balance is meant to be system-maintained (one row per item+warehouse),
 	# never created by hand - this is the single place that invariant is enforced,
-	# so every caller (Purchase Receipt, Sales Bill, etc.) shares it instead of
+	# so every caller (Purchase Receipt, Billing, etc.) shares it instead of
 	# each re-implementing its own get-or-create logic.
 	name = f"{item}-{warehouse}"
 	if frappe.db.exists("Stock Balance", name):

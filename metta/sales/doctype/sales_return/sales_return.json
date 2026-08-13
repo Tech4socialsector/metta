@@ -7,8 +7,8 @@
  "engine": "InnoDB",
  "field_order": [
   "patient",
-  "source_type",
-  "against_document",
+  "against_sales_bill",
+  "against_material_issue",
   "to_warehouse",
   "return_date_time",
   "returned_by",
@@ -23,20 +23,19 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Patient",
-   "options": "Patient Consultation"
+   "options": "Patient Visit"
   },
   {
-   "fieldname": "source_type",
-   "fieldtype": "Select",
-   "label": "Source Type",
-   "options": "\nSales Bill\nMaterial Issue"
+   "fieldname": "against_sales_bill",
+   "fieldtype": "Link",
+   "label": "Against Billing",
+   "options": "Billing"
   },
   {
-   "depends_on": "eval:doc.source_type",
-   "fieldname": "against_document",
-   "fieldtype": "Dynamic Link",
-   "label": "Against Matirial ID",
-   "options": "source_type"
+   "fieldname": "against_material_issue",
+   "fieldtype": "Link",
+   "label": "Against Material Issue",
+   "options": "Material Issue"
   },
   {
    "fieldname": "to_warehouse",
@@ -97,7 +96,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-08-10 15:08:08.662424",
+ "modified": "2026-08-12 15:30:00.000000",
  "modified_by": "Administrator",
  "module": "Sales",
  "name": "Sales Return",

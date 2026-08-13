@@ -1,7 +1,7 @@
 {
  "app": "metta",
  "charts": [],
- "content": "[{\"id\":\"p3CgfFHc5-\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Welcome to the HMIS workspace</span>\",\"col\":12}},{\"id\":\"ocnhOtXI8c\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Patient Registration\",\"col\":4}},{\"id\":\"XpjgqUD5ck\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Patient Consultation\",\"col\":4}},{\"id\":\"L3YZBek8y-\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Nurse Interventions\",\"col\":4}}]",
+ "content": "[{\"id\":\"p3CgfFHc5-\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Welcome to the HMIS workspace</span>\",\"col\":12}},{\"id\":\"ocnhOtXI8c\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Patient Registration\",\"col\":4}},{\"id\":\"XpjgqUD5ck\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Patient Visit\",\"col\":4}},{\"id\":\"L3YZBek8y-\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Nurse Interventions\",\"col\":4}},{\"id\":\"inpUuSXH62\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Doctor Consultation\",\"col\":4}}]",
  "creation": "2026-07-16 23:35:16.393718",
  "custom_blocks": [],
  "docstatus": 0,
@@ -13,7 +13,7 @@
  "label": "HMIS",
  "link_type": "DocType",
  "links": [],
- "modified": "2026-08-03 16:36:45.956781",
+ "modified": "2026-08-11 16:25:28.479186",
  "modified_by": "Administrator",
  "module": "metta",
  "name": "HMIS",
@@ -23,8 +23,12 @@
    "number_card_name": "Patient Registration-1"
   },
   {
-   "label": "Patient Consultation",
-   "number_card_name": "Patient Consultation"
+   "label": "Doctor Consultation",
+   "number_card_name": "Doctor Consultation"
+  },
+  {
+   "label": "Patient Visit",
+   "number_card_name": "Patient Visit"
   },
   {
    "label": "Nurse Interventions",

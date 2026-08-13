@@ -187,5 +187,98 @@
   "name": "Master Form",
   "standard": 0,
   "title": "Master Form"
+ },
+ {
+  "app": null,
+  "docstatus": 0,
+  "doctype": "Workspace Sidebar",
+  "for_user": null,
+  "header_icon": null,
+  "items": [
+   {
+    "child": 0,
+    "collapsible": 1,
+    "filters": null,
+    "icon": null,
+    "indent": 0,
+    "keep_closed": 0,
+    "label": "Front Desk",
+    "link_to": "Front Desk",
+    "link_type": "Workspace",
+    "navigate_to_tab": null,
+    "route_options": null,
+    "show_arrow": 0,
+    "type": "Link",
+    "url": null
+   }
+  ],
+  "modified": "2026-08-11 15:43:32.829051",
+  "module": "metta",
+  "module_onboarding": null,
+  "name": "Front Desk",
+  "standard": 0,
+  "title": "Front Desk"
+ },
+ {
+  "app": null,
+  "docstatus": 0,
+  "doctype": "Workspace Sidebar",
+  "for_user": null,
+  "header_icon": null,
+  "items": [
+   {
+    "child": 0,
+    "collapsible": 1,
+    "filters": null,
+    "icon": null,
+    "indent": 0,
+    "keep_closed": 0,
+    "label": "Nurse",
+    "link_to": "Nurse",
+    "link_type": "Workspace",
+    "navigate_to_tab": null,
+    "route_options": null,
+    "show_arrow": 0,
+    "type": "Link",
+    "url": null
+   }
+  ],
+  "modified": "2026-08-11 15:43:32.941427",
+  "module": "metta",
+  "module_onboarding": null,
+  "name": "Nurse",
+  "standard": 0,
+  "title": "Nurse"
+ },
+ {
+  "app": null,
+  "docstatus": 0,
+  "doctype": "Workspace Sidebar",
+  "for_user": null,
+  "header_icon": null,
+  "items": [
+   {
+    "child": 0,
+    "collapsible": 1,
+    "filters": null,
+    "icon": null,
+    "indent": 0,
+    "keep_closed": 0,
+    "label": "Doctor",
+    "link_to": "Doctor",
+    "link_type": "Workspace",
+    "navigate_to_tab": null,
+    "route_options": null,
+    "show_arrow": 0,
+    "type": "Link",
+    "url": null
+   }
+  ],
+  "modified": "2026-08-11 15:43:32.944060",
+  "module": "metta",
+  "module_onboarding": null,
+  "name": "Doctor",
+  "standard": 0,
+  "title": "Doctor"
  }
 ]

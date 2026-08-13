@@ -38,12 +38,15 @@ def get_data(filters):
 		f"""
 		SELECT
 			owner,
-			SUM(net_amount) AS gross_amt,
+			-- Charity is a full waiver - net_amount is zeroed for those rows,
+			-- so charity_amount has to be added back in to see the true
+			-- value of what was actually billed, not just what was collected.
+			SUM(net_amount + charity_amount) AS gross_amt,
 			SUM(CASE WHEN payment_mode = 'Cash' THEN net_amount ELSE 0 END) AS cash_amt,
 			SUM(CASE WHEN payment_mode IN ('UPI', 'Card') THEN net_amount ELSE 0 END) AS epay,
 			SUM(CASE WHEN payment_mode = 'Credit - Corporate' THEN net_amount ELSE 0 END) AS credit_bills,
-			SUM(CASE WHEN payment_mode = 'Free - Staff Concession' THEN net_amount ELSE 0 END) AS charity
-		FROM `tabSales Bill`
+			SUM(CASE WHEN payment_mode = 'Charity' THEN charity_amount ELSE 0 END) AS charity
+		FROM `tabBilling`
 		WHERE docstatus = 1 {bill_conditions}
 		GROUP BY owner
 		""",
