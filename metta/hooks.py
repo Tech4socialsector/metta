@@ -12,15 +12,30 @@ fixtures = [
 	{"doctype": "Print Format", "filters": [["name", "=", "Patient Registration Receipt"]]},
 	{
 		"doctype": "Number Card",
-		"filters": [["name", "in", ["Nurse Interventions", "Patient Consultation", "Patient Registration-1"]]],
+		"filters": [
+			[
+				"name",
+				"in",
+				[
+					"Nurse Interventions",
+					"Patient Visit",
+					"Patient Registration-1",
+					"Doctor Consultation",
+				],
+			]
+		],
 	},
 	{
 		"doctype": "Workspace Sidebar",
-		"filters": [["name", "in", ["HMIS", "Master Form", "Stock and Pharmacy"]]],
+		"filters": [
+			["name", "in", ["HMIS", "Master Form", "Stock and Pharmacy", "Front Desk", "Nurse", "Doctor", "Billing Desk"]]
+		],
 	},
 	{
 		"doctype": "Desktop Icon",
-		"filters": [["name", "in", ["HMIS", "Master Form", "Stock and Pharmacy"]]],
+		"filters": [
+			["name", "in", ["HMIS", "Master Form", "Stock and Pharmacy", "Front Desk", "Nurse", "Doctor", "Billing Desk"]]
+		],
 	},
 	{
 		"doctype": "Role",
@@ -32,10 +47,12 @@ fixtures = [
 					"Front Desk",
 					"Nurse",
 					"Pharmacy Staff",
+					"Billing Staff",
 					"Store Staff",
 					"Warehouse Staffs",
 					"Purchase Approver",
 					"Account Staff",
+					"Doctor",
 				],
 			]
 		],
@@ -183,13 +200,17 @@ add_to_apps_screen = [
 # -----------
 # Permissions evaluated in scripted ways
 
-# permission_query_conditions = {
-# 	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
-# }
-#
-# has_permission = {
-# 	"Event": "frappe.desk.doctype.event.event.has_permission",
-# }
+permission_query_conditions = {
+	"Patient Visit": "metta.metta.doctype.patient_visit.patient_visit.get_permission_query_conditions",
+	"Nurse Interventions": "metta.metta.doctype.nurse_interventions.nurse_interventions.get_permission_query_conditions",
+	"Doctor Consultation": "metta.metta.doctype.doctor_consultation.doctor_consultation.get_permission_query_conditions",
+}
+
+has_permission = {
+	"Patient Visit": "metta.metta.doctype.patient_visit.patient_visit.has_permission",
+	"Nurse Interventions": "metta.metta.doctype.nurse_interventions.nurse_interventions.has_permission",
+	"Doctor Consultation": "metta.metta.doctype.doctor_consultation.doctor_consultation.has_permission",
+}
 
 # Document Events
 # ---------------

@@ -25,7 +25,7 @@ class SalesReturn(Document):
 		# otherwise submit a fabricated return and add unverified qty to stock.
 		if not (self.against_sales_bill or self.against_material_issue):
 			frappe.throw(
-				_("Please link either Against Sales Bill or Against Material Issue - a return needs a source document."),
+				_("Please link either Against Billing or Against Material Issue - a return needs a source document."),
 				title=_("Source Document Required"),
 			)
 

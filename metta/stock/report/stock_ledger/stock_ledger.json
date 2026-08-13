@@ -36,7 +36,7 @@
    "fieldtype": "Select",
    "label": "Voucher Type",
    "mandatory": 0,
-   "options": "\nPurchase Receipt\nPurchase Return\nStock Transfer\nMaterial Issue\nStock Adjustment\nStock Reconciliation\nSales Bill",
+   "options": "\nPurchase Receipt\nPurchase Return\nStock Transfer\nMaterial Issue\nStock Adjustment\nStock Reconciliation\nBilling",
    "wildcard_filter": 0
   },
   {
@@ -57,7 +57,7 @@
  "idx": 0,
  "is_standard": "Yes",
  "letter_head": null,
- "modified": "2026-07-30 17:33:29.636194",
+ "modified": "2026-08-12 11:15:00.000000",
  "modified_by": "Administrator",
  "module": "Stock",
  "name": "Stock Ledger",

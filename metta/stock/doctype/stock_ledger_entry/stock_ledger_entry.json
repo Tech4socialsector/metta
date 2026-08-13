@@ -67,7 +67,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Voucher Type",
-   "options": "Purchase Receipt\nPurchase Return\nStock Transfer\nSales Bill\nSales Return\nMaterial Issue\nStock Adjustment\nStock Reconciliation",
+   "options": "Purchase Receipt\nPurchase Return\nStock Transfer\nBilling\nSales Return\nMaterial Issue\nStock Adjustment\nStock Reconciliation",
    "reqd": 1
   },
   {
@@ -106,7 +106,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-28 16:50:41.298394",
+ "modified": "2026-08-12 11:15:00.000000",
  "modified_by": "Administrator",
  "module": "Stock",
  "name": "Stock Ledger Entry",

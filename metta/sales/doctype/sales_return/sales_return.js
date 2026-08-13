@@ -34,7 +34,7 @@ frappe.ui.form.on("Sales Return", {
 		if (!frm.doc.patient) return;
 
 		frappe.db
-			.get_list("Sales Bill", {
+			.get_list("Billing", {
 				filters: { patient: frm.doc.patient, docstatus: 1 },
 				fields: ["name"],
 				order_by: "sale_datetime desc",

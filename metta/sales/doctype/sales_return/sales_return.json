@@ -23,13 +23,13 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Patient",
-   "options": "Patient Consultation"
+   "options": "Patient Visit"
   },
   {
    "fieldname": "against_sales_bill",
    "fieldtype": "Link",
-   "label": "Against Sales Bill",
-   "options": "Sales Bill"
+   "label": "Against Billing",
+   "options": "Billing"
   },
   {
    "fieldname": "against_material_issue",
@@ -96,7 +96,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-08-03 15:26:06.041310",
+ "modified": "2026-08-12 15:30:00.000000",
  "modified_by": "Administrator",
  "module": "Sales",
  "name": "Sales Return",

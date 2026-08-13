@@ -35,7 +35,7 @@
    "fieldname": "visit_reference",
    "fieldtype": "Link",
    "label": "OPD Visit / Admission Reference",
-   "options": "Patient Consultation"
+   "options": "Patient Visit"
   },
   {
    "default": "Now",
@@ -80,7 +80,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-08-03 15:26:07.796987",
+ "modified": "2026-08-11 14:18:24.701440",
  "modified_by": "Administrator",
  "module": "Stock",
  "name": "Material Issue",

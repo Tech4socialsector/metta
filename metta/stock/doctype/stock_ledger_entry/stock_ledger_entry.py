@@ -110,7 +110,7 @@ def _notify_if_reorder_crossed(item, warehouse, old_qty, new_qty):
 
 
 def validate_sufficient_stock(item, warehouse, qty_needed):
-	# Every doctype that takes stock OUT (Sales Bill, Material Issue, Stock
+	# Every doctype that takes stock OUT (Billing, Material Issue, Stock
 	# Transfer dispatch, Purchase Return, Stock Adjustment write-off) shares
 	# this check so none of them can silently push a balance negative.
 	from metta.stock.doctype.stock_balance.stock_balance import get_or_create_stock_balance

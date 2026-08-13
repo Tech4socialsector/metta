@@ -17,7 +17,7 @@ class RoomMaster(Document):
 		# Computed live rather than stored, so this can't go stale the way a
 		# manually-maintained counter field would.
 		return frappe.db.count(
-			"Patient Consultation",
+			"Patient Visit",
 			{
 				"room": self.name,
 				"registration_category": "IP",
@@ -35,7 +35,7 @@ class RoomMaster(Document):
 		# room's bed list is available.
 		occupied_bed_nos = set(
 			frappe.get_all(
-				"Patient Consultation",
+				"Patient Visit",
 				filters={
 					"room": self.name,
 					"registration_category": "IP",

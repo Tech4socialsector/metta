@@ -1,7 +1,7 @@
 // Copyright (c) 2026, tfss and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on("Patient Consultation", {
+frappe.ui.form.on("Patient Visit", {
 	setup(frm) {
 		// The server blocks admitting into an inactive room regardless - this
 		// just keeps it from being offered as an option in the first place.
@@ -20,10 +20,12 @@ frappe.ui.form.on("Patient Consultation", {
 				// it either.
 				frm.set_df_property("registration_category", "read_only", 1);
 			} else {
-				// A genuinely fresh registration only ever starts as OP - IP
-				// is never picked directly here, only ever reached by clicking
-				// "Admit Patient" on an existing OP visit.
-				frm.set_df_property("registration_category", "options", "\nOP");
+				// A fresh registration normally only starts as OP - IP is
+				// usually only reached via "Admit Patient" on an existing OP
+				// visit - but IP is still offered here too for a genuine
+				// emergency (accident, urgent delivery), gated server-side by
+				// the "Emergency Admission" checkbox this reveals.
+				frm.set_df_property("registration_category", "options", "\nOP\nIP");
 			}
 		} else {
 			// Once saved, the category is locked for good - changing it after
@@ -39,18 +41,21 @@ frappe.ui.form.on("Patient Consultation", {
 				frm.add_custom_button(__("Admit Patient"), () => {
 					frappe.call({
 						method:
-							"metta.metta.doctype.patient_consultation.patient_consultation.get_admission_defaults",
+							"metta.metta.doctype.patient_visit.patient_visit.get_admission_defaults",
 						args: { op_registration: frm.doc.name },
 						callback(r) {
 							if (!r.message) return;
 							// The OP visit's own record (fee, receipt) is left untouched -
 							// this opens a brand-new IP registration instead of converting
 							// the current one in place.
-							frappe.new_doc("Patient Consultation", {
+							frappe.new_doc("Patient Visit", {
 								registration_category: "IP",
 								uhin_id: r.message.uhin_id,
 								doctor_name: r.message.doctor_name,
 								converted_from_registration: r.message.converted_from_registration,
+								billing_category: r.message.billing_category,
+								discount_percent: r.message.discount_percent,
+								adjustment_type: r.message.adjustment_type,
 							});
 						},
 					});
@@ -60,7 +65,7 @@ frappe.ui.form.on("Patient Consultation", {
 			frm.add_custom_button(__("Receipt Preview"), () => {
 				frappe.call({
 					method:
-						"metta.metta.doctype.patient_consultation.patient_consultation.get_receipt_html",
+						"metta.metta.doctype.patient_visit.patient_visit.get_receipt_html",
 					args: { registration: frm.doc.name },
 					callback(r) {
 						if (!r.message) {
@@ -108,7 +113,7 @@ frappe.ui.form.on("Patient Consultation", {
 		}
 		frappe.call({
 			method:
-				"metta.metta.doctype.patient_consultation.patient_consultation.get_ward_bed_summary",
+				"metta.metta.doctype.patient_visit.patient_visit.get_ward_bed_summary",
 			args: { ward: frm.doc.ward },
 			callback(r) {
 				if (!r.message || r.message.total_beds === undefined) {
@@ -150,7 +155,7 @@ frappe.ui.form.on("Patient Consultation", {
 		}
 		frappe.call({
 			method:
-				"metta.metta.doctype.patient_consultation.patient_consultation.check_bed_availability",
+				"metta.metta.doctype.patient_visit.patient_visit.check_bed_availability",
 			args: {
 				ward: frm.doc.ward,
 				bed_no: frm.doc.bed_no,
@@ -192,7 +197,7 @@ frappe.ui.form.on("Patient Consultation", {
 		}
 		frappe.call({
 			method:
-				"metta.metta.doctype.patient_consultation.patient_consultation.get_room_details",
+				"metta.metta.doctype.patient_visit.patient_visit.get_room_details",
 			args: { room: frm.doc.room },
 			callback(r) {
 				if (!r.message || r.message.capacity === undefined) {
@@ -241,7 +246,7 @@ frappe.ui.form.on("Patient Consultation", {
 		}
 		frappe.call({
 			method:
-				"metta.metta.doctype.patient_consultation.patient_consultation.check_room_availability",
+				"metta.metta.doctype.patient_visit.patient_visit.check_room_availability",
 			args: {
 				room: frm.doc.room,
 				room_bed_no: frm.doc.room_bed_no,
@@ -262,4 +267,59 @@ frappe.ui.form.on("Patient Consultation", {
 			},
 		});
 	},
+
+	fee_amount(frm) {
+		calculate_billing_totals(frm);
+	},
+	discount_percent(frm) {
+		calculate_billing_totals(frm);
+	},
+	payment_mode(frm) {
+		calculate_billing_totals(frm);
+	},
+	billing_category(frm) {
+		if (!frm.doc.billing_category) {
+			frm._category_adjustment = null;
+			frm.set_value("discount_percent", 0);
+			frm.set_value("adjustment_type", "");
+			calculate_billing_totals(frm);
+			return;
+		}
+		frappe.call({
+			method: "metta.metta.doctype.patient_visit.patient_visit.get_category_adjustment",
+			args: { billing_category: frm.doc.billing_category },
+			callback(r) {
+				const adjustment = r.message || null;
+				frm._category_adjustment = adjustment;
+				frm.set_value("discount_percent", (adjustment && adjustment.discount_percent) || 0);
+				frm.set_value("adjustment_type", (adjustment && adjustment.adjustment_type) || "");
+				calculate_billing_totals(frm);
+			},
+		});
+	},
 });
+
+function calculate_billing_totals(frm) {
+	// Mirrors the server's calculate_billing_totals() exactly - a live
+	// preview only, validate() on save is what's actually authoritative.
+	const adjustment = frm._category_adjustment;
+	const adjustment_type =
+		adjustment && adjustment.discount_status === "Active" ? adjustment.adjustment_type : null;
+	const raw_percent = ["Discount", "Increase"].includes(adjustment_type) ? flt(frm.doc.discount_percent) : 0;
+	const signed_percent = adjustment_type === "Increase" ? -raw_percent : raw_percent;
+
+	const discount_amount = (flt(frm.doc.fee_amount) * signed_percent) / 100;
+	const net_amount = flt(frm.doc.fee_amount) - discount_amount;
+	frm.set_value("discount_amount", discount_amount);
+
+	// Mirrors the server's Charity handling - a full waiver, not a discount,
+	// so the preview should show 0 due immediately rather than waiting for
+	// save to zero it out.
+	if (frm.doc.payment_mode === "Charity") {
+		frm.set_value("charity_amount", net_amount);
+		frm.set_value("net_amount", 0);
+	} else {
+		frm.set_value("charity_amount", 0);
+		frm.set_value("net_amount", net_amount);
+	}
+}
