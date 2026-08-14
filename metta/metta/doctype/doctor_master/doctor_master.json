@@ -8,7 +8,15 @@
  "field_order": [
   "department",
   "fee_amount",
-  "user"
+  "user",
+  "qualification",
+  "registration_number",
+  "specialization",
+  "column_break_contact",
+  "mobile",
+  "email",
+  "schedule_section",
+  "weekly_schedule"
  ],
  "fields": [
   {
@@ -29,12 +37,61 @@
    "label": "User",
    "options": "User",
    "unique": 1
+  },
+  {
+   "description": "e.g. MBBS, MD",
+   "fieldname": "qualification",
+   "fieldtype": "Data",
+   "label": "Qualification"
+  },
+  {
+   "description": "Medical council registration number.",
+   "fieldname": "registration_number",
+   "fieldtype": "Data",
+   "label": "Registration Number",
+   "unique": 1
+  },
+  {
+   "fieldname": "specialization",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Specialization"
+  },
+  {
+   "fieldname": "column_break_contact",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "mobile",
+   "fieldtype": "Data",
+   "label": "Mobile",
+   "length": 10,
+   "options": "Phone"
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "label": "Email",
+   "options": "Email"
+  },
+  {
+   "fieldname": "schedule_section",
+   "fieldtype": "Section Break",
+   "label": "Weekly Schedule"
+  },
+  {
+   "description": "Recurring weekly availability - each row is a bookable slot (day + time range + how many patients it can hold). Appointment validates against these rows.",
+   "fieldname": "weekly_schedule",
+   "fieldtype": "Table",
+   "label": "Weekly Schedule",
+   "options": "Doctor Schedule Slot"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-11 18:00:00.000000",
+ "modified": "2026-08-13 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "metta",
  "name": "Doctor Master",

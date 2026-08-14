@@ -43,14 +43,33 @@ frappe.ui.form.on("Billing", {
 		} else {
 			calculate_totals(frm);
 		}
+
+		// Same reasoning as billing_category above - an existing bill loads
+		// with `patient` already set but this form's own patient(frm) handler
+		// never fired, so the advance balance (and its button) would otherwise
+		// stay missing until the user re-picks the patient by hand.
+		if (frm.doc.patient && !frm._advance_balance) {
+			frappe.call({
+				method: "metta.sales.doctype.patient_advance.patient_advance.get_advance_balance",
+				args: { patient_visit: frm.doc.patient },
+				callback(r) {
+					frm._advance_balance = r.message || null;
+					add_advance_button(frm);
+				},
+			});
+		} else {
+			add_advance_button(frm);
+		}
 	},
 	// Patient Visit doesn't carry the patient's actual name itself -
 	// only a link (uhin_id) to the demographics record that does, so this
 	// can't be a plain fetch_from.
 	patient(frm) {
 		frm.clear_custom_buttons();
+		frm._advance_balance = null;
 		if (!frm.doc.patient) {
 			frm.set_value("customer_name", "");
+			calculate_totals(frm);
 			return;
 		}
 		frappe.call({
@@ -61,11 +80,23 @@ frappe.ui.form.on("Billing", {
 			},
 		});
 		offer_pending_consultations(frm);
+		frappe.call({
+			method: "metta.sales.doctype.patient_advance.patient_advance.get_advance_balance",
+			args: { patient_visit: frm.doc.patient },
+			callback(r) {
+				frm._advance_balance = r.message || null;
+				add_advance_button(frm);
+				calculate_totals(frm);
+			},
+		});
 	},
 	discount_percent(frm) {
 		calculate_totals(frm);
 	},
 	payment_mode(frm) {
+		calculate_totals(frm);
+	},
+	advance_adjusted(frm) {
 		calculate_totals(frm);
 	},
 	// billing_category is itself a fetch_from off "patient" - its change event
@@ -174,6 +205,19 @@ function calculate_totals(frm) {
 		frm.set_value("charity_amount", 0);
 		frm.set_value("net_amount", net_amount);
 	}
+
+	// Mirrors validate_advance_adjustment() on the server - just a preview,
+	// the save is what actually enforces the balance cap.
+	frm.set_value("amount_due", flt(frm.doc.net_amount) - flt(frm.doc.advance_adjusted));
+}
+
+function add_advance_button(frm) {
+	const balance = frm._advance_balance && flt(frm._advance_balance.balance);
+	if (!balance || balance <= 0) return;
+	frm.add_custom_button(__("Apply Advance"), () => {
+		const amount = Math.min(balance, flt(frm.doc.net_amount));
+		frm.set_value("advance_adjusted", amount);
+	});
 }
 
 function offer_pending_consultations(frm) {

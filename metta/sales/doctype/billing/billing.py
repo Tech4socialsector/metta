@@ -6,6 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt
 
+from metta.sales.doctype.patient_advance.patient_advance import get_advance_balance
 from metta.stock.doctype.stock_ledger_entry.stock_ledger_entry import (
 	create_stock_ledger_entry,
 	reverse_stock_ledger_entries,
@@ -69,6 +70,36 @@ class Billing(Document):
 		self.net_amount = subtotal - self.discount_amount + gst_total
 
 		self.apply_charity()
+		self.validate_advance_adjustment()
+
+	def validate_advance_adjustment(self):
+		if not self.advance_adjusted:
+			self.amount_due = self.net_amount
+			return
+
+		if not self.patient:
+			frappe.throw(_("Select a Patient before adjusting an advance against this bill."))
+
+		if flt(self.advance_adjusted) > flt(self.net_amount):
+			frappe.throw(
+				_("Advance Adjusted cannot exceed the Net Amount."), title=_("Invalid Advance Adjustment")
+			)
+
+		# Add back this same doc's own previous value - otherwise re-saving an
+		# already-adjusted bill would see its own prior adjustment as
+		# unavailable, since get_advance_balance() has no way to know to
+		# exclude what this same record already consumed.
+		previous = flt(frappe.db.get_value("Billing", self.name, "advance_adjusted")) if not self.is_new() else 0
+		balance = get_advance_balance(self.patient)["balance"] + previous
+		if flt(self.advance_adjusted) > balance:
+			frappe.throw(
+				_("Only {0} is available in this patient's advance balance.").format(
+					frappe.format(balance, {"fieldtype": "Currency"})
+				),
+				title=_("Advance Balance Exceeded"),
+			)
+
+		self.amount_due = flt(self.net_amount) - flt(self.advance_adjusted)
 
 	def apply_charity(self):
 		# Charity is a full waiver, not a discount - what the patient would

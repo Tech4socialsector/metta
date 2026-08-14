@@ -15,6 +15,7 @@
   "emergency_admission",
   "converted_from_registration",
   "registration_type",
+  "appointment",
   "uhin_id",
   "first_name",
   "last_name",
@@ -128,12 +129,21 @@
    "options": "Registration type Master"
   },
   {
+   "description": "Set automatically when this visit was created via \"Check In\" on a booked Appointment - never typed by hand.",
+   "fieldname": "appointment",
+   "fieldtype": "Link",
+   "label": "Appointment",
+   "options": "Appointment",
+   "read_only": 1
+  },
+  {
    "fieldname": "uhin_id",
    "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "UHIN ID",
-   "options": "Patient Registration"
+   "options": "Patient Registration",
+   "reqd": 1
   },
   {
    "fetch_from": "uhin_id.first_name",
@@ -609,7 +619,7 @@
   }
  ],
  "max_attachments": 50,
- "modified": "2026-08-12 12:30:00.000000",
+ "modified": "2026-08-13 01:00:00.000000",
  "modified_by": "Administrator",
  "module": "metta",
  "name": "Patient Visit",

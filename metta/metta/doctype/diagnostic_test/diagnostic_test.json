@@ -1,0 +1,193 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "autoname": "DGT-.YYYY.-.#####",
+ "creation": "2026-08-13 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "doctor_consultation",
+  "patient_name",
+  "column_break_dt",
+  "item",
+  "item_name",
+  "test_type",
+  "status_section",
+  "status",
+  "ordered_on",
+  "sample_collected_on",
+  "result_section",
+  "result",
+  "normal_range",
+  "result_attachment",
+  "remarks",
+  "column_break_reported",
+  "reported_by",
+  "reported_on"
+ ],
+ "fields": [
+  {
+   "fieldname": "doctor_consultation",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Doctor Consultation",
+   "options": "Doctor Consultation",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "doctor_consultation.patient_name",
+   "fieldname": "patient_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Patient Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_dt",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Must be a real, priced Service item - same as Suggested Test on Doctor Consultation.",
+   "fieldname": "item",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Test / Investigation",
+   "options": "Item",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "item.item_name",
+   "fieldname": "item_name",
+   "fieldtype": "Data",
+   "label": "Item Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "test_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Type",
+   "options": "Lab Test\nX-Ray\nScan\nOther",
+   "reqd": 1
+  },
+  {
+   "fieldname": "status_section",
+   "fieldtype": "Section Break",
+   "label": "Status"
+  },
+  {
+   "default": "Ordered",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Ordered\nSample Collected\nResult Entered\nReported\nCancelled",
+   "reqd": 1
+  },
+  {
+   "default": "Now",
+   "fieldname": "ordered_on",
+   "fieldtype": "Datetime",
+   "label": "Ordered On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sample_collected_on",
+   "fieldtype": "Datetime",
+   "label": "Sample Collected On"
+  },
+  {
+   "fieldname": "result_section",
+   "fieldtype": "Section Break",
+   "label": "Result"
+  },
+  {
+   "fieldname": "result",
+   "fieldtype": "Small Text",
+   "label": "Result"
+  },
+  {
+   "fieldname": "normal_range",
+   "fieldtype": "Data",
+   "label": "Normal Range"
+  },
+  {
+   "fieldname": "result_attachment",
+   "fieldtype": "Attach",
+   "label": "Report / Image Attachment"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "column_break_reported",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "reported_by",
+   "fieldtype": "Link",
+   "label": "Reported By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reported_on",
+   "fieldtype": "Datetime",
+   "label": "Reported On",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-08-13 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "metta",
+ "name": "Diagnostic Test",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Lab Staff",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Doctor",
+   "share": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "search_fields": "patient_name,item_name",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "patient_name",
+ "track_changes": 1
+}
