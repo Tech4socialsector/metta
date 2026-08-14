@@ -1,0 +1,27 @@
+{
+ "content": null,
+ "creation": "2026-08-13 00:00:00",
+ "docstatus": 0,
+ "doctype": "Page",
+ "modified": "2026-08-13 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Stock",
+ "name": "outletwise-expiry-report",
+ "owner": "Administrator",
+ "page_name": "outletwise-expiry-report",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Store Staff"
+  },
+  {
+   "role": "Pharmacy Staff"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "title": "Outlet-wise Expiry Report"
+}

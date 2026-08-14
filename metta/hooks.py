@@ -227,23 +227,11 @@ has_permission = {
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"metta.tasks.all"
-# 	],
-# 	"daily": [
-# 		"metta.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"metta.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"metta.tasks.weekly"
-# 	],
-# 	"monthly": [
-# 		"metta.tasks.monthly"
-# 	],
-# }
+scheduler_events = {
+	"daily": [
+		"metta.stock.tasks.send_expiry_alerts",
+	],
+}
 
 # Testing
 # -------
