@@ -159,6 +159,13 @@ class PatientVisit(Document):
 			}
 		).insert(ignore_permissions=True)
 
+		# Only set when this visit came from "Check In" on a booked Appointment
+		# (see Appointment.get_visit_defaults) - most visits still won't have one.
+		if self.appointment:
+			frappe.db.set_value(
+				"Appointment", self.appointment, {"status": "Checked-in", "patient_visit": self.name}
+			)
+
 	def validate_bed_availability(self):
 		# Only IP admissions occupy a physical bed; OP visits, Room-type
 		# admissions, and unassigned beds/wards have nothing to conflict with.
@@ -340,6 +347,21 @@ def get_admission_defaults(op_registration):
 		"discount_percent": op.discount_percent,
 		"adjustment_type": op.adjustment_type,
 	}
+
+
+@frappe.whitelist()
+def get_discharge_defaults(patient_visit):
+	# Mirrors get_admission_defaults() - the client opens a prefilled but
+	# unsaved Discharge Summary, so whoever writes it still reviews/fills in
+	# the actual clinical content rather than this silently inserting one.
+	doc = frappe.get_doc("Patient Visit", patient_visit)
+	doc.check_permission("read")
+	if doc.registration_category != "IP" or doc.admission_status != "Discharged":
+		frappe.throw(
+			_("Discharge Summary can only be created once this IP admission is marked Discharged."),
+			title=_("Not Discharged Yet"),
+		)
+	return {"patient_visit": doc.name}
 
 
 @frappe.whitelist()

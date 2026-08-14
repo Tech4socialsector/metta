@@ -19,6 +19,8 @@
   "discount_amount",
   "gst_amount",
   "net_amount",
+  "advance_adjusted",
+  "amount_due",
   "payment_mode",
   "corporate_customer",
   "charity_category",
@@ -116,6 +118,20 @@
    "read_only": 1
   },
   {
+   "description": "Amount adjusted from this patient's IP admission advance - reduces what's actually collected now.",
+   "fieldname": "advance_adjusted",
+   "fieldtype": "Currency",
+   "label": "Advance Adjusted"
+  },
+  {
+   "description": "Net Amount minus Advance Adjusted - what's actually being collected now via Payment Mode.",
+   "fieldname": "amount_due",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Amount Due",
+   "read_only": 1
+  },
+  {
    "fieldname": "payment_mode",
    "fieldtype": "Select",
    "label": "Payment Mode",
@@ -174,7 +190,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-08-12 20:18:00.163127",
+ "modified": "2026-08-13 02:00:00.000000",
  "modified_by": "Administrator",
  "module": "Sales",
  "name": "Billing",

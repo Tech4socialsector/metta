@@ -53,6 +53,7 @@ fixtures = [
 					"Purchase Approver",
 					"Account Staff",
 					"Doctor",
+					"Lab Staff",
 				],
 			]
 		],
@@ -204,12 +205,18 @@ permission_query_conditions = {
 	"Patient Visit": "metta.metta.doctype.patient_visit.patient_visit.get_permission_query_conditions",
 	"Nurse Interventions": "metta.metta.doctype.nurse_interventions.nurse_interventions.get_permission_query_conditions",
 	"Doctor Consultation": "metta.metta.doctype.doctor_consultation.doctor_consultation.get_permission_query_conditions",
+	"Appointment": "metta.metta.doctype.appointment.appointment.get_permission_query_conditions",
+	"Diagnostic Test": "metta.metta.doctype.diagnostic_test.diagnostic_test.get_permission_query_conditions",
+	"Discharge Summary": "metta.metta.doctype.discharge_summary.discharge_summary.get_permission_query_conditions",
 }
 
 has_permission = {
 	"Patient Visit": "metta.metta.doctype.patient_visit.patient_visit.has_permission",
 	"Nurse Interventions": "metta.metta.doctype.nurse_interventions.nurse_interventions.has_permission",
 	"Doctor Consultation": "metta.metta.doctype.doctor_consultation.doctor_consultation.has_permission",
+	"Appointment": "metta.metta.doctype.appointment.appointment.has_permission",
+	"Diagnostic Test": "metta.metta.doctype.diagnostic_test.diagnostic_test.has_permission",
+	"Discharge Summary": "metta.metta.doctype.discharge_summary.discharge_summary.has_permission",
 }
 
 # Document Events

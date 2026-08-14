@@ -153,6 +153,43 @@ def get_patient_history(patient_consultation, exclude=None):
 
 
 @frappe.whitelist()
+def create_diagnostic_tests(consultation):
+	# One Diagnostic Test per suggested_tests row not already converted -
+	# checked by (doctor_consultation, item) rather than a stored flag on the
+	# child row, so this can safely be called again later if new tests get
+	# added to the same consultation without duplicating the earlier ones.
+	frappe.has_permission("Doctor Consultation", "read", throw=True)
+
+	already_converted = set(
+		frappe.get_all(
+			"Diagnostic Test", filters={"doctor_consultation": consultation}, pluck="item"
+		)
+	)
+
+	created = []
+	for row in frappe.get_all(
+		"Suggested Test",
+		filters={"parent": consultation},
+		fields=["item", "test_type"],
+		order_by="idx",
+	):
+		if row.item in already_converted:
+			continue
+		doc = frappe.get_doc(
+			{
+				"doctype": "Diagnostic Test",
+				"doctor_consultation": consultation,
+				"item": row.item,
+				"test_type": row.test_type,
+			}
+		)
+		doc.insert()
+		created.append(doc.name)
+
+	return created
+
+
+@frappe.whitelist()
 def get_my_dashboard_stats():
 	# "Visited" is defined as "this same doctor has already written a
 	# consultation note for this visit" - the only signal available today,

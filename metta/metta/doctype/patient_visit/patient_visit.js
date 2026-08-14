@@ -103,6 +103,52 @@ frappe.ui.form.on("Patient Visit", {
 					},
 				});
 			});
+
+			if (frm.doc.registration_category === "IP" && frm.doc.admission_status === "Discharged") {
+				frm.add_custom_button(__("Discharge Summary"), () => {
+					frappe.call({
+						method:
+							"metta.metta.doctype.patient_visit.patient_visit.get_discharge_defaults",
+						args: { patient_visit: frm.doc.name },
+						callback(r) {
+							if (!r.message) return;
+							frappe.new_doc("Discharge Summary", r.message);
+						},
+					});
+				});
+			}
+
+			// Front Desk needs to check this mid-stay too (e.g. before deciding
+			// whether more advance needs collecting), not only at discharge -
+			// so this isn't gated on admission_status the way Discharge Summary is.
+			if (frm.doc.registration_category === "IP") {
+				frm.add_custom_button(__("Advance Summary"), () => {
+					frappe.call({
+						method:
+							"metta.sales.doctype.patient_advance.patient_advance.get_advance_balance",
+						args: { patient_visit: frm.doc.name },
+						callback(r) {
+							if (!r.message) return;
+							const d = r.message;
+							// A balance > 0 after everything's been billed means a refund
+							// is owed - it never goes negative, since Billing's own
+							// validate_advance_adjustment() caps advance_adjusted at
+							// whatever's actually still available.
+							frappe.msgprint({
+								title: __("Advance Summary"),
+								message: __(
+									"Total Collected: {0}<br>Total Adjusted Against Bills: {1}<br><b>Balance: {2}</b>",
+									[
+										format_currency(d.total_collected),
+										format_currency(d.total_adjusted),
+										format_currency(d.balance),
+									]
+								)
+							});
+						},
+					});
+				});
+			}
 		}
 	},
 

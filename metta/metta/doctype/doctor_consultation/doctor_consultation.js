@@ -112,7 +112,34 @@ frappe.ui.form.on("Doctor Consultation", {
 							});
 						},
 					});
-				}).addClass("btn-primary");
+			}).addClass("btn-primary");
+			}
+
+			// Lab Staff need this to actually start work on a suggested test -
+			// Doctor and System Manager can also trigger it (e.g. Lab Staff hasn't
+			// gotten to it yet and the doctor wants it tracked right away).
+			if ((frm.doc.suggested_tests || []).length) {
+				frm.add_custom_button(__("Order Diagnostic Tests"), () => {
+					frappe.call({
+						method:
+							"metta.metta.doctype.doctor_consultation.doctor_consultation.create_diagnostic_tests",
+						args: { consultation: frm.doc.name },
+						callback(r) {
+							const created = r.message || [];
+							if (!created.length) {
+								frappe.msgprint(__("All suggested tests already have a Diagnostic Test."));
+								return;
+							}
+							frappe.msgprint(
+								__("Created Diagnostic Test(s): {0}", [
+									created
+										.map((name) => `<a href="/app/diagnostic-test/${name}">${name}</a>`)
+										.join(", "),
+								])
+							);
+						},
+					});
+				});
 			}
 		}
 	},
