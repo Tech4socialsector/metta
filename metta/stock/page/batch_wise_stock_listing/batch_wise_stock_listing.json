@@ -1,0 +1,32 @@
+{
+ "content": null,
+ "creation": "2026-08-17 00:00:00",
+ "docstatus": 0,
+ "doctype": "Page",
+ "idx": 0,
+ "modified": "2026-08-18 12:16:58.709050",
+ "modified_by": "Administrator",
+ "module": "Stock",
+ "name": "batch-wise-stock-listing",
+ "owner": "Administrator",
+ "page_name": "batch-wise-stock-listing",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Store Staff"
+  },
+  {
+   "role": "Pharmacy Staff"
+  },
+  {
+   "role": "Billing Staff"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 0,
+ "title": "Batch Wise Stock Listing"
+}

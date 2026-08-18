@@ -292,6 +292,30 @@
    "role": "System Manager",
    "share": 1,
    "write": 1
+  },
+  {
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Store Staff"
+  },
+  {
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Pharmacy Staff"
+  },
+  {
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Billing Staff"
+  },
+  {
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Account Staff"
   }
  ],
  "row_format": "Dynamic",

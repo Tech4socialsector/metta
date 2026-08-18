@@ -9,6 +9,7 @@
   "bill_type",
   "warehouse",
   "patient",
+  "registration_category",
   "customer_name",
   "billing_category",
   "sale_datetime",
@@ -58,6 +59,15 @@
    "fieldtype": "Link",
    "label": "Patient",
    "options": "Patient Visit"
+  },
+  {
+   "fetch_from": "patient.registration_category",
+   "fieldname": "registration_category",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Registration Category",
+   "print_hide": 1,
+   "read_only": 1
   },
   {
    "fieldname": "customer_name",
@@ -118,6 +128,7 @@
    "read_only": 1
   },
   {
+   "depends_on": "eval:doc.registration_category==\"IP\"",
    "description": "Amount adjusted from this patient's IP admission advance - reduces what's actually collected now.",
    "fieldname": "advance_adjusted",
    "fieldtype": "Currency",
@@ -233,6 +244,18 @@
    "share": 1,
    "submit": 1,
    "write": 1
+  },
+  {
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Store Staff"
+  },
+  {
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Account Staff"
   }
  ],
  "row_format": "Dynamic",

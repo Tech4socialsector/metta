@@ -12,6 +12,7 @@ def get_data(from_date, to_date, supplier=None, item=None):
 	# -> Purchase Bill (purchase_receipt) -> Purchase Bill Item (matched by
 	# item), summed per PO+item since one PO can span multiple receipts/bills.
 	frappe.has_permission("Purchase Order", "read", throw=True)
+	frappe.has_permission("Purchase Bill", "read", throw=True)
 
 	conditions = ["po.order_date >= %(from_date)s", "po.order_date <= %(to_date)s"]
 	values = {"from_date": f"{from_date} 00:00:00", "to_date": f"{to_date} 23:59:59"}

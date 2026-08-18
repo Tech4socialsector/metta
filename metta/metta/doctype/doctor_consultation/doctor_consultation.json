@@ -9,7 +9,11 @@
   "patient_name",
   "doctor",
   "consultation_datetime",
+  "clinical_details_section",
   "diagnosis",
+  "column_break_diagnosis",
+  "clinical_notes",
+  "prescription_section",
   "prescribed_items",
   "investigations_section",
   "suggested_tests",
@@ -54,10 +58,28 @@
    "reqd": 1
   },
   {
+   "fieldname": "clinical_details_section",
+   "fieldtype": "Section Break"
+  },
+  {
    "fieldname": "diagnosis",
    "fieldtype": "Small Text",
    "ignore_xss_filter": 1,
-   "label": "Diagnosis / Clinical Notes"
+   "label": "Diagnosis"
+  },
+  {
+   "fieldname": "column_break_diagnosis",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "clinical_notes",
+   "fieldtype": "Small Text",
+   "ignore_xss_filter": 1,
+   "label": "Clinical Notes"
+  },
+  {
+   "fieldname": "prescription_section",
+   "fieldtype": "Section Break"
   },
   {
    "fieldname": "prescribed_items",

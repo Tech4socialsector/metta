@@ -11,6 +11,12 @@ UNTRACKED_COLUMNS = ("patient_debit", "debit_collected", "adv_ip")
 
 
 def execute(filters=None):
+	# Collection Report's own permission check (via its "roles" list + the
+	# ref_doctype=Billing check the report framework runs) never sees that
+	# get_data() also reads straight from Sales Return - checked explicitly
+	# here for the same reason Stock Sale Report checks it.
+	frappe.has_permission("Sales Return", "read", throw=True)
+
 	filters = filters or {}
 	columns = get_columns()
 	data = get_data(filters)

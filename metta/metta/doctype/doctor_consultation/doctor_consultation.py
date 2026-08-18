@@ -100,6 +100,40 @@ def get_vitals_status(patient_consultation):
 
 
 @frappe.whitelist()
+def get_latest_vitals(patient_consultation):
+	# Unlike get_vitals_status above (a plain True/False that never leaves
+	# frappe.get_all's bypassed row-permissions), this returns the actual
+	# clinical readings - so it uses frappe.get_list, which does apply Nurse
+	# Interventions' own permission rules (a Doctor only ever sees their own
+	# assigned patients' vitals, same restriction that already governs that
+	# doctype everywhere else it's read).
+	frappe.has_permission("Nurse Interventions", "read", throw=True)
+	if not patient_consultation:
+		return None
+	rows = frappe.get_list(
+		"Nurse Interventions",
+		filters={"patient_registration": patient_consultation, "status": "Completed"},
+		fields=[
+			"temperature",
+			"pulse",
+			"respiration",
+			"saturation",
+			"height",
+			"weight",
+			"bmi",
+			"bmi_category",
+			"blood_pressure_mmhg",
+			"rbg_level",
+			"piccle",
+			"primary_diagnosis",
+		],
+		order_by="date desc",
+		limit_page_length=1,
+	)
+	return rows[0] if rows else None
+
+
+@frappe.whitelist()
 def get_own_doctor():
 	# Lets the client default the `doctor` field to whoever is actually
 	# logged in, instead of leaving it blank for them to fill in by hand
@@ -131,7 +165,7 @@ def get_patient_history(patient_consultation, exclude=None):
 	rows = frappe.get_all(
 		"Doctor Consultation",
 		filters=filters,
-		fields=["name", "patient_consultation", "doctor", "consultation_datetime", "diagnosis"],
+		fields=["name", "patient_consultation", "doctor", "consultation_datetime", "diagnosis", "clinical_notes"],
 		order_by="consultation_datetime desc",
 	)
 	for row in rows:

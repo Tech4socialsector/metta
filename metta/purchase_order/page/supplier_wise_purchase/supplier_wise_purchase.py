@@ -16,6 +16,7 @@ def get_data(from_date=None, to_date=None, supplier=None, status=None):
 	# supplier's history is a matter of picking it from the filter, not a
 	# prerequisite for seeing anything at all.
 	frappe.has_permission("Purchase Order", "read", throw=True)
+	frappe.has_permission("Purchase Bill", "read", throw=True)
 
 	conditions = []
 	values = {}

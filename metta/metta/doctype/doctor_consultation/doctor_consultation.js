@@ -32,6 +32,7 @@ frappe.ui.form.on("Doctor Consultation", {
 	refresh(frm) {
 		render_patient_history(frm);
 		check_vitals_status(frm);
+		show_vitals_popup(frm);
 
 		if (!frm.is_new()) {
 			frm.add_custom_button(__("Print Prescription"), () => {
@@ -146,8 +147,65 @@ frappe.ui.form.on("Doctor Consultation", {
 	patient_consultation(frm) {
 		render_patient_history(frm);
 		check_vitals_status(frm);
+		show_vitals_popup(frm);
 	},
 });
+
+// Tracks which document this was last shown for, so it pops up once per
+// time a consultation is actually opened/loaded - not again on every
+// intermediate Save while the doctor is still writing it up.
+let vitals_popup_shown_for = null;
+
+function show_vitals_popup(frm) {
+	if (!frm.doc.patient_consultation) return;
+	if (vitals_popup_shown_for === frm.doc.name) return;
+	vitals_popup_shown_for = frm.doc.name;
+
+	frappe.call({
+		method: "metta.metta.doctype.doctor_consultation.doctor_consultation.get_latest_vitals",
+		args: { patient_consultation: frm.doc.patient_consultation },
+		callback(r) {
+			const vitals = r.message;
+			// Nothing recorded yet by the nurse - check_vitals_status's alert
+			// already covers this case, no need for an empty popup too.
+			if (!vitals) return;
+
+			const row = (label, value) => `
+				<div style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid var(--border-color,#d1d8dd);">
+					<span class="text-muted">${label}</span>
+					<span><b>${frappe.utils.escape_html(value != null && value !== "" ? String(value) : "—")}</b></span>
+				</div>`;
+
+			const bmi_display = vitals.bmi ? `${vitals.bmi} (${vitals.bmi_category || ""})` : "";
+
+			const html = `
+				<div>
+					${row(__("Temperature (F)"), vitals.temperature)}
+					${row(__("Blood Pressure (mmhg)"), vitals.blood_pressure_mmhg)}
+					${row(__("Pulse (b/m)"), vitals.pulse)}
+					${row(__("Respiration (b/m)"), vitals.respiration)}
+					${row(__("Saturation (SpO2)"), vitals.saturation)}
+					${row(__("Height (cm)"), vitals.height)}
+					${row(__("Weight (Kg)"), vitals.weight)}
+					${row(__("BMI"), bmi_display)}
+					${row(__("Random Blood Glucose"), vitals.rbg_level)}
+					${row(__("PICCLE"), vitals.piccle)}
+					${row(__("Nurse's Provisional Diagnosis"), vitals.primary_diagnosis)}
+				</div>`;
+
+			const dialog = new frappe.ui.Dialog({
+				title: __("Patient Vitals"),
+				size: "small",
+				fields: [{ fieldtype: "HTML", fieldname: "vitals_html", options: html }],
+				primary_action_label: __("Continue"),
+				primary_action() {
+					dialog.hide();
+				},
+			});
+			dialog.show();
+		},
+	});
+}
 
 function check_vitals_status(frm) {
 	if (!frm.doc.patient_consultation) return;
@@ -199,7 +257,8 @@ function render_patient_history(frm) {
 						return `
 							<div style="border-bottom:1px solid var(--border-color,#d1d8dd); padding:8px 0;">
 								<div><b>${frappe.datetime.str_to_user(row.consultation_datetime)}</b> - ${frappe.utils.escape_html(row.doctor)}</div>
-								<div>${frappe.utils.escape_html(row.diagnosis || "")}</div>
+								${row.diagnosis ? `<div><b>${__("Diagnosis")}:</b> ${frappe.utils.escape_html(row.diagnosis)}</div>` : ""}
+								${row.clinical_notes ? `<div><b>${__("Clinical Notes")}:</b> ${frappe.utils.escape_html(row.clinical_notes)}</div>` : ""}
 								${meds ? `<div class="text-muted">${__("Prescribed")}: ${meds}</div>` : ""}
 								${tests ? `<div class="text-muted">${__("Tests Suggested")}: ${tests}</div>` : ""}
 							</div>`;
