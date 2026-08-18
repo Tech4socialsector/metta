@@ -28,13 +28,41 @@ fixtures = [
 	{
 		"doctype": "Workspace Sidebar",
 		"filters": [
-			["name", "in", ["HMIS", "Master Form", "Stock and Pharmacy", "Front Desk", "Nurse", "Doctor", "Billing Desk"]]
+			[
+				"name",
+				"in",
+				[
+					"HMIS",
+					"Master Form",
+					"Stock and Pharmacy",
+					"Front Desk",
+					"Nurse",
+					"Doctor",
+					"Billing Desk",
+					"Lab",
+					"Account Desk",
+				],
+			]
 		],
 	},
 	{
 		"doctype": "Desktop Icon",
 		"filters": [
-			["name", "in", ["HMIS", "Master Form", "Stock and Pharmacy", "Front Desk", "Nurse", "Doctor", "Billing Desk"]]
+			[
+				"name",
+				"in",
+				[
+					"HMIS",
+					"Master Form",
+					"Stock and Pharmacy",
+					"Front Desk",
+					"Nurse",
+					"Doctor",
+					"Billing Desk",
+					"Lab",
+					"Account Desk",
+				],
+			]
 		],
 	},
 	{
@@ -208,6 +236,7 @@ permission_query_conditions = {
 	"Appointment": "metta.metta.doctype.appointment.appointment.get_permission_query_conditions",
 	"Diagnostic Test": "metta.metta.doctype.diagnostic_test.diagnostic_test.get_permission_query_conditions",
 	"Discharge Summary": "metta.metta.doctype.discharge_summary.discharge_summary.get_permission_query_conditions",
+	"Doctor Leave": "metta.metta.doctype.doctor_leave.doctor_leave.get_permission_query_conditions",
 }
 
 has_permission = {
@@ -217,6 +246,7 @@ has_permission = {
 	"Appointment": "metta.metta.doctype.appointment.appointment.has_permission",
 	"Diagnostic Test": "metta.metta.doctype.diagnostic_test.diagnostic_test.has_permission",
 	"Discharge Summary": "metta.metta.doctype.discharge_summary.discharge_summary.has_permission",
+	"Doctor Leave": "metta.metta.doctype.doctor_leave.doctor_leave.has_permission",
 }
 
 # Document Events

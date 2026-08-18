@@ -149,6 +149,15 @@ def get_patient_history(patient_consultation, exclude=None):
 			fields=["item_name", "test_type", "remarks"],
 			order_by="idx",
 		)
+		# A suggested test only turns into a Diagnostic Test once someone clicks
+		# "Order Diagnostic Tests" - so this can be empty even when suggested_tests
+		# isn't, and that's fine, it just means nothing's been ordered yet.
+		row["diagnostic_tests"] = frappe.get_all(
+			"Diagnostic Test",
+			filters={"doctor_consultation": row.name},
+			fields=["item_name", "test_type", "status", "result", "reported_on"],
+			order_by="creation",
+		)
 	return rows
 
 
@@ -202,6 +211,8 @@ def get_my_dashboard_stats():
 			"visited": 0,
 			"ready": 0,
 			"waiting": 0,
+			"assigned_visits": [],
+			"visited_visits": [],
 			"ready_visits": [],
 			"waiting_visits": [],
 		}
@@ -214,33 +225,46 @@ def get_my_dashboard_stats():
 	)
 	assigned_names = [v.name for v in assigned_visits]
 
-	visited_names = set()
+	consultation_by_visit = {}
 	nurse_status_by_visit = {}
+	nurse_intervention_by_visit = {}
 	if assigned_names:
-		visited_names = set(
-			frappe.get_all(
+		consultation_by_visit = {
+			c.patient_consultation: c.name
+			for c in frappe.get_all(
 				"Doctor Consultation",
 				filters={"patient_consultation": ["in", assigned_names], "doctor": doctor},
-				pluck="patient_consultation",
+				fields=["name", "patient_consultation"],
 			)
-		)
+		}
 		# patient_registration on Nurse Interventions actually links to the
 		# visit (see the field's own comment) - a visit can in principle have
 		# more than one Nurse Interventions row, so "ready" means at least
-		# one of them is Completed, not that all of them are.
+		# one of them is Completed, not that all of them are. The Completed
+		# one is preferred as the record to link to - it's the one with
+		# actual vitals filled in, not a still-Pending placeholder.
 		for row in frappe.get_all(
 			"Nurse Interventions",
 			filters={"patient_registration": ["in", assigned_names]},
-			fields=["patient_registration", "status"],
+			fields=["name", "patient_registration", "status"],
 		):
 			if row.status == "Completed":
 				nurse_status_by_visit[row.patient_registration] = True
+				nurse_intervention_by_visit[row.patient_registration] = row.name
 			else:
 				nurse_status_by_visit.setdefault(row.patient_registration, False)
+				nurse_intervention_by_visit.setdefault(row.patient_registration, row.name)
 
+	visited_names = set(consultation_by_visit.keys())
 	not_yet_visited = [v for v in assigned_visits if v.name not in visited_names]
 	ready_visits = [v for v in not_yet_visited if nurse_status_by_visit.get(v.name)]
 	waiting_visits = [v for v in not_yet_visited if not nurse_status_by_visit.get(v.name)]
+	visited_visits = [v for v in assigned_visits if v.name in visited_names]
+
+	for v in ready_visits:
+		v["nurse_intervention"] = nurse_intervention_by_visit.get(v.name)
+	for v in visited_visits:
+		v["consultation"] = consultation_by_visit.get(v.name)
 
 	return {
 		"linked": True,
@@ -251,6 +275,8 @@ def get_my_dashboard_stats():
 		# Capped - this is a quick-glance dashboard, not a full report; the
 		# Patient Visit list (already filtered to this doctor) is where a
 		# long backlog should actually be worked through.
+		"assigned_visits": assigned_visits[:20],
+		"visited_visits": visited_visits[:20],
 		"ready_visits": ready_visits[:20],
 		"waiting_visits": waiting_visits[:20],
 	}

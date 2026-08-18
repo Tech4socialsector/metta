@@ -2,7 +2,6 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt
 
@@ -13,7 +12,6 @@ class NurseInterventions(Document):
 	def validate(self):
 		self.update_age()
 		self.update_bmi()
-		self.validate_completion()
 
 	def update_age(self):
 		dob = frappe.db.get_value("Patient Registration", self.patient_unique_id, "dob") if self.patient_unique_id else None
@@ -38,26 +36,6 @@ class NurseInterventions(Document):
 			self.bmi_category = "Overweight"
 		else:
 			self.bmi_category = "Obese"
-
-	def validate_completion(self):
-		# "Pending" is what makes this a reliable triage worklist - an
-		# intervention marked Completed with no vitals actually recorded would
-		# silently defeat that.
-		if self.status != "Completed":
-			return
-		required_vitals = {
-			"temperature": _("Temperature"),
-			"pulse": _("Pulse"),
-			"blood_pressure_mmhg": _("Blood Pressure"),
-		}
-		missing = [label for fieldname, label in required_vitals.items() if not self.get(fieldname)]
-		if missing:
-			frappe.throw(
-				_("Cannot mark this Completed - the following vitals are still missing: {0}.").format(
-					", ".join(missing)
-				),
-				title=_("Vitals Missing"),
-			)
 
 
 def get_permission_query_conditions(user=None):

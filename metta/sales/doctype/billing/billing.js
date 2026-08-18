@@ -296,7 +296,12 @@ function load_consultation_items(frm, consultation) {
 				row.amount = i.amount;
 			});
 			frm.refresh_field("items");
+			// Only "Load Prescribed Items" itself is meant to go away once used -
+			// but clear_custom_buttons() removes every button, so Apply Advance
+			// (added earlier by the patient(frm) handler) has to be put back
+			// here, using the already-cached balance rather than refetching it.
 			frm.clear_custom_buttons();
+			add_advance_button(frm);
 			calculate_totals(frm);
 		},
 	});

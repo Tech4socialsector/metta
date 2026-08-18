@@ -150,11 +150,33 @@ frappe.ui.form.on("Patient Visit", {
 				});
 			}
 		}
+
+		// Same reasoning as billing_category on Billing - an existing IP visit
+		// loads with ward/room already set but the field's own change handler
+		// never fires on load, so "Select Bed" would otherwise be missing
+		// until the user re-touches the field.
+		if (frm.doc.ward) {
+			frappe.call({
+				method: "metta.metta.doctype.patient_visit.patient_visit.get_ward_bed_summary",
+				args: { ward: frm.doc.ward },
+				callback(r) {
+					if (r.message && r.message.total_beds !== undefined) render_ward_summary(frm, r.message);
+				},
+			});
+		} else if (frm.doc.room) {
+			frappe.call({
+				method: "metta.metta.doctype.patient_visit.patient_visit.get_room_details",
+				args: { room: frm.doc.room },
+				callback(r) {
+					if (r.message && r.message.capacity !== undefined) render_room_summary(frm, r.message);
+				},
+			});
+		}
 	},
 
 	ward(frm) {
 		if (!frm.doc.ward) {
-			frm.set_intro("");
+			frm.fields_dict.ward_bed_summary_html.$wrapper.html("");
 			return;
 		}
 		frappe.call({
@@ -165,30 +187,7 @@ frappe.ui.form.on("Patient Visit", {
 				if (!r.message || r.message.total_beds === undefined) {
 					return;
 				}
-				const { total_beds, occupied_beds, available_beds, beds } = r.message;
-				let html = __(
-					"Ward {0}: {1} total beds &mdash; <span style='color:#28a745;font-weight:bold;'>{2} available</span>, <span style='color:#dc3545;font-weight:bold;'>{3} occupied</span>",
-					[frm.doc.ward, total_beds, available_beds, occupied_beds]
-				);
-
-				if (beds && beds.length) {
-					// Only wards with an enumerated bed list (see Ward Master) can show
-					// individual bed-level status; others only have a manual count.
-					const pill = (bed) => {
-						const is_available = bed.status === "Available";
-						const bg = is_available ? "#28a745" : "#dc3545";
-						return `<span title="${bed.status}" style="display:inline-block;margin:2px;padding:2px 8px;border-radius:10px;background:${bg};color:#fff;font-size:11px;">${frappe.utils.escape_html(
-							bed.bed_no
-						)}</span>`;
-					};
-					html += `<div style="margin-top:6px;">${beds.map(pill).join("")}</div>`;
-				} else {
-					html += `<div style="margin-top:4px;color:#888;">${__(
-						"Individual beds are not listed for this ward yet — add them under Beds on the Ward Master record to see bed-wise status here."
-					)}</div>`;
-				}
-
-				frm.set_intro(html);
+				render_ward_summary(frm, r.message);
 			},
 		});
 	},
@@ -226,7 +225,8 @@ frappe.ui.form.on("Patient Visit", {
 	accommodation_type(frm) {
 		// Ward and Room are mutually exclusive - clear whichever set of fields
 		// no longer applies so a stale link can't linger and get saved.
-		frm.set_intro("");
+		frm.fields_dict.ward_bed_summary_html.$wrapper.html("");
+		frm.fields_dict.room_bed_summary_html.$wrapper.html("");
 		if (frm.doc.accommodation_type === "Ward") {
 			frm.set_value("room", "");
 			frm.set_value("room_bed_no", "");
@@ -238,7 +238,7 @@ frappe.ui.form.on("Patient Visit", {
 
 	room(frm) {
 		if (!frm.doc.room) {
-			frm.set_intro("");
+			frm.fields_dict.room_bed_summary_html.$wrapper.html("");
 			return;
 		}
 		frappe.call({
@@ -249,37 +249,7 @@ frappe.ui.form.on("Patient Visit", {
 				if (!r.message || r.message.capacity === undefined) {
 					return;
 				}
-				const { room_type, rent_per_day, floor, capacity, occupied_beds, available_beds, beds } =
-					r.message;
-				let html = __(
-					"Room {0} ({1}): {2} total beds &mdash; <span style='color:#28a745;font-weight:bold;'>{3} available</span>, <span style='color:#dc3545;font-weight:bold;'>{4} occupied</span>",
-					[frm.doc.room, room_type || __("Type not set"), capacity, available_beds, occupied_beds]
-				);
-				if (floor) {
-					html += ` &mdash; ${__("Floor")} ${frappe.utils.escape_html(floor)}`;
-				}
-				if (rent_per_day) {
-					html += ` &mdash; ${__("Rent")} ${format_currency(rent_per_day)}/${__("day")}`;
-				}
-
-				if (beds && beds.length) {
-					// Only rooms with an enumerated bed list (see Room Master) can show
-					// individual bed-level status; others only have a manual capacity count.
-					const pill = (bed) => {
-						const is_available = bed.status === "Available";
-						const bg = is_available ? "#28a745" : "#dc3545";
-						return `<span title="${bed.status}" style="display:inline-block;margin:2px;padding:2px 8px;border-radius:10px;background:${bg};color:#fff;font-size:11px;">${frappe.utils.escape_html(
-							bed.bed_no
-						)}</span>`;
-					};
-					html += `<div style="margin-top:6px;">${beds.map(pill).join("")}</div>`;
-				} else {
-					html += `<div style="margin-top:4px;color:#888;">${__(
-						"Individual beds are not listed for this room yet — add them under Beds on the Room Master record to see bed-wise status here."
-					)}</div>`;
-				}
-
-				frm.set_intro(html);
+				render_room_summary(frm, r.message);
 			},
 		});
 	},
@@ -344,6 +314,102 @@ frappe.ui.form.on("Patient Visit", {
 		});
 	},
 });
+
+function bed_tile_html(bed) {
+	// Each tile shows a bed icon (not just a plain colored box) - no icon
+	// font/asset loading needed since it's a plain emoji.
+	const is_available = bed.status === "Available";
+	const bg = is_available ? "#28a745" : "#dc3545";
+	return `
+		<div class="bed-tile" data-bed="${frappe.utils.escape_html(bed.bed_no)}" data-available="${is_available}"
+			title="${frappe.utils.escape_html(bed.status)}"
+			style="display:inline-flex; flex-direction:column; align-items:center; justify-content:center;
+				width:56px; height:56px; margin:4px; border-radius:6px;
+				background:${bg}; color:#fff; font-size:11px; font-weight:bold;
+				cursor:${is_available ? "pointer" : "not-allowed"}; opacity:${is_available ? "1" : "0.55"};">
+			<span style="font-size:18px; line-height:1;">🛏️</span>
+			<span>${frappe.utils.escape_html(bed.bed_no)}</span>
+		</div>`;
+}
+
+function bed_grid_html(beds) {
+	// A ward with 30-40 beds shown as tiles all the time would flood the
+	// form - so only a compact available/occupied count shows by default,
+	// and the actual tile grid stays collapsed until asked for.
+	const available_count = beds.filter((b) => b.status === "Available").length;
+	const occupied_count = beds.length - available_count;
+
+	return `
+		<div class="bed-summary-toggle" style="display:inline-flex; align-items:center; gap:6px; cursor:pointer;
+			border:1px solid var(--border-color,#d1d8dd); border-radius:20px; padding:4px 12px 4px 8px; width:fit-content;">
+			<span style="font-size:16px;">🛏️</span>
+			<span style="color:#28a745; font-weight:bold;">${available_count} ${__("available")}</span>,
+			<span style="color:#dc3545; font-weight:bold;">${occupied_count} ${__("occupied")}</span>
+			<span class="text-muted" style="font-size:12px;">&mdash; ${__("click to view beds")}</span>
+		</div>
+		<div class="bed-grid-body" style="display:none; border:1px solid var(--border-color,#d1d8dd); border-radius:8px; padding:10px; margin-top:6px;">
+			<div style="display:flex; flex-wrap:wrap;">${beds.map(bed_tile_html).join("")}</div>
+			<div style="margin-top:8px; font-size:12px;">
+				<span style="display:inline-block; width:12px; height:12px; background:#28a745; border-radius:3px; margin-right:4px;"></span>${__("Available")}
+				<span style="display:inline-block; width:12px; height:12px; background:#dc3545; border-radius:3px; margin:0 4px 0 16px;"></span>${__("Occupied")}
+			</div>
+		</div>
+		<div style="margin-bottom:10px;"></div>`;
+}
+
+function bind_bed_tiles($wrapper, on_select) {
+	$wrapper.find(".bed-summary-toggle").on("click", () => {
+		$wrapper.find(".bed-grid-body").slideToggle(150);
+	});
+	// Occupied tiles simply don't call on_select - "not clickable" in spirit,
+	// since a plain div has no disabled state of its own to rely on.
+	$wrapper.find(".bed-tile").on("click", function () {
+		if (!$(this).data("available")) return;
+		on_select($(this).data("bed"));
+	});
+}
+
+function render_ward_summary(frm, data) {
+	const { beds } = data;
+	// Rendered right next to Bed No itself (an HTML field placed directly
+	// after it) rather than frm.set_intro() at the top of the form - the
+	// grid and the field it fills in should be in the same glance.
+	const $wrapper = frm.fields_dict.ward_bed_summary_html.$wrapper;
+
+	if (!beds || !beds.length) {
+		// Only wards with an enumerated bed list (see Ward Master) have
+		// anything to actually pick from - others only have a manual count.
+		$wrapper.html(
+			`<div style="color:#888; margin-bottom:10px;">${__(
+				"Individual beds are not listed for this ward yet — add them under Beds on the Ward Master record to see bed-wise status here."
+			)}</div>`
+		);
+		return;
+	}
+
+	$wrapper.html(bed_grid_html(beds));
+	// A fresh .html() call just replaced the whole wrapper, so there's no
+	// stale handler to worry about - the old tiles (and their listeners) are
+	// gone along with the old DOM they were attached to.
+	bind_bed_tiles($wrapper, (bed_no) => frm.set_value("bed_no", bed_no));
+}
+
+function render_room_summary(frm, data) {
+	const { beds } = data;
+	const $wrapper = frm.fields_dict.room_bed_summary_html.$wrapper;
+
+	if (!beds || !beds.length) {
+		$wrapper.html(
+			`<div style="color:#888; margin-bottom:10px;">${__(
+				"Individual beds are not listed for this room yet — add them under Beds on the Room Master record to see bed-wise status here."
+			)}</div>`
+		);
+		return;
+	}
+
+	$wrapper.html(bed_grid_html(beds));
+	bind_bed_tiles($wrapper, (bed_no) => frm.set_value("room_bed_no", bed_no));
+}
 
 function calculate_billing_totals(frm) {
 	// Mirrors the server's calculate_billing_totals() exactly - a live
