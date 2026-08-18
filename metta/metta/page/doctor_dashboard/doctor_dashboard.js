@@ -14,6 +14,19 @@ frappe.pages["doctor-dashboard"].on_page_load = function (wrapper) {
 	page.set_primary_action(__("Refresh"), () => load_stats(page), "refresh");
 };
 
+const TILE_LABELS = {
+	assigned: __("Assigned to Me"),
+	visited: __("Visited"),
+	ready: __("Ready to Consult"),
+	waiting: __("Waiting for Vitals"),
+};
+const TILE_COLORS = {
+	assigned: "#2d95f0",
+	visited: "#28a745",
+	ready: "#f0932d",
+	waiting: "#dc3545",
+};
+
 function load_stats(page) {
 	const $wrapper = page.body.find(".doctor-dashboard-wrapper");
 	$wrapper.html(`<div class="text-muted" style="padding:20px;">${__("Loading...")}</div>`);
@@ -31,68 +44,116 @@ function load_stats(page) {
 				return;
 			}
 
-			const tile = (label, value, color) => `
-				<div style="flex:1; min-width:160px; border:1px solid var(--border-color,#d1d8dd); border-radius:8px; padding:16px; text-align:center;">
-					<div style="font-size:32px; font-weight:bold; color:${color};">${value}</div>
-					<div class="text-muted" style="margin-top:4px;">${label}</div>
-				</div>`;
+			// Cached so clicking between tiles just re-renders from what's
+			// already been fetched, instead of a fresh server call per click -
+			// "Refresh" is what re-fetches.
+			page._dashboard_stats = stats;
+			page._dashboard_active_tile = "ready";
 
-			let html = `
-				<div style="display:flex; gap:16px; flex-wrap:wrap; margin:20px 0;">
-					${tile(__("Assigned to Me"), stats.assigned, "#2d95f0")}
-					${tile(__("Visited"), stats.visited, "#28a745")}
-					${tile(__("Ready to Consult"), stats.ready, "#f0932d")}
-					${tile(__("Waiting for Vitals"), stats.waiting, "#dc3545")}
-				</div>`;
-
-			const visit_table = (visits, show_consult_button) => `
-				<table class="table table-bordered">
-					<thead><tr><th>${__("Visit")}</th><th>${__("Patient")}</th><th>${__("Category")}</th><th></th></tr></thead>
-					<tbody>
-						${visits
-							.map(
-								(v) => `
-							<tr>
-								<td>${frappe.utils.escape_html(v.name)}</td>
-								<td>${frappe.utils.escape_html(v.patient_name || "")}</td>
-								<td>${frappe.utils.escape_html(v.registration_category || "")}</td>
-								<td>
-									${
-										show_consult_button
-											? `<button class="btn btn-xs btn-primary consult-btn" data-visit="${frappe.utils.escape_html(
-													v.name
-												)}">${__("Consult")}</button>`
-											: `<span class="text-muted">${__("Waiting on nurse")}</span>`
-									}
-								</td>
-							</tr>`
-							)
-							.join("")}
-					</tbody>
-				</table>`;
-
-			if (stats.ready_visits && stats.ready_visits.length) {
-				html += `<h5 style="margin-top:10px;">${__("Ready to Consult")}</h5>`;
-				html += visit_table(stats.ready_visits, true);
-			}
-
-			if (stats.waiting_visits && stats.waiting_visits.length) {
-				html += `<h5 style="margin-top:10px;">${__("Waiting for Vitals")}</h5>`;
-				html += visit_table(stats.waiting_visits, false);
-			}
-
-			if (!stats.ready_visits.length && !stats.waiting_visits.length && stats.assigned > 0) {
-				html += `<div class="text-muted" style="margin-top:10px;">${__("No pending patients — you're all caught up.")}</div>`;
-			}
-
-			$wrapper.html(html);
-
-			// Goes straight to writing the consultation, not to the (read-only,
-			// for a doctor) Patient Visit record - that's the actual next
-			// action someone clicking a ready patient wants to take.
-			$wrapper.find(".consult-btn").on("click", function () {
-				frappe.new_doc("Doctor Consultation", { patient_consultation: $(this).data("visit") });
-			});
+			$wrapper.html(`
+				<div class="dashboard-tiles" style="display:flex; gap:16px; flex-wrap:wrap; margin:20px 0;"></div>
+				<div class="dashboard-list"></div>
+			`);
+			render_tiles(page);
+			render_list(page);
 		},
 	});
+}
+
+function render_tiles(page) {
+	const $wrapper = page.body.find(".doctor-dashboard-wrapper");
+	const stats = page._dashboard_stats;
+	const active = page._dashboard_active_tile;
+
+	const tile_html = (key) => {
+		const is_active = key === active;
+		return `
+			<div class="dashboard-tile" data-key="${key}" style="
+				flex:1; min-width:160px; border:2px solid ${is_active ? TILE_COLORS[key] : "var(--border-color,#d1d8dd)"};
+				border-radius:8px; padding:16px; text-align:center; cursor:pointer;
+				background:${is_active ? "var(--control-bg,#f5f7fa)" : "transparent"};">
+				<div style="font-size:32px; font-weight:bold; color:${TILE_COLORS[key]};">${stats[key]}</div>
+				<div class="text-muted" style="margin-top:4px;">${TILE_LABELS[key]}</div>
+			</div>`;
+	};
+
+	$wrapper.find(".dashboard-tiles").html(
+		["assigned", "visited", "ready", "waiting"].map(tile_html).join("")
+	);
+
+	$wrapper.find(".dashboard-tile").on("click", function () {
+		page._dashboard_active_tile = $(this).data("key");
+		render_tiles(page);
+		render_list(page);
+	});
+}
+
+function render_list(page) {
+	const $wrapper = page.body.find(".doctor-dashboard-wrapper");
+	const stats = page._dashboard_stats;
+	const key = page._dashboard_active_tile;
+	const visits = stats[`${key}_visits`] || [];
+
+	if (!visits.length) {
+		$wrapper.find(".dashboard-list").html(
+			`<div class="text-muted" style="margin-top:10px;">${__("Nothing here right now.")}</div>`
+		);
+		return;
+	}
+
+	$wrapper.find(".dashboard-list").html(`
+		<h5 style="margin-top:10px;">${TILE_LABELS[key]}</h5>
+		${visit_table(visits, key)}
+	`);
+
+	$wrapper.find(".consult-btn").on("click", function () {
+		// Goes straight to writing the consultation, not to the (read-only,
+		// for a doctor) Patient Visit record - that's the actual next action
+		// someone clicking a ready patient wants to take.
+		frappe.new_doc("Doctor Consultation", { patient_consultation: $(this).data("visit") });
+	});
+}
+
+function visit_table(visits, kind) {
+	const action_cell = (v) => {
+		if (kind === "ready") {
+			const vitals_link = v.nurse_intervention
+				? ` <a href="/app/nurse-interventions/${encodeURIComponent(v.nurse_intervention)}" target="_blank">${__("View Vitals")}</a>`
+				: "";
+			return `<button class="btn btn-xs btn-primary consult-btn" data-visit="${frappe.utils.escape_html(
+				v.name
+			)}">${__("Consult")}</button>${vitals_link}`;
+		}
+		if (kind === "waiting") {
+			return `<span class="text-muted">${__("Waiting on nurse")}</span>`;
+		}
+		if (kind === "visited") {
+			return v.consultation
+				? `<a href="/app/doctor-consultation/${encodeURIComponent(v.consultation)}" target="_blank">${__("View Consultation")}</a>`
+				: "";
+		}
+		// "assigned" - the raw overview, mixing all three states - shows where
+		// each one currently stands instead of an action to take.
+		if (v.consultation) return `<span class="text-muted">${__("Visited")}</span>`;
+		if (v.nurse_intervention) return `<span class="text-muted">${__("Ready to Consult")}</span>`;
+		return `<span class="text-muted">${__("Waiting for Vitals")}</span>`;
+	};
+
+	return `
+		<table class="table table-bordered">
+			<thead><tr><th>${__("Visit")}</th><th>${__("Patient")}</th><th>${__("Category")}</th><th></th></tr></thead>
+			<tbody>
+				${visits
+					.map(
+						(v) => `
+					<tr>
+						<td>${frappe.utils.escape_html(v.name)}</td>
+						<td>${frappe.utils.escape_html(v.patient_name || "")}</td>
+						<td>${frappe.utils.escape_html(v.registration_category || "")}</td>
+						<td>${action_cell(v)}</td>
+					</tr>`
+					)
+					.join("")}
+			</tbody>
+		</table>`;
 }

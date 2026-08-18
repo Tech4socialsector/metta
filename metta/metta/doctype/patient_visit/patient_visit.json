@@ -37,8 +37,10 @@
   "accommodation_type",
   "ward",
   "bed_no",
+  "ward_bed_summary_html",
   "room",
   "room_bed_no",
+  "room_bed_summary_html",
   "admission_status",
   "column_break_ip",
   "admission_date",
@@ -317,6 +319,12 @@
    "label": "Bed No"
   },
   {
+   "depends_on": "eval:doc.accommodation_type==\"Ward\"",
+   "fieldname": "ward_bed_summary_html",
+   "fieldtype": "HTML",
+   "label": "Ward Bed Summary"
+  },
+  {
    "depends_on": "eval:doc.accommodation_type==\"Room\"",
    "fieldname": "room",
    "fieldtype": "Link",
@@ -328,6 +336,12 @@
    "fieldname": "room_bed_no",
    "fieldtype": "Data",
    "label": "Bed No"
+  },
+  {
+   "depends_on": "eval:doc.accommodation_type==\"Room\"",
+   "fieldname": "room_bed_summary_html",
+   "fieldtype": "HTML",
+   "label": "Room Bed Summary"
   },
   {
    "default": "Admitted",
@@ -619,7 +633,7 @@
   }
  ],
  "max_attachments": 50,
- "modified": "2026-08-13 01:00:00.000000",
+ "modified": "2026-08-17 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "metta",
  "name": "Patient Visit",

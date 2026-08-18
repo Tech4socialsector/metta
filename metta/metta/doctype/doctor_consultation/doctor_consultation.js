@@ -141,6 +141,18 @@ frappe.ui.form.on("Doctor Consultation", {
 						},
 					});
 				});
+
+				// For the "order a test, then prescribe once the result is back"
+				// flow - a fresh consultation is needed rather than editing this
+				// one, since Billing refuses a second bill against an already-billed
+				// consultation. Pre-linking the same visit/doctor here so the doctor
+				// doesn't have to look either up again by hand.
+				frm.add_custom_button(__("Follow-up Consultation"), () => {
+					frappe.new_doc("Doctor Consultation", {
+						patient_consultation: frm.doc.patient_consultation,
+						doctor: frm.doc.doctor,
+					});
+				});
 			}
 		}
 	},
@@ -254,6 +266,16 @@ function render_patient_history(frm) {
 						const tests = (row.suggested_tests || [])
 							.map((t) => `${frappe.utils.escape_html(t.item_name || "")} (${frappe.utils.escape_html(t.test_type || "")})`)
 							.join(", ");
+						// Shows the actual result once Reported, so the doctor doesn't
+						// have to separately open the Diagnostic Test to see it - just
+						// the status (e.g. "Sample Collected") while still pending.
+						const diagnostic_tests = (row.diagnostic_tests || [])
+							.map((d) =>
+								d.status === "Reported"
+									? `${frappe.utils.escape_html(d.item_name || "")}: ${frappe.utils.escape_html(d.result || "")}`
+									: `${frappe.utils.escape_html(d.item_name || "")} (${frappe.utils.escape_html(d.status || "")})`
+							)
+							.join(", ");
 						return `
 							<div style="border-bottom:1px solid var(--border-color,#d1d8dd); padding:8px 0;">
 								<div><b>${frappe.datetime.str_to_user(row.consultation_datetime)}</b> - ${frappe.utils.escape_html(row.doctor)}</div>
@@ -261,6 +283,7 @@ function render_patient_history(frm) {
 								${row.clinical_notes ? `<div><b>${__("Clinical Notes")}:</b> ${frappe.utils.escape_html(row.clinical_notes)}</div>` : ""}
 								${meds ? `<div class="text-muted">${__("Prescribed")}: ${meds}</div>` : ""}
 								${tests ? `<div class="text-muted">${__("Tests Suggested")}: ${tests}</div>` : ""}
+								${diagnostic_tests ? `<div class="text-muted">${__("Test Results")}: ${diagnostic_tests}</div>` : ""}
 							</div>`;
 					})
 					.join("")

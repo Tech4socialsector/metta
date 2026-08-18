@@ -1,7 +1,7 @@
 {
  "app": "metta",
  "charts": [],
- "content": "[{\"id\":\"billHeader01\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Welcome to the Billing workspace</span>\",\"col\":12}},{\"id\":\"billShort01\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Billing\",\"col\":4}},{\"id\":\"billShort02\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Doctor Consultation\",\"col\":4}}]",
+ "content": "[{\"id\":\"billHeader01\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Welcome to the Billing workspace</span>\",\"col\":12}},{\"id\":\"billShort01\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Billing\",\"col\":4}},{\"id\":\"billShort02\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Doctor Consultation\",\"col\":4}},{\"id\":\"billShort03\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Patient Advance\",\"col\":4}}]",
  "creation": "2026-08-12 00:00:00",
  "custom_blocks": [],
  "docstatus": 0,
@@ -13,7 +13,7 @@
  "label": "Billing Desk",
  "link_type": "DocType",
  "links": [],
- "modified": "2026-08-12 12:00:00.000000",
+ "modified": "2026-08-14 01:00:00.000000",
  "modified_by": "Administrator",
  "module": "metta",
  "name": "Billing Desk",
@@ -44,6 +44,14 @@
    "doc_view": "List",
    "label": "Doctor Consultation",
    "link_to": "Doctor Consultation",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Patient Advance",
+   "link_to": "Patient Advance",
    "stats_filter": "[]",
    "type": "DocType"
   }

@@ -18,6 +18,7 @@ class Appointment(Document):
 
 	def validate(self):
 		self.validate_appointment_date()
+		self.validate_doctor_not_on_leave()
 		self.validate_against_doctor_schedule()
 
 	def validate_appointment_date(self):
@@ -29,16 +30,32 @@ class Appointment(Document):
 				_("Appointment Date cannot be in the past."), title=_("Invalid Appointment Date")
 			)
 
+	def validate_doctor_not_on_leave(self):
+		# Checked ahead of validate_against_doctor_schedule() - a leave day
+		# should surface as "on leave", not get masked by (or double-reported
+		# alongside) the more generic "no schedule slot" message.
+		if _is_on_leave(self.doctor, self.appointment_date):
+			leave = frappe.db.get_value(
+				"Doctor Leave",
+				{
+					"doctor": self.doctor,
+					"from_date": ["<=", self.appointment_date],
+					"to_date": [">=", self.appointment_date],
+				},
+				"reason",
+			)
+			frappe.throw(
+				_("Dr {0} is on leave on {1}{2}.").format(
+					frappe.bold(self.doctor), self.appointment_date, f" ({leave})" if leave else ""
+				),
+				title=_("Doctor On Leave"),
+			)
+
 	def validate_against_doctor_schedule(self):
 		weekday = WEEKDAYS[getdate(self.appointment_date).weekday()]
 		appointment_time = get_time(self.appointment_time)
 
-		slot = None
-		for row in frappe.get_doc("Doctor Master", self.doctor).weekly_schedule:
-			if row.day == weekday and get_time(row.from_time) <= appointment_time < get_time(row.to_time):
-				slot = row
-				break
-
+		slot = _find_matching_slot(self.doctor, weekday, appointment_time)
 		if not slot:
 			frappe.throw(
 				_("Dr {0} has no schedule slot covering {1} on {2}.").format(
@@ -48,33 +65,43 @@ class Appointment(Document):
 			)
 
 		# This is the real gate against overbooking a slot - the client-side
-		# picker (once built) will just be a convenience; this check can't be
-		# bypassed by the UI, an API call, or two staff booking at once.
-		# Counted in Python rather than a DB "between" filter so the same
-		# from<=t<to boundary rule used above also applies to the existing
-		# bookings being compared against.
-		same_day_appointments = frappe.get_all(
-			"Appointment",
-			filters={
-				"doctor": self.doctor,
-				"appointment_date": self.appointment_date,
-				"status": ["!=", "Cancelled"],
-				"name": ["!=", self.name],
-			},
-			fields=["appointment_time"],
-		)
-		booked = sum(
-			1
-			for row in same_day_appointments
-			if get_time(slot.from_time) <= get_time(row.appointment_time) < get_time(slot.to_time)
-		)
-		if booked >= slot.max_patients:
+		# picker is just a convenience; this check can't be bypassed by the
+		# UI, an API call, or two staff booking at once.
+		if _count_booked_in_slot(self.doctor, self.appointment_date, slot, exclude=self.name) >= slot.max_patients:
 			frappe.throw(
 				_("The {0}-{1} slot for Dr {2} on {3} is fully booked.").format(
 					slot.from_time, slot.to_time, frappe.bold(self.doctor), self.appointment_date
 				),
 				title=_("Slot Fully Booked"),
 			)
+
+
+def _is_on_leave(doctor, appointment_date):
+	return bool(
+		frappe.db.exists(
+			"Doctor Leave",
+			{"doctor": doctor, "from_date": ["<=", appointment_date], "to_date": [">=", appointment_date]},
+		)
+	)
+
+
+def _find_matching_slot(doctor, weekday, appointment_time):
+	# Counted in Python rather than a DB query so the same from<=t<to
+	# boundary rule is applied consistently everywhere a slot is looked up.
+	for row in frappe.get_doc("Doctor Master", doctor).weekly_schedule:
+		if row.day == weekday and get_time(row.from_time) <= appointment_time < get_time(row.to_time):
+			return row
+	return None
+
+
+def _count_booked_in_slot(doctor, appointment_date, slot, exclude=None):
+	filters = {"doctor": doctor, "appointment_date": appointment_date, "status": ["!=", "Cancelled"]}
+	if exclude:
+		filters["name"] = ["!=", exclude]
+	rows = frappe.get_all("Appointment", filters=filters, fields=["appointment_time"])
+	return sum(
+		1 for row in rows if get_time(slot.from_time) <= get_time(row.appointment_time) < get_time(slot.to_time)
+	)
 
 
 def get_permission_query_conditions(user=None):
@@ -124,3 +151,32 @@ def get_visit_defaults(appointment):
 		"registration_category": "OP",
 		"appointment": doc.name,
 	}
+
+
+@frappe.whitelist()
+def get_available_doctors(appointment_date, appointment_time, exclude_appointment=None):
+	# Anyone who can create an Appointment can see who's available to book -
+	# this is exactly the picker they're choosing from, nothing more sensitive
+	# (no leave reasons, no other patients' details are returned).
+	frappe.has_permission("Appointment", "create", throw=True)
+
+	if not appointment_date or not appointment_time:
+		return []
+
+	appointment_date = getdate(appointment_date)
+	appointment_time = get_time(appointment_time)
+	if appointment_date < getdate(today()):
+		return []
+
+	weekday = WEEKDAYS[appointment_date.weekday()]
+	available = []
+	for doctor in frappe.get_all("Doctor Master", pluck="name"):
+		if _is_on_leave(doctor, appointment_date):
+			continue
+		slot = _find_matching_slot(doctor, weekday, appointment_time)
+		if not slot:
+			continue
+		if _count_booked_in_slot(doctor, appointment_date, slot, exclude=exclude_appointment) >= slot.max_patients:
+			continue
+		available.append(doctor)
+	return available

@@ -10,12 +10,12 @@
   "patient",
   "patient_name",
   "phone",
-  "column_break_doctor",
-  "doctor",
-  "department",
   "schedule_section",
   "appointment_date",
   "appointment_time",
+  "column_break_doctor",
+  "doctor",
+  "department",
   "status",
   "patient_visit",
   "reason_for_visit"
@@ -47,27 +47,6 @@
    "read_only": 1
   },
   {
-   "fieldname": "column_break_doctor",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "doctor",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Doctor",
-   "options": "Doctor Master",
-   "reqd": 1
-  },
-  {
-   "fetch_from": "doctor.department",
-   "fieldname": "department",
-   "fieldtype": "Link",
-   "label": "Department",
-   "options": "Department",
-   "read_only": 1
-  },
-  {
    "fieldname": "schedule_section",
    "fieldtype": "Section Break",
    "label": "Schedule"
@@ -87,6 +66,27 @@
    "in_list_view": 1,
    "label": "Appointment Time",
    "reqd": 1
+  },
+  {
+   "fieldname": "column_break_doctor",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "doctor",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Doctor",
+   "options": "Doctor Master",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "doctor.department",
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "Department",
+   "options": "Department",
+   "read_only": 1
   },
   {
    "default": "Scheduled",
@@ -114,7 +114,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-13 01:00:00.000000",
+ "modified": "2026-08-14 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "metta",
  "name": "Appointment",
