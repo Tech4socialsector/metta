@@ -12,6 +12,8 @@ class NurseInterventions(Document):
 	def validate(self):
 		self.update_age()
 		self.update_bmi()
+		self.update_blood_sugar_status()
+		self.update_anemia_status()
 
 	def update_age(self):
 		dob = frappe.db.get_value("Patient Registration", self.patient_unique_id, "dob") if self.patient_unique_id else None
@@ -36,6 +38,31 @@ class NurseInterventions(Document):
 			self.bmi_category = "Overweight"
 		else:
 			self.bmi_category = "Obese"
+
+	def update_blood_sugar_status(self):
+		# Random Blood Glucose, not fasting - thresholds are for a random
+		# reading (mg/dL, despite the field's own "gm/dl" label - a
+		# pre-existing mislabel, glucose is never actually measured in gm/dl).
+		if not self.rbg_level:
+			self.blood_sugar_status = ""
+			return
+		rbg = flt(self.rbg_level)
+		if rbg < 70:
+			self.blood_sugar_status = "Low"
+		elif rbg < 140:
+			self.blood_sugar_status = "Normal"
+		else:
+			self.blood_sugar_status = "High"
+
+	def update_anemia_status(self):
+		# WHO cutoffs differ by sex (Male 13 g/dL, Female/unspecified 12 g/dL)
+		# - a simplification, since these also vary further by age and
+		# pregnancy status, neither of which this doctype captures.
+		if not self.hemoglobin_level:
+			self.anemia_status = ""
+			return
+		threshold = 13.0 if self.gender == "Male" else 12.0
+		self.anemia_status = "Normal" if flt(self.hemoglobin_level) >= threshold else "Anemic"
 
 
 def get_permission_query_conditions(user=None):
