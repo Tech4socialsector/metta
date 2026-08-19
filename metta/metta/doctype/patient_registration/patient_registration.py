@@ -11,6 +11,10 @@ from metta.metta.utils import validate_phone_number
 class PatientRegistration(Document):
 	def validate(self):
 		validate_phone_number(self.phone, "Phone")
+		# Age is always derived from Date of Birth, never entered by hand - the
+		# same rule Patient Visit and Nurse Interventions already follow, using
+		# this same calculate_age() (see its own docstring below).
+		self.age = calculate_age(self.dob)
 
 
 @frappe.whitelist()

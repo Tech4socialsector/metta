@@ -30,6 +30,9 @@
   "bmi_category",
   "blood_pressure_mmhg",
   "rbg_level",
+  "blood_sugar_status",
+  "hemoglobin_level",
+  "anemia_status",
   "piccle",
   "primary_diagnosis"
  ],
@@ -179,6 +182,26 @@
    "fieldname": "rbg_level",
    "fieldtype": "Data",
    "label": "Random Blood Glucose Level (gm/dl)"
+  },
+  {
+   "fieldname": "blood_sugar_status",
+   "fieldtype": "Select",
+   "label": "Blood Sugar Status",
+   "options": "\nLow\nNormal\nHigh",
+   "read_only": 1
+  },
+  {
+   "fieldname": "hemoglobin_level",
+   "fieldtype": "Float",
+   "label": "Hemoglobin Level (g/dL)",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "anemia_status",
+   "fieldtype": "Select",
+   "label": "Anemia Status",
+   "options": "\nNormal\nAnemic",
+   "read_only": 1
   },
   {
    "fieldname": "piccle",

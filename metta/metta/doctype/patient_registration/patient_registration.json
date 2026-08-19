@@ -15,6 +15,7 @@
   "patient_name",
   "blood_group",
   "dob",
+  "age",
   "sex",
   "column_break_isoy",
   "marital_status",
@@ -80,6 +81,12 @@
    "fieldname": "dob",
    "fieldtype": "Date",
    "label": "Date of Birth"
+  },
+  {
+   "fieldname": "age",
+   "fieldtype": "Int",
+   "label": "Age",
+   "read_only": 1
   },
   {
    "fieldname": "sex",

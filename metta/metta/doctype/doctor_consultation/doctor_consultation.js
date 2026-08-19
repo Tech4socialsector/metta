@@ -189,6 +189,12 @@ function show_vitals_popup(frm) {
 				</div>`;
 
 			const bmi_display = vitals.bmi ? `${vitals.bmi} (${vitals.bmi_category || ""})` : "";
+			const blood_sugar_display = vitals.rbg_level
+				? `${vitals.rbg_level}${vitals.blood_sugar_status ? ` (${vitals.blood_sugar_status})` : ""}`
+				: "";
+			const hemoglobin_display = vitals.hemoglobin_level
+				? `${vitals.hemoglobin_level}${vitals.anemia_status ? ` (${vitals.anemia_status})` : ""}`
+				: "";
 
 			const html = `
 				<div>
@@ -200,7 +206,8 @@ function show_vitals_popup(frm) {
 					${row(__("Height (cm)"), vitals.height)}
 					${row(__("Weight (Kg)"), vitals.weight)}
 					${row(__("BMI"), bmi_display)}
-					${row(__("Random Blood Glucose"), vitals.rbg_level)}
+					${row(__("Random Blood Glucose"), blood_sugar_display)}
+					${row(__("Hemoglobin (g/dL)"), hemoglobin_display)}
 					${row(__("PICCLE"), vitals.piccle)}
 					${row(__("Nurse's Provisional Diagnosis"), vitals.primary_diagnosis)}
 				</div>`;
