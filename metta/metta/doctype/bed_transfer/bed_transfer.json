@@ -1,0 +1,200 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-08-19 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "patient_visit",
+  "transferred_on",
+  "transferred_by",
+  "column_break_bt1",
+  "reason",
+  "from_section",
+  "from_accommodation_type",
+  "from_ward",
+  "from_bed_no",
+  "column_break_bt2",
+  "from_room",
+  "from_room_bed_no",
+  "to_section",
+  "to_accommodation_type",
+  "to_ward",
+  "to_bed_no",
+  "column_break_bt3",
+  "to_room",
+  "to_room_bed_no"
+ ],
+ "fields": [
+  {
+   "fieldname": "patient_visit",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Patient Visit",
+   "options": "Patient Visit",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "default": "Now",
+   "fieldname": "transferred_on",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Transferred On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "transferred_by",
+   "fieldtype": "Link",
+   "label": "Transferred By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_bt1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Optional - e.g. \"Moved to ICU for closer monitoring\". Can be filled in after the fact.",
+   "fieldname": "reason",
+   "fieldtype": "Small Text",
+   "label": "Reason"
+  },
+  {
+   "fieldname": "from_section",
+   "fieldtype": "Section Break",
+   "label": "From"
+  },
+  {
+   "fieldname": "from_accommodation_type",
+   "fieldtype": "Select",
+   "label": "Accommodation Type",
+   "options": "\nWard\nRoom",
+   "read_only": 1
+  },
+  {
+   "fieldname": "from_ward",
+   "fieldtype": "Link",
+   "label": "Ward",
+   "options": "Ward Master",
+   "read_only": 1
+  },
+  {
+   "fieldname": "from_bed_no",
+   "fieldtype": "Data",
+   "label": "Bed No",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_bt2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "from_room",
+   "fieldtype": "Link",
+   "label": "Room",
+   "options": "Room Master",
+   "read_only": 1
+  },
+  {
+   "fieldname": "from_room_bed_no",
+   "fieldtype": "Data",
+   "label": "Room Bed No",
+   "read_only": 1
+  },
+  {
+   "fieldname": "to_section",
+   "fieldtype": "Section Break",
+   "label": "To"
+  },
+  {
+   "fieldname": "to_accommodation_type",
+   "fieldtype": "Select",
+   "label": "Accommodation Type",
+   "options": "\nWard\nRoom",
+   "read_only": 1
+  },
+  {
+   "fieldname": "to_ward",
+   "fieldtype": "Link",
+   "label": "Ward",
+   "options": "Ward Master",
+   "read_only": 1
+  },
+  {
+   "fieldname": "to_bed_no",
+   "fieldtype": "Data",
+   "label": "Bed No",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_bt3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "to_room",
+   "fieldtype": "Link",
+   "label": "Room",
+   "options": "Room Master",
+   "read_only": 1
+  },
+  {
+   "fieldname": "to_room_bed_no",
+   "fieldtype": "Data",
+   "label": "Room Bed No",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-08-19 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "metta",
+ "name": "Bed Transfer",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Front Desk",
+   "write": 1
+  },
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Nurse",
+   "write": 1
+  },
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Doctor"
+  }
+ ],
+ "row_format": "Dynamic",
+ "search_fields": "patient_visit",
+ "sort_field": "transferred_on",
+ "sort_order": "DESC",
+ "states": []
+}

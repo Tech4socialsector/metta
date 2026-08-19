@@ -41,6 +41,10 @@ fixtures = [
 					"Billing Desk",
 					"Lab",
 					"Account Desk",
+					"Store Desk",
+					"Warehouse Desk",
+					"Purchase Desk",
+					"Pharmacy Desk",
 				],
 			]
 		],
@@ -61,6 +65,11 @@ fixtures = [
 					"Billing Desk",
 					"Lab",
 					"Account Desk",
+					"Framework",
+					"Store Desk",
+					"Warehouse Desk",
+					"Purchase Desk",
+					"Pharmacy Desk",
 				],
 			]
 		],

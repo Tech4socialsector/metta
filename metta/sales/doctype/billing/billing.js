@@ -195,16 +195,7 @@ function calculate_totals(frm) {
 	frm.set_value("discount_amount", discount_amount);
 	frm.set_value("gst_amount", gst_total);
 
-	// Mirrors apply_charity() on the server - Charity is a full waiver, not
-	// a discount, so the preview should show 0 due immediately rather than
-	// waiting for save to zero it out.
-	if (frm.doc.payment_mode === "Charity") {
-		frm.set_value("charity_amount", net_amount);
-		frm.set_value("net_amount", 0);
-	} else {
-		frm.set_value("charity_amount", 0);
-		frm.set_value("net_amount", net_amount);
-	}
+	frm.set_value("net_amount", net_amount);
 
 	// Mirrors validate_advance_adjustment() on the server - just a preview,
 	// the save is what actually enforces the balance cap.

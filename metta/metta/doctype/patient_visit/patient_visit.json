@@ -41,6 +41,7 @@
   "room",
   "room_bed_no",
   "room_bed_summary_html",
+  "bed_transfer_history_html",
   "admission_status",
   "column_break_ip",
   "admission_date",
@@ -61,9 +62,6 @@
   "net_amount",
   "payment_mode",
   "corporate_customer",
-  "charity_category",
-  "charity_amount",
-  "charity_remarks",
   "collected_by",
   "medical_history_tab",
   "personal_and_social_history",
@@ -251,6 +249,7 @@
    "label": "Identification Number (UID)"
   },
   {
+   "fetch_from": "uhin_id.phone",
    "fieldname": "phone",
    "fieldtype": "Data",
    "in_filter": 1,
@@ -342,6 +341,12 @@
    "fieldname": "room_bed_summary_html",
    "fieldtype": "HTML",
    "label": "Room Bed Summary"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "bed_transfer_history_html",
+   "fieldtype": "HTML",
+   "label": "Bed / Ward Transfer History"
   },
   {
    "default": "Admitted",
@@ -451,7 +456,7 @@
    "fieldname": "payment_mode",
    "fieldtype": "Select",
    "label": "Payment Mode",
-   "options": "\nCash\nUPI\nCard\nCharity\nCredit - Corporate"
+   "options": "\nCash\nUPI\nCard\nCredit - Corporate"
   },
   {
    "depends_on": "eval:doc.payment_mode==\"Credit - Corporate\"",
@@ -460,29 +465,6 @@
    "label": "Corporate Customer",
    "mandatory_depends_on": "eval:doc.payment_mode==\"Credit - Corporate\"",
    "options": "Corporate Customer"
-  },
-  {
-   "depends_on": "eval:doc.payment_mode==\"Charity\"",
-   "fieldname": "charity_category",
-   "fieldtype": "Link",
-   "label": "Charity Category",
-   "mandatory_depends_on": "eval:doc.payment_mode==\"Charity\"",
-   "options": "Charity Category"
-  },
-  {
-   "depends_on": "eval:doc.payment_mode==\"Charity\"",
-   "description": "The amount actually waived - what this fee would have come to before Charity zeroed it out.",
-   "fieldname": "charity_amount",
-   "fieldtype": "Currency",
-   "label": "Charity Amount",
-   "read_only": 1
-  },
-  {
-   "depends_on": "eval:doc.payment_mode==\"Charity\"",
-   "description": "e.g. \"As per doctor's advice\".",
-   "fieldname": "charity_remarks",
-   "fieldtype": "Small Text",
-   "label": "Charity Remarks"
   },
   {
    "fieldname": "collected_by",
@@ -633,7 +615,7 @@
   }
  ],
  "max_attachments": 50,
- "modified": "2026-08-17 00:00:00.000000",
+ "modified": "2026-08-19 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "metta",
  "name": "Patient Visit",

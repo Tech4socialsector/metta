@@ -26,7 +26,6 @@ def get_columns():
 	return [
 		{"label": "User Name", "fieldname": "user_name", "fieldtype": "Data", "width": 160},
 		{"label": "Gross Amt", "fieldname": "gross_amt", "fieldtype": "Currency", "width": 110},
-		{"label": "Charity", "fieldname": "charity", "fieldtype": "Currency", "width": 100},
 		{"label": "Epay", "fieldname": "epay", "fieldtype": "Currency", "width": 100},
 		{"label": "Credit Bills", "fieldname": "credit_bills", "fieldtype": "Currency", "width": 110},
 		{"label": "Sales Ret", "fieldname": "sales_ret", "fieldtype": "Currency", "width": 100},
@@ -43,10 +42,7 @@ def get_data(filters):
 		f"""
 		SELECT
 			owner,
-			-- Charity is a full waiver - net_amount is zeroed for those rows,
-			-- so charity_amount has to be added back in to see the true
-			-- value of what was actually billed, not just what was collected.
-			SUM(net_amount + charity_amount) AS gross_amt,
+			SUM(net_amount) AS gross_amt,
 			-- amount_collected, not net_amount - a bill fully (or partly)
 			-- covered by Advance Adjusted still keeps whatever Payment Mode
 			-- was picked, even though nothing (or only part) was actually
@@ -55,7 +51,6 @@ def get_data(filters):
 			SUM(CASE WHEN payment_mode = 'Cash' THEN amount_collected ELSE 0 END) AS cash_amt,
 			SUM(CASE WHEN payment_mode IN ('UPI', 'Card') THEN amount_collected ELSE 0 END) AS epay,
 			SUM(CASE WHEN payment_mode = 'Credit - Corporate' THEN amount_collected ELSE 0 END) AS credit_bills,
-			SUM(CASE WHEN payment_mode = 'Charity' THEN charity_amount ELSE 0 END) AS charity,
 			SUM(advance_adjusted) AS adv_ip
 		FROM `tabBilling`
 		WHERE docstatus = 1 {bill_conditions}
@@ -87,7 +82,6 @@ def get_data(filters):
 	full_names = _get_full_names(rows_by_user.keys())
 	amount_fields = (
 		"gross_amt",
-		"charity",
 		"epay",
 		"credit_bills",
 		"sales_ret",
