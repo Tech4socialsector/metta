@@ -26,6 +26,7 @@ class PatientVisit(Document):
 		self.validate_bed_availability()
 		self.validate_room_availability()
 		self.validate_discharge()
+		self.log_bed_transfer()
 		# Front-desk process requires checking Patient Registration first: link the
 		# existing record, or create one there if the patient is genuinely new.
 		# Registration should never silently invent a patient - it must always
@@ -66,19 +67,6 @@ class PatientVisit(Document):
 
 		self.discount_amount = flt(self.fee_amount) * signed_percent / 100
 		self.net_amount = flt(self.fee_amount) - self.discount_amount
-
-		# Charity is a full waiver, not a discount - what the patient would
-		# otherwise have owed is recorded (for the collection report) and then
-		# zeroed out, rather than left to just silently disappear.
-		if self.payment_mode == "Charity":
-			if not self.charity_category:
-				frappe.throw(_("Charity Category is mandatory when Payment Mode is Charity."))
-			self.charity_amount = self.net_amount
-			self.net_amount = 0
-		else:
-			self.charity_category = None
-			self.charity_amount = 0
-			self.charity_remarks = None
 
 		# Recorded the first time a payment mode is actually picked - not
 		# reset on every subsequent edit, so it keeps showing who originally
@@ -141,6 +129,57 @@ class PatientVisit(Document):
 			# Re-admitting after a correction shouldn't leave a stale discharge
 			# date lingering on an otherwise-active admission.
 			self.discharge_date = None
+
+	def log_bed_transfer(self):
+		# Runs during validate() - the DB still holds the pre-save location at
+		# this point, so this is the one place "old" and "new" can be compared
+		# without a separate before-save snapshot. Bed/room availability was
+		# already checked above, so by the time this runs the new location (if
+		# any) is known to actually be valid.
+		if self.is_new() or self.registration_category != "IP":
+			return
+
+		previous = frappe.db.get_value(
+			"Patient Visit",
+			self.name,
+			["accommodation_type", "ward", "bed_no", "room", "room_bed_no"],
+			as_dict=True,
+		)
+		if not previous:
+			return
+
+		current = {
+			"accommodation_type": self.accommodation_type,
+			"ward": self.ward,
+			"bed_no": self.bed_no,
+			"room": self.room,
+			"room_bed_no": self.room_bed_no,
+		}
+		if all(previous.get(field) == current.get(field) for field in current):
+			return
+
+		# The very first time a location is assigned (right after "Admit
+		# Patient" created this record with nothing set yet) isn't a transfer -
+		# there's nowhere to say the patient came "from".
+		if not any([previous.accommodation_type, previous.ward, previous.bed_no, previous.room, previous.room_bed_no]):
+			return
+
+		frappe.get_doc(
+			{
+				"doctype": "Bed Transfer",
+				"patient_visit": self.name,
+				"from_accommodation_type": previous.accommodation_type,
+				"from_ward": previous.ward,
+				"from_bed_no": previous.bed_no,
+				"from_room": previous.room,
+				"from_room_bed_no": previous.room_bed_no,
+				"to_accommodation_type": current["accommodation_type"],
+				"to_ward": current["ward"],
+				"to_bed_no": current["bed_no"],
+				"to_room": current["room"],
+				"to_room_bed_no": current["room_bed_no"],
+			}
+		).insert(ignore_permissions=True)
 
 	def update_age(self):
 		dob = frappe.db.get_value("Patient Registration", self.uhin_id, "dob")
@@ -462,3 +501,35 @@ def get_front_desk_dashboard_stats():
 		# through instead.
 		"patient_flow": patient_flow[:20],
 	}
+
+
+def _describe_location(row, prefix):
+	accommodation_type = row.get(f"{prefix}_accommodation_type")
+	if accommodation_type == "Ward":
+		return f"{row.get(f'{prefix}_ward') or '?'} (Bed {row.get(f'{prefix}_bed_no') or '?'})"
+	if accommodation_type == "Room":
+		return f"{row.get(f'{prefix}_room') or '?'} (Bed {row.get(f'{prefix}_room_bed_no') or '?'})"
+	return "—"
+
+
+@frappe.whitelist()
+def get_bed_transfer_history(patient_visit):
+	# The whole point of logging these is so a move is actually visible
+	# afterward, not just recorded somewhere nobody looks.
+	frappe.has_permission("Patient Visit", "read", throw=True)
+	if not patient_visit:
+		return []
+	rows = frappe.get_all(
+		"Bed Transfer",
+		filters={"patient_visit": patient_visit},
+		fields=[
+			"name", "transferred_on", "transferred_by", "reason",
+			"from_accommodation_type", "from_ward", "from_bed_no", "from_room", "from_room_bed_no",
+			"to_accommodation_type", "to_ward", "to_bed_no", "to_room", "to_room_bed_no",
+		],
+		order_by="transferred_on desc",
+	)
+	for row in rows:
+		row["from_label"] = _describe_location(row, "from")
+		row["to_label"] = _describe_location(row, "to")
+	return rows

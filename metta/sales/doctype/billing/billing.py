@@ -69,7 +69,6 @@ class Billing(Document):
 		self.gst_amount = gst_total
 		self.net_amount = subtotal - self.discount_amount + gst_total
 
-		self.apply_charity()
 		self.validate_advance_adjustment()
 		self.validate_amount_collected()
 
@@ -122,20 +121,6 @@ class Billing(Document):
 
 		self.amount_due = flt(self.net_amount) - flt(self.advance_adjusted)
 
-	def apply_charity(self):
-		# Charity is a full waiver, not a discount - what the patient would
-		# otherwise have owed is recorded (for the collection report) and then
-		# zeroed out, rather than left to just silently disappear.
-		if self.payment_mode == "Charity":
-			if not self.charity_category:
-				frappe.throw(_("Charity Category is mandatory when Payment Mode is Charity."))
-			self.charity_amount = self.net_amount
-			self.net_amount = 0
-		else:
-			self.charity_category = None
-			self.charity_amount = 0
-			self.charity_remarks = None
-
 	def update_bill_type(self):
 		# Whatever was picked before adding items (to drive the Item picker's
 		# filter in the browser) is only a starting point - this is the
@@ -168,24 +153,20 @@ class Billing(Document):
 			)
 
 	def on_submit(self):
+		# Stock moves immediately on submit - Billing Staff finalizing the
+		# bill is what hands the medicine over, so this is the point stock
+		# has to reflect that.
 		for row in self.items:
-			# A Service (a lab test, an X-ray, a consultation fee) was never
-			# stocked in the first place - forcing it through the same
-			# stock-ledger/sufficient-stock check as a physical Medicine or
-			# Consumable would always fail with "0 available", since no Item
-			# of this type ever has a Stock Balance row.
 			if row.item_type == "Service":
 				continue
-
 			row.stock_qty = flt(row.qty) * flt(row.conversion_factor or 1)
 			row.db_set("stock_qty", row.stock_qty, update_modified=False)
 			validate_sufficient_stock(row.item, self.warehouse, row.stock_qty)
-
 			create_stock_ledger_entry(
 				item=row.item,
 				warehouse=self.warehouse,
 				batch_no=row.batch_no,
-				posting_datetime=self.sale_datetime,
+				posting_datetime=frappe.utils.now_datetime(),
 				voucher_type="Billing",
 				voucher_no=self.name,
 				qty_change=-row.stock_qty,

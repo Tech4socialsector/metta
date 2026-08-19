@@ -1,5 +1,31 @@
 [
  {
+  "app": "frappe",
+  "bg_color": null,
+  "docstatus": 0,
+  "doctype": "Desktop Icon",
+  "hidden": 0,
+  "icon": null,
+  "icon_image": null,
+  "icon_type": "App",
+  "label": "Framework",
+  "link": "/desk/build",
+  "link_to": null,
+  "link_type": "External",
+  "logo_url": "/assets/frappe/images/frappe-framework-logo.svg",
+  "modified": "2026-08-19 16:19:20.098449",
+  "name": "Framework",
+  "parent_icon": null,
+  "restrict_removal": 0,
+  "roles": [
+   {
+    "role": "System Manager"
+   }
+  ],
+  "sidebar": null,
+  "standard": 1
+ },
+ {
   "app": null,
   "bg_color": "gray",
   "docstatus": 0,
@@ -13,11 +39,15 @@
   "link_to": "HMIS",
   "link_type": "Workspace Sidebar",
   "logo_url": null,
-  "modified": "2026-07-15 20:06:26.024025",
+  "modified": "2026-08-19 16:13:47.261801",
   "name": "HMIS",
   "parent_icon": null,
   "restrict_removal": 0,
-  "roles": [],
+  "roles": [
+   {
+    "role": "System Manager"
+   }
+  ],
   "sidebar": null,
   "standard": 0
  },
@@ -35,11 +65,15 @@
   "link_to": "Stock and Pharmacy",
   "link_type": "Workspace Sidebar",
   "logo_url": null,
-  "modified": "2026-07-20 14:56:30.080709",
+  "modified": "2026-08-19 16:13:47.381799",
   "name": "Stock and Pharmacy",
   "parent_icon": null,
   "restrict_removal": 0,
-  "roles": [],
+  "roles": [
+   {
+    "role": "System Manager"
+   }
+  ],
   "sidebar": null,
   "standard": 0
  },
@@ -57,11 +91,15 @@
   "link_to": "Master Form",
   "link_type": "Workspace Sidebar",
   "logo_url": null,
-  "modified": "2026-07-20 15:35:11.446233",
+  "modified": "2026-08-19 16:13:47.378082",
   "name": "Master Form",
   "parent_icon": null,
   "restrict_removal": 0,
-  "roles": [],
+  "roles": [
+   {
+    "role": "System Manager"
+   }
+  ],
   "sidebar": null,
   "standard": 0
  },
@@ -79,11 +117,18 @@
   "link_to": "Front Desk",
   "link_type": "Workspace Sidebar",
   "logo_url": null,
-  "modified": "2026-08-11 15:43:32.937559",
+  "modified": "2026-08-19 16:13:47.384764",
   "name": "Front Desk",
   "parent_icon": null,
   "restrict_removal": 0,
-  "roles": [],
+  "roles": [
+   {
+    "role": "System Manager"
+   },
+   {
+    "role": "Front Desk"
+   }
+  ],
   "sidebar": null,
   "standard": 0
  },
@@ -101,11 +146,18 @@
   "link_to": "Nurse",
   "link_type": "Workspace Sidebar",
   "logo_url": null,
-  "modified": "2026-08-11 15:43:32.942896",
+  "modified": "2026-08-19 16:13:47.388032",
   "name": "Nurse",
   "parent_icon": null,
   "restrict_removal": 0,
-  "roles": [],
+  "roles": [
+   {
+    "role": "System Manager"
+   },
+   {
+    "role": "Nurse"
+   }
+  ],
   "sidebar": null,
   "standard": 0
  },
@@ -123,11 +175,221 @@
   "link_to": "Doctor",
   "link_type": "Workspace Sidebar",
   "logo_url": null,
-  "modified": "2026-08-11 15:43:32.945080",
+  "modified": "2026-08-19 16:13:47.391436",
   "name": "Doctor",
   "parent_icon": null,
   "restrict_removal": 0,
-  "roles": [],
+  "roles": [
+   {
+    "role": "Doctor"
+   },
+   {
+    "role": "System Manager"
+   }
+  ],
+  "sidebar": null,
+  "standard": 0
+ },
+ {
+  "app": null,
+  "bg_color": "gray",
+  "docstatus": 0,
+  "doctype": "Desktop Icon",
+  "hidden": 0,
+  "icon": null,
+  "icon_image": null,
+  "icon_type": "Link",
+  "label": "Store Desk",
+  "link": null,
+  "link_to": "Store Desk",
+  "link_type": "Workspace Sidebar",
+  "logo_url": null,
+  "modified": "2026-08-19 16:13:47.401592",
+  "name": "Store Desk",
+  "parent_icon": null,
+  "restrict_removal": 0,
+  "roles": [
+   {
+    "role": "System Manager"
+   },
+   {
+    "role": "Store Staff"
+   }
+  ],
+  "sidebar": null,
+  "standard": 0
+ },
+ {
+  "app": null,
+  "bg_color": "gray",
+  "docstatus": 0,
+  "doctype": "Desktop Icon",
+  "hidden": 0,
+  "icon": null,
+  "icon_image": null,
+  "icon_type": "Link",
+  "label": "Pharmacy Desk",
+  "link": null,
+  "link_to": "Pharmacy Desk",
+  "link_type": "Workspace Sidebar",
+  "logo_url": null,
+  "modified": "2026-08-19 16:13:47.411384",
+  "name": "Pharmacy Desk",
+  "parent_icon": null,
+  "restrict_removal": 0,
+  "roles": [
+   {
+    "role": "System Manager"
+   },
+   {
+    "role": "Pharmacy Staff"
+   }
+  ],
+  "sidebar": null,
+  "standard": 0
+ },
+ {
+  "app": null,
+  "bg_color": "gray",
+  "docstatus": 0,
+  "doctype": "Desktop Icon",
+  "hidden": 0,
+  "icon": null,
+  "icon_image": null,
+  "icon_type": "Link",
+  "label": "Purchase Desk",
+  "link": null,
+  "link_to": "Purchase Desk",
+  "link_type": "Workspace Sidebar",
+  "logo_url": null,
+  "modified": "2026-08-19 16:13:47.409061",
+  "name": "Purchase Desk",
+  "parent_icon": null,
+  "restrict_removal": 0,
+  "roles": [
+   {
+    "role": "Purchase Approver"
+   },
+   {
+    "role": "System Manager"
+   }
+  ],
+  "sidebar": null,
+  "standard": 0
+ },
+ {
+  "app": null,
+  "bg_color": "gray",
+  "docstatus": 0,
+  "doctype": "Desktop Icon",
+  "hidden": 0,
+  "icon": null,
+  "icon_image": null,
+  "icon_type": "Link",
+  "label": "Warehouse Desk",
+  "link": null,
+  "link_to": "Warehouse Desk",
+  "link_type": "Workspace Sidebar",
+  "logo_url": null,
+  "modified": "2026-08-19 16:13:47.405969",
+  "name": "Warehouse Desk",
+  "parent_icon": null,
+  "restrict_removal": 0,
+  "roles": [
+   {
+    "role": "Warehouse Staffs"
+   },
+   {
+    "role": "System Manager"
+   }
+  ],
+  "sidebar": null,
+  "standard": 0
+ },
+ {
+  "app": null,
+  "bg_color": "gray",
+  "docstatus": 0,
+  "doctype": "Desktop Icon",
+  "hidden": 0,
+  "icon": null,
+  "icon_image": null,
+  "icon_type": "Link",
+  "label": "Lab",
+  "link": null,
+  "link_to": "Lab",
+  "link_type": "Workspace Sidebar",
+  "logo_url": null,
+  "modified": "2026-08-19 16:13:47.396300",
+  "name": "Lab",
+  "parent_icon": null,
+  "restrict_removal": 0,
+  "roles": [
+   {
+    "role": "Lab Staff"
+   },
+   {
+    "role": "System Manager"
+   }
+  ],
+  "sidebar": null,
+  "standard": 0
+ },
+ {
+  "app": null,
+  "bg_color": "gray",
+  "docstatus": 0,
+  "doctype": "Desktop Icon",
+  "hidden": 0,
+  "icon": null,
+  "icon_image": null,
+  "icon_type": "Link",
+  "label": "Account Desk",
+  "link": null,
+  "link_to": "Account Desk",
+  "link_type": "Workspace Sidebar",
+  "logo_url": null,
+  "modified": "2026-08-19 16:13:47.398887",
+  "name": "Account Desk",
+  "parent_icon": null,
+  "restrict_removal": 0,
+  "roles": [
+   {
+    "role": "Account Staff"
+   },
+   {
+    "role": "System Manager"
+   }
+  ],
+  "sidebar": null,
+  "standard": 0
+ },
+ {
+  "app": null,
+  "bg_color": "gray",
+  "docstatus": 0,
+  "doctype": "Desktop Icon",
+  "hidden": 0,
+  "icon": null,
+  "icon_image": null,
+  "icon_type": "Link",
+  "label": "Billing Desk",
+  "link": null,
+  "link_to": "Billing Desk",
+  "link_type": "Workspace Sidebar",
+  "logo_url": null,
+  "modified": "2026-08-19 16:13:47.393890",
+  "name": "Billing Desk",
+  "parent_icon": null,
+  "restrict_removal": 0,
+  "roles": [
+   {
+    "role": "Billing Staff"
+   },
+   {
+    "role": "System Manager"
+   }
+  ],
   "sidebar": null,
   "standard": 0
  }
