@@ -208,7 +208,20 @@ function calculate_totals(frm) {
 
 	// Mirrors validate_advance_adjustment() on the server - just a preview,
 	// the save is what actually enforces the balance cap.
-	frm.set_value("amount_due", flt(frm.doc.net_amount) - flt(frm.doc.advance_adjusted));
+	const previous_amount_due = flt(frm.doc.amount_due);
+	const new_amount_due = flt(frm.doc.net_amount) - flt(frm.doc.advance_adjusted);
+	frm.set_value("amount_due", new_amount_due);
+
+	// Defaults to fully collected - staff reduce this by hand only for a
+	// genuine partial payment, as the LAST step before submitting. Only reset
+	// it when Amount Due itself actually changed (a real edit - items,
+	// discount, advance) - calculate_totals() also runs on every refresh()
+	// (e.g. right after Save, when the form re-renders), and resetting
+	// unconditionally there would silently wipe out a partial payment the
+	// moment the page redraws, even though nothing was actually edited.
+	if (new_amount_due !== previous_amount_due) {
+		frm.set_value("amount_collected", new_amount_due);
+	}
 }
 
 function add_advance_button(frm) {

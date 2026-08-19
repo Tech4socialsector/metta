@@ -22,6 +22,7 @@
   "net_amount",
   "advance_adjusted",
   "amount_due",
+  "amount_collected",
   "payment_mode",
   "corporate_customer",
   "charity_category",
@@ -141,6 +142,12 @@
    "in_list_view": 1,
    "label": "Amount Due",
    "read_only": 1
+  },
+  {
+   "description": "Defaults to Amount Due - reduce this only if the patient is genuinely paying less than the full amount today. Used by Collection Report so an advance-covered bill isn't also counted as collected via Payment Mode.",
+   "fieldname": "amount_collected",
+   "fieldtype": "Currency",
+   "label": "Amount Collected Now"
   },
   {
    "fieldname": "payment_mode",

@@ -71,6 +71,27 @@ class Billing(Document):
 
 		self.apply_charity()
 		self.validate_advance_adjustment()
+		self.validate_amount_collected()
+
+	def validate_amount_collected(self):
+		# Defaults to fully collected (today's normal case) unless someone
+		# deliberately reduces it for a genuine partial payment - this is what
+		# Collection Report's Cash Amt/Epay/Credit Bills actually sum, so an
+		# advance-covered bill doesn't get double-counted as if it were also
+		# collected via Payment Mode.
+		if not self.amount_collected:
+			self.amount_collected = self.amount_due
+			return
+
+		if flt(self.amount_collected) < 0:
+			frappe.throw(_("Amount Collected Now cannot be negative."))
+		if flt(self.amount_collected) > flt(self.amount_due):
+			frappe.throw(
+				_("Amount Collected Now cannot exceed Amount Due ({0}).").format(
+					frappe.format(self.amount_due, {"fieldtype": "Currency"})
+				),
+				title=_("Invalid Amount Collected"),
+			)
 
 	def validate_advance_adjustment(self):
 		if not self.advance_adjusted:

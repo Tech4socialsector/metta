@@ -3,11 +3,10 @@
 
 import frappe
 
-# The columns below are only what today's schema can actually answer -
-# Patient Debit, Debit Collected and Adv/IP have no backing field or
-# doctype anywhere in the app yet, so they're always reported as 0 rather
-# than silently guessed at.
-UNTRACKED_COLUMNS = ("patient_debit", "debit_collected", "adv_ip")
+# Patient Debit and Debit Collected have no backing field or doctype anywhere
+# in the app, so they're always reported as 0 rather than silently guessed
+# at. Adv/IP comes straight from Billing.advance_adjusted.
+UNTRACKED_COLUMNS = ("patient_debit", "debit_collected")
 
 
 def execute(filters=None):
@@ -48,10 +47,16 @@ def get_data(filters):
 			-- so charity_amount has to be added back in to see the true
 			-- value of what was actually billed, not just what was collected.
 			SUM(net_amount + charity_amount) AS gross_amt,
-			SUM(CASE WHEN payment_mode = 'Cash' THEN net_amount ELSE 0 END) AS cash_amt,
-			SUM(CASE WHEN payment_mode IN ('UPI', 'Card') THEN net_amount ELSE 0 END) AS epay,
-			SUM(CASE WHEN payment_mode = 'Credit - Corporate' THEN net_amount ELSE 0 END) AS credit_bills,
-			SUM(CASE WHEN payment_mode = 'Charity' THEN charity_amount ELSE 0 END) AS charity
+			-- amount_collected, not net_amount - a bill fully (or partly)
+			-- covered by Advance Adjusted still keeps whatever Payment Mode
+			-- was picked, even though nothing (or only part) was actually
+			-- collected that way; summing net_amount here would double-count
+			-- that same money under both Adv/IP and Cash/Epay/Credit Bills.
+			SUM(CASE WHEN payment_mode = 'Cash' THEN amount_collected ELSE 0 END) AS cash_amt,
+			SUM(CASE WHEN payment_mode IN ('UPI', 'Card') THEN amount_collected ELSE 0 END) AS epay,
+			SUM(CASE WHEN payment_mode = 'Credit - Corporate' THEN amount_collected ELSE 0 END) AS credit_bills,
+			SUM(CASE WHEN payment_mode = 'Charity' THEN charity_amount ELSE 0 END) AS charity,
+			SUM(advance_adjusted) AS adv_ip
 		FROM `tabBilling`
 		WHERE docstatus = 1 {bill_conditions}
 		GROUP BY owner
@@ -87,6 +92,7 @@ def get_data(filters):
 		"credit_bills",
 		"sales_ret",
 		*UNTRACKED_COLUMNS,
+		"adv_ip",
 		"cash_amt",
 	)
 
