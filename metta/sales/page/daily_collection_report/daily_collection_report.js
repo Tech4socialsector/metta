@@ -215,12 +215,14 @@ class DailyCollectionReport {
 		// instead of being recomputed separately here.
 		const total_row = rows.length ? rows[rows.length - 1] : null;
 		const detail_rows = total_row ? rows.slice(0, -1) : [];
+		const advances = data.advances || { rows: [], total: 0 };
 
-		this.render_cards(total_row);
+		this.render_cards(total_row, advances);
 		this.render_table(detail_rows, total_row);
+		this.render_advances(advances);
 	}
 
-	render_cards(total_row) {
+	render_cards(total_row, advances) {
 		if (!total_row) {
 			this.cards_area.html("");
 			return;
@@ -237,9 +239,60 @@ class DailyCollectionReport {
 				<div class="dcr-card-label">${__("Sales Returns")}</div>
 				<div class="dcr-card-value">${format_currency(total_row.sales_ret)}</div>
 			</div>
+			<div class="dcr-card">
+				<div class="dcr-card-label">${__("Advances Collected")}</div>
+				<div class="dcr-card-value">${format_currency(advances.total)}</div>
+			</div>
 			<div class="dcr-card highlight">
 				<div class="dcr-card-label">${__("Total Collected")}</div>
 				<div class="dcr-card-value">${format_currency(total_collected)}</div>
+			</div>
+		`);
+	}
+
+	render_advances(advances) {
+		if (!this.advances_area) {
+			this.advances_area = $(`<div></div>`).appendTo(this.page.body);
+		}
+		const rows = advances.rows || [];
+		if (!rows.length) {
+			this.advances_area.html(`
+				<div class="dcr-subheading">${__("Advances")}</div>
+				<p class="text-muted">${__("No advances collected for this period.")}</p>
+			`);
+			return;
+		}
+
+		const header = ["Patient Visit", "Patient Name", "Amount", "Payment Mode", "Received By", "Received On", "Remarks"]
+			.map((h) => `<th>${__(h)}</th>`)
+			.join("");
+
+		const row_html = (row) => `
+			<tr>
+				<td>${frappe.utils.escape_html(row.patient_visit || "")}</td>
+				<td>${frappe.utils.escape_html(row.patient_label || "")}</td>
+				<td class="text-center">${format_currency(row.amount)}</td>
+				<td>${frappe.utils.escape_html(row.payment_mode || "")}</td>
+				<td>${frappe.utils.escape_html(row.received_by_name || "")}</td>
+				<td>${frappe.datetime.str_to_user(row.received_on)}</td>
+				<td>${frappe.utils.escape_html(row.remarks || "")}</td>
+			</tr>`;
+
+		const body = rows.map(row_html).join("");
+		const total_html = `
+			<tr class="dcr-total">
+				<td colspan="2">${__("Total")}</td>
+				<td class="text-center">${format_currency(advances.total)}</td>
+				<td colspan="4"></td>
+			</tr>`;
+
+		this.advances_area.html(`
+			<div class="dcr-subheading">${__("Advances")}</div>
+			<div class="table-wrapper" style="overflow-x: auto;">
+				<table class="table table-hover dcr-table">
+					<thead><tr>${header}</tr></thead>
+					<tbody>${body}${total_html}</tbody>
+				</table>
 			</div>
 		`);
 	}
