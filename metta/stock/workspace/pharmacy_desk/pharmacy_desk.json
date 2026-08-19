@@ -1,0 +1,153 @@
+{
+ "app": "metta",
+ "charts": [],
+ "content": "[{\"id\":\"QdQA4A3M-u\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Welcome to the Pharmacy Desk workspace</b></span>\",\"col\":12}},{\"id\":\"H87pwmP6cH\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Pharmacy</b></span>\",\"col\":12}},{\"id\":\"iDmBhRVt0b\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Billing\",\"col\":3}},{\"id\":\"mMEGJWD6oy\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Batch\",\"col\":3}},{\"id\":\"L-ojsGnVrr\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Stock Balance\",\"col\":3}},{\"id\":\"sG4drG5GZy\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Stock Ledger Entry\",\"col\":3}},{\"id\":\"GASf-CQTMr\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Item\",\"col\":3}},{\"id\":\"EF_e5maZ27\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Warehouse\",\"col\":3}},{\"id\":\"Z1cRF2zQ4_\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Patient</b></span>\",\"col\":12}},{\"id\":\"kHrJs_7FwK\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Doctor Consultation\",\"col\":3}},{\"id\":\"CigNLAw1fe\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Patient Visit\",\"col\":3}},{\"id\":\"Br3-u_zm_Z\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Billing Support</b></span>\",\"col\":12}},{\"id\":\"rZgagf7T53\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Corporate Customer\",\"col\":3}},{\"id\":\"cbnVLxfS1a\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Category Price Adjustment\",\"col\":3}},{\"id\":\"Y0gQPai5J0\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Sales Return\",\"col\":3}},{\"id\":\"fo_FQ73RpP\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports</b></span>\",\"col\":12}},{\"id\":\"dn13t8kCxw\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Batch Wise Stock Listing\",\"col\":3}},{\"id\":\"zgjY-8e4ck\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Material Analysis\",\"col\":3}},{\"id\":\"BB8xIvJ-uJ\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Outlet-wise Expiry Report\",\"col\":3}},{\"id\":\"Ete0t94H1L\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Stock Sale Report\",\"col\":3}}]",
+ "creation": "2026-08-19 17:00:00.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "hide_custom": 0,
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Pharmacy Desk",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2026-08-19 17:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Stock",
+ "name": "Pharmacy Desk",
+ "number_cards": [],
+ "owner": "Administrator",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "Pharmacy Staff"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "sequence_id": 0.0,
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Billing",
+   "link_to": "Billing",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Batch",
+   "link_to": "Batch",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Stock Balance",
+   "link_to": "Stock Balance",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Stock Ledger Entry",
+   "link_to": "Stock Ledger Entry",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Item",
+   "link_to": "Item",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Warehouse",
+   "link_to": "Warehouse",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Doctor Consultation",
+   "link_to": "Doctor Consultation",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Patient Visit",
+   "link_to": "Patient Visit",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Corporate Customer",
+   "link_to": "Corporate Customer",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Category Price Adjustment",
+   "link_to": "Category Price Adjustment",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Sales Return",
+   "link_to": "Sales Return",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "label": "Batch Wise Stock Listing",
+   "link_to": "batch-wise-stock-listing",
+   "stats_filter": "[]",
+   "type": "Page"
+  },
+  {
+   "color": "Grey",
+   "label": "Material Analysis",
+   "link_to": "material-analysis",
+   "stats_filter": "[]",
+   "type": "Page"
+  },
+  {
+   "color": "Grey",
+   "label": "Outlet-wise Expiry Report",
+   "link_to": "outletwise-expiry-report",
+   "stats_filter": "[]",
+   "type": "Page"
+  },
+  {
+   "color": "Grey",
+   "label": "Stock Sale Report",
+   "link_to": "stock-sale-report",
+   "stats_filter": "[]",
+   "type": "Page"
+  }
+ ],
+ "title": "Pharmacy Desk",
+ "type": "Workspace"
+}

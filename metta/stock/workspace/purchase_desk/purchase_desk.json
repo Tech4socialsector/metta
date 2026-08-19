@@ -1,0 +1,75 @@
+{
+ "app": "metta",
+ "charts": [],
+ "content": "[{\"id\":\"CHdlyscQ_-\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Welcome to the Purchase Desk workspace</b></span>\",\"col\":12}},{\"id\":\"AO4ZoQLDaJ\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Purchase</b></span>\",\"col\":12}},{\"id\":\"ZrW-aXBK6v\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Purchase Order\",\"col\":3}},{\"id\":\"dohVWRd7Zs\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Purchase Receipt\",\"col\":3}},{\"id\":\"LGUWlms7ZK\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Purchase Bill\",\"col\":3}},{\"id\":\"IWhQ3TuQic\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports</b></span>\",\"col\":12}},{\"id\":\"NOWnS3uSc3\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Supplier Wise Purchase\",\"col\":3}},{\"id\":\"ndT-jW6CEz\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Date wise Purchase Order Details\",\"col\":3}}]",
+ "creation": "2026-08-19 17:00:00.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "hide_custom": 0,
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Purchase Desk",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2026-08-19 17:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Stock",
+ "name": "Purchase Desk",
+ "number_cards": [],
+ "owner": "Administrator",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "Purchase Approver"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "sequence_id": 0.0,
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Purchase Order",
+   "link_to": "Purchase Order",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Purchase Receipt",
+   "link_to": "Purchase Receipt",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Purchase Bill",
+   "link_to": "Purchase Bill",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "label": "Supplier Wise Purchase",
+   "link_to": "supplier-wise-purchase",
+   "stats_filter": "[]",
+   "type": "Page"
+  },
+  {
+   "color": "Grey",
+   "label": "Date wise Purchase Order Details",
+   "link_to": "date-wise-purchase-order-details",
+   "stats_filter": "[]",
+   "type": "Page"
+  }
+ ],
+ "title": "Purchase Desk",
+ "type": "Workspace"
+}

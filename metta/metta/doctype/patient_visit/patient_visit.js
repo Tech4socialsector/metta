@@ -172,6 +172,10 @@ frappe.ui.form.on("Patient Visit", {
 				},
 			});
 		}
+
+		if (frm.doc.registration_category === "IP" && !frm.is_new()) {
+			render_bed_transfer_history(frm);
+		}
 	},
 
 	ward(frm) {
@@ -198,6 +202,7 @@ frappe.ui.form.on("Patient Visit", {
 		if (!frm.doc.ward || !frm.doc.bed_no || frm.doc.registration_category !== "IP") {
 			return;
 		}
+		const clicked_bed = frm.doc.bed_no;
 		frappe.call({
 			method:
 				"metta.metta.doctype.patient_visit.patient_visit.check_bed_availability",
@@ -217,6 +222,7 @@ frappe.ui.form.on("Patient Visit", {
 						),
 					});
 					frm.set_value("bed_no", "");
+					revert_bed_pending(frm.fields_dict.ward_bed_summary_html.$wrapper, clicked_bed);
 				}
 			},
 		});
@@ -260,6 +266,7 @@ frappe.ui.form.on("Patient Visit", {
 		if (!frm.doc.room || !frm.doc.room_bed_no || frm.doc.registration_category !== "IP") {
 			return;
 		}
+		const clicked_bed = frm.doc.room_bed_no;
 		frappe.call({
 			method:
 				"metta.metta.doctype.patient_visit.patient_visit.check_room_availability",
@@ -279,6 +286,7 @@ frappe.ui.form.on("Patient Visit", {
 						),
 					});
 					frm.set_value("room_bed_no", "");
+					revert_bed_pending(frm.fields_dict.room_bed_summary_html.$wrapper, clicked_bed);
 				}
 			},
 		});
@@ -365,8 +373,38 @@ function bind_bed_tiles($wrapper, on_select) {
 	// since a plain div has no disabled state of its own to rely on.
 	$wrapper.find(".bed-tile").on("click", function () {
 		if (!$(this).data("available")) return;
+		// Nothing is saved yet at this point - this is only a preview so
+		// clicking feels instant instead of waiting on the availability
+		// round-trip below. mark_bed_pending()/revert_bed_pending() are what
+		// undo this if that check comes back occupied, so it never lies
+		// about a bed actually being taken.
+		mark_bed_pending($wrapper, $(this).data("bed"));
 		on_select($(this).data("bed"));
 	});
+}
+
+function mark_bed_pending($wrapper, bed_no) {
+	// Only one bed can be picked for this visit - clear any earlier pending
+	// look before applying it to the new one, same as the field itself only
+	// ever holding one value.
+	$wrapper.find(".bed-tile").each(function () {
+		if ($(this).data("available")) {
+			$(this).css({ background: "#28a745", cursor: "pointer", opacity: 1 });
+		}
+	});
+	$wrapper
+		.find(`.bed-tile[data-bed="${frappe.utils.escape_html(String(bed_no))}"]`)
+		.css({ background: "#dc3545", cursor: "not-allowed", opacity: 1 })
+		.attr("title", __("Selected (not saved yet)"));
+}
+
+function revert_bed_pending($wrapper, bed_no) {
+	// The availability check rejected it after all - back to how it looked
+	// before the click, since nothing was actually reserved.
+	$wrapper
+		.find(`.bed-tile[data-bed="${frappe.utils.escape_html(String(bed_no))}"]`)
+		.css({ background: "#28a745", cursor: "pointer", opacity: 1 })
+		.attr("title", __("Available"));
 }
 
 function render_ward_summary(frm, data) {
@@ -411,6 +449,38 @@ function render_room_summary(frm, data) {
 	bind_bed_tiles($wrapper, (bed_no) => frm.set_value("room_bed_no", bed_no));
 }
 
+function render_bed_transfer_history(frm) {
+	const $wrapper = frm.fields_dict.bed_transfer_history_html.$wrapper;
+	frappe.call({
+		method: "metta.metta.doctype.patient_visit.patient_visit.get_bed_transfer_history",
+		args: { patient_visit: frm.doc.name },
+		callback(r) {
+			const rows = r.message || [];
+			if (!rows.length) {
+				$wrapper.html(`<div class="text-muted">${__("No ward/bed transfers recorded for this admission yet.")}</div>`);
+				return;
+			}
+			$wrapper.html(
+				rows
+					.map(
+						(row) => `
+					<div style="border-bottom:1px solid var(--border-color,#d1d8dd); padding:8px 0;">
+						<div>
+							<b>${frappe.datetime.str_to_user(row.transferred_on)}</b>
+							&mdash; ${frappe.utils.escape_html(row.from_label)} &rarr; ${frappe.utils.escape_html(row.to_label)}
+						</div>
+						<div class="text-muted" style="font-size:12px;">
+							${__("By")} ${frappe.utils.escape_html(row.transferred_by || "")}
+							${row.reason ? ` &mdash; ${frappe.utils.escape_html(row.reason)}` : ""}
+						</div>
+					</div>`
+					)
+					.join("")
+			);
+		},
+	});
+}
+
 function calculate_billing_totals(frm) {
 	// Mirrors the server's calculate_billing_totals() exactly - a live
 	// preview only, validate() on save is what's actually authoritative.
@@ -423,15 +493,5 @@ function calculate_billing_totals(frm) {
 	const discount_amount = (flt(frm.doc.fee_amount) * signed_percent) / 100;
 	const net_amount = flt(frm.doc.fee_amount) - discount_amount;
 	frm.set_value("discount_amount", discount_amount);
-
-	// Mirrors the server's Charity handling - a full waiver, not a discount,
-	// so the preview should show 0 due immediately rather than waiting for
-	// save to zero it out.
-	if (frm.doc.payment_mode === "Charity") {
-		frm.set_value("charity_amount", net_amount);
-		frm.set_value("net_amount", 0);
-	} else {
-		frm.set_value("charity_amount", 0);
-		frm.set_value("net_amount", net_amount);
-	}
+	frm.set_value("net_amount", net_amount);
 }

@@ -1,7 +1,7 @@
 {
  "app": "metta",
  "charts": [],
- "content": "[{\"id\":\"billHeader01\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Welcome to the Billing workspace</span>\",\"col\":12}},{\"id\":\"billShort01\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Billing\",\"col\":4}},{\"id\":\"billShort02\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Doctor Consultation\",\"col\":4}},{\"id\":\"billShort03\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Patient Advance\",\"col\":4}}]",
+ "content": "[{\"id\":\"billHeader01\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Welcome to the Billing workspace</span>\",\"col\":12}},{\"id\":\"billShort01\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Billing\",\"col\":4}},{\"id\":\"billShort02\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Doctor Consultation\",\"col\":4}},{\"id\":\"billShort03\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Patient Advance\",\"col\":4}},{\"id\":\"billShort04\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Stock Sale Report\",\"col\":4}}]",
  "creation": "2026-08-12 00:00:00",
  "custom_blocks": [],
  "docstatus": 0,
@@ -13,7 +13,7 @@
  "label": "Billing Desk",
  "link_type": "DocType",
  "links": [],
- "modified": "2026-08-14 01:00:00.000000",
+ "modified": "2026-08-19 17:30:00.000000",
  "modified_by": "Administrator",
  "module": "metta",
  "name": "Billing Desk",
@@ -54,6 +54,13 @@
    "link_to": "Patient Advance",
    "stats_filter": "[]",
    "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "label": "Stock Sale Report",
+   "link_to": "stock-sale-report",
+   "stats_filter": "[]",
+   "type": "Page"
   }
  ],
  "title": "Billing Desk",

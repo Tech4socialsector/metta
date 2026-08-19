@@ -1,0 +1,106 @@
+{
+ "app": "metta",
+ "charts": [],
+ "content": "[{\"id\":\"k-poD17yQ_\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Welcome to the Warehouse Desk workspace</b></span>\",\"col\":12}},{\"id\":\"nZRhIiaq8i\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Purchase</b></span>\",\"col\":12}},{\"id\":\"Pr1VJDXVtW\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Purchase Order\",\"col\":3}},{\"id\":\"HaBWkERHWJ\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Purchase Receipt\",\"col\":3}},{\"id\":\"7MDEDyRyx3\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Purchase Bill\",\"col\":3}},{\"id\":\"-PL9j_suLW\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Stock</b></span>\",\"col\":12}},{\"id\":\"PjV0QW0XnH\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Stock Indent\",\"col\":3}},{\"id\":\"tl4ESwzjlQ\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Stock Transfer\",\"col\":3}},{\"id\":\"VY7_Bn0arV\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Stock Ledger Entry\",\"col\":3}},{\"id\":\"M6vBBUUfie\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports</b></span>\",\"col\":12}},{\"id\":\"BSOP5DeJt1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Outletwise Stock Transfer Summary\",\"col\":3}},{\"id\":\"E_kg-WN8fT\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Previous Day Stock Report\",\"col\":3}},{\"id\":\"-6AYaTJh68\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Purchase Analysis\",\"col\":3}}]",
+ "creation": "2026-08-19 17:00:00.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "hide_custom": 0,
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Warehouse Desk",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2026-08-19 17:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Stock",
+ "name": "Warehouse Desk",
+ "number_cards": [],
+ "owner": "Administrator",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "Warehouse Staffs"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "sequence_id": 0.0,
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Purchase Order",
+   "link_to": "Purchase Order",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Purchase Receipt",
+   "link_to": "Purchase Receipt",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Purchase Bill",
+   "link_to": "Purchase Bill",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Stock Indent",
+   "link_to": "Stock Indent",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Stock Transfer",
+   "link_to": "Stock Transfer",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Stock Ledger Entry",
+   "link_to": "Stock Ledger Entry",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "label": "Outletwise Stock Transfer Summary",
+   "link_to": "outletwise-stock-tra",
+   "stats_filter": "[]",
+   "type": "Page"
+  },
+  {
+   "color": "Grey",
+   "label": "Previous Day Stock Report",
+   "link_to": "previous-day-stock-report",
+   "stats_filter": "[]",
+   "type": "Page"
+  },
+  {
+   "color": "Grey",
+   "label": "Purchase Analysis",
+   "link_to": "purchase-analysis",
+   "stats_filter": "[]",
+   "type": "Page"
+  }
+ ],
+ "title": "Warehouse Desk",
+ "type": "Workspace"
+}
