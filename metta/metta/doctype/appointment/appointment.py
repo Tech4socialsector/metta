@@ -180,3 +180,43 @@ def get_available_doctors(appointment_date, appointment_time, exclude_appointmen
 			continue
 		available.append(doctor)
 	return available
+
+
+@frappe.whitelist()
+def get_front_desk_dashboard_stats():
+	frappe.has_permission("Appointment", "read", throw=True)
+	day = getdate(today())
+
+	appointments = frappe.get_all(
+		"Appointment",
+		filters={"appointment_date": day},
+		fields=["name", "patient_name", "doctor", "appointment_time", "status"],
+		order_by="appointment_time",
+	)
+	# "Completed" counts as checked-in too - that status only ever follows
+	# from having been checked in first, it doesn't mean they never came.
+	checkedin_appointments = [a for a in appointments if a.status in ("Checked-in", "Completed")]
+
+	op_visits = frappe.get_all(
+		"Patient Visit",
+		filters={"registration_category": "OP", "date": day},
+		fields=["name", "patient_name", "doctor_name"],
+		order_by="creation desc",
+	)
+	ip_visits = frappe.get_all(
+		"Patient Visit",
+		filters={"registration_category": "IP", "admission_date": day},
+		fields=["name", "patient_name", "doctor_name"],
+		order_by="creation desc",
+	)
+
+	return {
+		"appointments": len(appointments),
+		"checkedin": len(checkedin_appointments),
+		"op": len(op_visits),
+		"ip": len(ip_visits),
+		"appointments_list": appointments,
+		"checkedin_list": checkedin_appointments,
+		"op_list": op_visits,
+		"ip_list": ip_visits,
+	}

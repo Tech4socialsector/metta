@@ -396,3 +396,69 @@ def check_room_availability(room, room_bed_no, registration=None):
 		filters["name"] = ["!=", registration]
 	existing = frappe.db.get_value("Patient Visit", filters, "name")
 	return {"occupied": bool(existing), "occupied_by": existing}
+
+
+@frappe.whitelist()
+def get_front_desk_dashboard_stats():
+	# The whole shape of the day from Front Desk's own point of view - not
+	# just what they registered, but where each of today's patients actually
+	# is in the pipeline (nurse done? doctor seen?), since that's exactly what
+	# a patient standing at the counter asking "how much longer" needs answered.
+	frappe.has_permission("Patient Visit", "read", throw=True)
+	today = frappe.utils.today()
+
+	registrations_today = frappe.db.count("Patient Registration", filters={"creation": [">=", today]})
+
+	visits_today = frappe.get_all(
+		"Patient Visit",
+		filters={"creation": [">=", today]},
+		fields=["name", "patient_name", "registration_category", "net_amount"],
+		order_by="creation desc",
+	)
+	op_visits_today = sum(1 for v in visits_today if v.registration_category == "OP")
+	ip_admissions_today = sum(1 for v in visits_today if v.registration_category == "IP")
+	collected_today = sum(flt(v.net_amount) for v in visits_today)
+
+	visit_names = [v.name for v in visits_today]
+	nurse_done = {}
+	doctor_seen = set()
+	if visit_names:
+		# A visit can in principle have more than one Nurse Interventions row -
+		# "done" means at least one of them is Completed, not that all are.
+		for row in frappe.get_all(
+			"Nurse Interventions",
+			filters={"patient_registration": ["in", visit_names]},
+			fields=["patient_registration", "status"],
+		):
+			if row.status == "Completed":
+				nurse_done[row.patient_registration] = True
+			else:
+				nurse_done.setdefault(row.patient_registration, False)
+		doctor_seen = set(
+			frappe.get_all(
+				"Doctor Consultation", filters={"patient_consultation": ["in", visit_names]}, pluck="patient_consultation"
+			)
+		)
+
+	patient_flow = [
+		{
+			"name": v.name,
+			"patient_name": v.patient_name,
+			"registration_category": v.registration_category,
+			"nurse_done": nurse_done.get(v.name, False),
+			"doctor_seen": v.name in doctor_seen,
+			"net_amount": v.net_amount,
+		}
+		for v in visits_today
+	]
+
+	return {
+		"registrations_today": registrations_today,
+		"op_visits_today": op_visits_today,
+		"ip_admissions_today": ip_admissions_today,
+		"collected_today": collected_today,
+		# Capped - this is a quick-glance dashboard, not a full report; the
+		# Patient Visit list is where a long day's backlog should be worked
+		# through instead.
+		"patient_flow": patient_flow[:20],
+	}

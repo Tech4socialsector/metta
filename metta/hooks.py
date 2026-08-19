@@ -74,7 +74,7 @@ fixtures = [
 				[
 					"Front Desk",
 					"Nurse",
-					"Pharmacy Staff",
+																																																																																							"Pharmacy Staff",
 					"Billing Staff",
 					"Store Staff",
 					"Warehouse Staffs",
@@ -163,9 +163,10 @@ app_include_js = "/assets/metta/js/report_export.js"
 # home_page = "login"
 
 # website user home page (by Role)
-# role_home_page = {
-# 	"Role": "home_page"
-# }
+role_home_page = {
+	"Front Desk": "front-desk-dashboard",
+	"Doctor": "doctor-dashboard",
+}
 
 # Generators
 # ----------

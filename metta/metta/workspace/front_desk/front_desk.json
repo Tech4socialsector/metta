@@ -1,7 +1,7 @@
 {
  "app": "metta",
  "charts": [],
- "content": "[{\"id\":\"fdHeader01\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Welcome to the Front Desk workspace</span>\",\"col\":12}},{\"id\":\"pJOOHEXq3P\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Patient Registration\",\"col\":4}},{\"id\":\"fdCard02\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Patient Visit\",\"col\":6}},{\"id\":\"fdShort01\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Appointment\",\"col\":4}},{\"id\":\"fdShort02\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Discharge Summary\",\"col\":4}}]",
+ "content": "[{\"id\":\"fdHeader01\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Welcome to the Front Desk workspace</span>\",\"col\":12}},{\"id\":\"pJOOHEXq3P\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Patient Registration\",\"col\":4}},{\"id\":\"fdCard02\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Patient Visit\",\"col\":6}},{\"id\":\"fdShort01\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Appointment\",\"col\":4}},{\"id\":\"fdShort02\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Discharge Summary\",\"col\":4}},{\"id\":\"fdShort03\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"My Dashboard\",\"col\":4}}]",
  "creation": "2026-08-11 00:00:00",
  "custom_blocks": [],
  "docstatus": 0,
@@ -13,7 +13,7 @@
  "label": "Front Desk",
  "link_type": "DocType",
  "links": [],
- "modified": "2026-08-14 01:00:00.000000",
+ "modified": "2026-08-18 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "metta",
  "name": "Front Desk",
@@ -55,6 +55,13 @@
    "link_to": "Discharge Summary",
    "stats_filter": "[]",
    "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "label": "My Dashboard",
+   "link_to": "front-desk-dashboard",
+   "stats_filter": "[]",
+   "type": "Page"
   }
  ],
  "title": "Front Desk",
