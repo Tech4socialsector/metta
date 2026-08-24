@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe.utils import flt
 
 # Patient Debit and Debit Collected have no backing field or doctype anywhere
 # in the app, so they're always reported as 0 rather than silently guessed
@@ -63,7 +64,14 @@ def get_data(filters):
 	return_conditions, return_values = _date_range_conditions(filters, "return_date_time")
 	returns = frappe.db.sql(
 		f"""
-		SELECT returned_by AS owner, SUM(total_value) AS sales_ret
+		SELECT
+			returned_by AS owner,
+			SUM(total_value) AS sales_ret,
+			-- Split by how the refund was actually given back, so it can net
+			-- against the matching Cash Amt/Credit Bills below rather than
+			-- just sitting next to them as an unrelated informational total.
+			SUM(CASE WHEN payment_mode = 'Cash' THEN total_value ELSE 0 END) AS cash_returns,
+			SUM(CASE WHEN payment_mode = 'Credit' THEN total_value ELSE 0 END) AS credit_returns
 		FROM `tabSales Return`
 		WHERE docstatus = 1 {return_conditions}
 		GROUP BY returned_by
@@ -77,7 +85,10 @@ def get_data(filters):
 	# silently drop them.
 	rows_by_user = {row.owner: row for row in bills}
 	for row in returns:
-		rows_by_user.setdefault(row.owner, frappe._dict()).sales_ret = row.sales_ret
+		entry = rows_by_user.setdefault(row.owner, frappe._dict())
+		entry.sales_ret = row.sales_ret
+		entry.cash_returns = row.cash_returns
+		entry.credit_returns = row.credit_returns
 
 	full_names = _get_full_names(rows_by_user.keys())
 	amount_fields = (
@@ -94,8 +105,20 @@ def get_data(filters):
 	totals = dict.fromkeys(amount_fields, 0)
 	for owner, row in rows_by_user.items():
 		entry = {"user_name": full_names.get(owner, owner)}
+		# Cash Amt/Credit Bills are net-of-returns - a return is that same
+		# day's transaction against whoever processes it, so it reduces that
+		# person's own collected-today figures, not the original bill's day.
+		net_cash_amt = flt(row.get("cash_amt")) - flt(row.get("cash_returns"))
+		net_credit_bills = flt(row.get("credit_bills")) - flt(row.get("credit_returns"))
 		for field in amount_fields:
-			entry[field] = 0 if field in UNTRACKED_COLUMNS else row.get(field) or 0
+			if field == "cash_amt":
+				entry[field] = net_cash_amt
+			elif field == "credit_bills":
+				entry[field] = net_credit_bills
+			elif field in UNTRACKED_COLUMNS:
+				entry[field] = 0
+			else:
+				entry[field] = row.get(field) or 0
 			totals[field] += entry[field]
 		result.append(entry)
 

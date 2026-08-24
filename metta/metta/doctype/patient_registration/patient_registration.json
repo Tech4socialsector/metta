@@ -17,25 +17,17 @@
   "dob",
   "age",
   "sex",
-  "column_break_isoy",
   "marital_status",
+  "column_break_isoy",
   "uid",
   "phone",
+  "emergency_phone_number",
+  "relationship_to_the_patient",
   "email",
+  "pin_code",
+  "state",
+  "district",
   "address",
-  "occupation",
-  "medical_section",
-  "allergies",
-  "medication",
-  "medical_history",
-  "surgical_history",
-  "risk_section",
-  "tobacco_past_use",
-  "tobacco_current_use",
-  "alcohol_past_use",
-  "alcohol_current_use",
-  "surrounding_factors",
-  "other_risk_factors",
   "billing_section",
   "billing_category",
   "discount_percent",
@@ -132,73 +124,8 @@
   },
   {
    "fieldname": "address",
-   "fieldtype": "Small Text",
-   "label": "Address"
-  },
-  {
-   "fieldname": "occupation",
    "fieldtype": "Data",
-   "label": "Occupation"
-  },
-  {
-   "fieldname": "medical_section",
-   "fieldtype": "Section Break",
-   "label": "Medical History"
-  },
-  {
-   "fieldname": "allergies",
-   "fieldtype": "Small Text",
-   "label": "Allergies"
-  },
-  {
-   "fieldname": "medication",
-   "fieldtype": "Small Text",
-   "label": "Medication"
-  },
-  {
-   "fieldname": "medical_history",
-   "fieldtype": "Small Text",
-   "label": "Medical History"
-  },
-  {
-   "fieldname": "surgical_history",
-   "fieldtype": "Small Text",
-   "label": "Surgical History"
-  },
-  {
-   "fieldname": "risk_section",
-   "fieldtype": "Section Break",
-   "label": "Risk Factors"
-  },
-  {
-   "fieldname": "tobacco_past_use",
-   "fieldtype": "Data",
-   "label": "Tobacco Consumption (Past)"
-  },
-  {
-   "fieldname": "tobacco_current_use",
-   "fieldtype": "Data",
-   "label": "Tobacco Consumption (Present)"
-  },
-  {
-   "fieldname": "alcohol_past_use",
-   "fieldtype": "Data",
-   "label": "Alcohol Consumption (Past)"
-  },
-  {
-   "fieldname": "alcohol_current_use",
-   "fieldtype": "Data",
-   "label": "Alcohol Consumption (Present)"
-  },
-  {
-   "fieldname": "surrounding_factors",
-   "fieldtype": "Small Text",
-   "label": "Occupational / Environmental Factors"
-  },
-  {
-   "fieldname": "other_risk_factors",
-   "fieldtype": "Small Text",
-   "label": "Other Risk Factors"
+   "label": "Village"
   },
   {
    "fieldname": "billing_section",
@@ -225,6 +152,32 @@
    "fieldtype": "Select",
    "label": "Billing Currency",
    "options": "\nINR\nUSD\nAED"
+  },
+  {
+   "fieldname": "emergency_phone_number",
+   "fieldtype": "Int",
+   "label": "Emergency Phone Number"
+  },
+  {
+   "fieldname": "pin_code",
+   "fieldtype": "Int",
+   "label": "Pin Code"
+  },
+  {
+   "fieldname": "state",
+   "fieldtype": "Data",
+   "label": "State"
+  },
+  {
+   "fieldname": "district",
+   "fieldtype": "Data",
+   "label": "District"
+  },
+  {
+   "fieldname": "relationship_to_the_patient",
+   "fieldtype": "Select",
+   "label": "Relationship to the Patient ",
+   "options": "Husband\nMother\nFather"
   }
  ],
  "icon": "fa fa-user",
@@ -235,7 +188,7 @@
   }
  ],
  "max_attachments": 50,
- "modified": "2026-08-14 11:48:05.873165",
+ "modified": "2026-08-24 11:40:19.541339",
  "modified_by": "Administrator",
  "module": "metta",
  "name": "Patient Registration",

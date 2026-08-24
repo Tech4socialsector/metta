@@ -47,13 +47,22 @@ def _cell_text(value):
 	return "" if value in (None, "") else str(value)
 
 
+def _resolve_sections(columns, rows, sections):
+	# Multi-section reports (Daily Collection Report's User Wise Details +
+	# Advances + Item Type Collection, all in one export) pass `sections`
+	# directly. Every other report page still passes plain columns/rows, so
+	# that's wrapped into a single unheaded section - same output as before.
+	if sections:
+		return _parse_json_arg(sections)
+	return [{"heading": None, "columns": _parse_json_arg(columns), "rows": _parse_json_arg(rows)}]
+
+
 @frappe.whitelist()
-def export_excel(title, columns, rows, filename=None, subtitle=None):
-	columns = _parse_json_arg(columns)
-	rows = _parse_json_arg(rows)
+def export_excel(title, columns=None, rows=None, filename=None, subtitle=None, sections=None):
+	sections = _resolve_sections(columns, rows, sections)
 
 	frappe.response["filename"] = f"{_safe_filename(filename or title)}.xlsx"
-	frappe.response["filecontent"] = build_xlsx(title, columns, rows, subtitle)
+	frappe.response["filecontent"] = build_xlsx(title, sections, subtitle)
 	frappe.response["type"] = "download"
 
 
@@ -62,9 +71,10 @@ PDF_ORIENTATIONS = {"Landscape", "Portrait"}
 
 
 @frappe.whitelist()
-def export_pdf(title, columns, rows, filename=None, subtitle=None, page_size="A4", orientation="Portrait"):
-	columns = _parse_json_arg(columns)
-	rows = _parse_json_arg(rows)
+def export_pdf(
+	title, columns=None, rows=None, filename=None, subtitle=None, page_size="A4", orientation="Portrait", sections=None
+):
+	sections = _resolve_sections(columns, rows, sections)
 
 	if page_size not in PDF_PAGE_SIZES:
 		page_size = "A4"
@@ -72,11 +82,11 @@ def export_pdf(title, columns, rows, filename=None, subtitle=None, page_size="A4
 		orientation = "Portrait"
 
 	frappe.response["filename"] = f"{_safe_filename(filename or title)}.pdf"
-	frappe.response["filecontent"] = build_pdf(title, columns, rows, subtitle, page_size, orientation)
+	frappe.response["filecontent"] = build_pdf(title, sections, subtitle, page_size, orientation)
 	frappe.response["type"] = "pdf"
 
 
-def build_xlsx(title, columns, rows, subtitle=None):
+def build_xlsx(title, sections, subtitle=None):
 	output = io.BytesIO()
 	workbook = xlsxwriter.Workbook(output, {"in_memory": True})
 	sheet = workbook.add_worksheet((title or "Report")[:31])
@@ -85,12 +95,17 @@ def build_xlsx(title, columns, rows, subtitle=None):
 	address_fmt = workbook.add_format({"font_size": 9, "font_color": "#444444"})
 	title_fmt = workbook.add_format({"bold": True, "font_size": 12, "align": "center", "valign": "vcenter"})
 	subtitle_fmt = workbook.add_format({"font_size": 9, "italic": True, "align": "center", "font_color": "#555555"})
+	section_fmt = workbook.add_format({"bold": True, "font_size": 11, "font_color": "#0b4a86"})
 	header_fmt = workbook.add_format(
 		{"bold": True, "bg_color": HEADER_COLOR, "font_color": "#ffffff", "border": 1}
 	)
 	cell_fmt = workbook.add_format({"border": 1})
 
-	last_col = max(len(columns) - 1, 2)
+	# One shared column width across every section - a narrow section (e.g.
+	# a 4-column Item Type table) shouldn't force the wide User Wise Details
+	# table's columns down to it, so the letterhead spans the widest section.
+	last_col = max((len(s["columns"]) - 1 for s in sections if s["columns"]), default=2)
+	last_col = max(last_col, 2)
 
 	row = 0
 	sheet.merge_range(row, 0, row, last_col, HOSPITAL_NAME, name_fmt)
@@ -111,38 +126,81 @@ def build_xlsx(title, columns, rows, subtitle=None):
 		row += 1
 	row += 1
 
-	header_row = row
-	for c, col in enumerate(columns):
-		sheet.write(header_row, c, col, header_fmt)
+	widest_columns = []
+	first_header_row = None
+	for section in sections:
+		columns = section["columns"] or []
+		rows = section["rows"] or []
+		if not columns:
+			continue
 
-	for r, data_row in enumerate(rows):
-		for c, value in enumerate(data_row):
-			sheet.write(header_row + 1 + r, c, _cell_text(value), cell_fmt)
+		if section.get("heading"):
+			sheet.merge_range(row, 0, row, last_col, section["heading"], section_fmt)
+			row += 1
 
-	for c, col in enumerate(columns):
+		header_row = row
+		if first_header_row is None:
+			first_header_row = header_row
+		for c, col in enumerate(columns):
+			sheet.write(header_row, c, col, header_fmt)
+
+		for r, data_row in enumerate(rows):
+			for c, value in enumerate(data_row):
+				sheet.write(header_row + 1 + r, c, _cell_text(value), cell_fmt)
+
+		row = header_row + 1 + len(rows) + 2  # blank rows before the next section
+
+		if len(columns) > len(widest_columns):
+			widest_columns = columns
+
+	for c, col in enumerate(widest_columns):
 		sheet.set_column(c, c, max(12, min(40, len(str(col)) + 4)))
 
-	sheet.freeze_panes(header_row + 1, 0)
+	# A single-section export (every report besides Daily Collection Report)
+	# keeps its sticky header exactly as before - with more than one section
+	# there's no single header row left to freeze at.
+	if len(sections) == 1 and first_header_row is not None:
+		sheet.freeze_panes(first_header_row + 1, 0)
+
 	workbook.close()
 	return output.getvalue()
 
 
-def build_pdf(title, columns, rows, subtitle=None, page_size="A4", orientation="Portrait"):
-	header_html = "".join(f"<th>{escape_html(str(c))}</th>" for c in columns)
-	body_html = "".join(
-		"<tr>" + "".join(f"<td>{escape_html(_cell_text(v))}</td>" for v in data_row) + "</tr>" for data_row in rows
-	)
+def build_pdf(title, sections, subtitle=None, page_size="A4", orientation="Portrait"):
 	address_html = "".join(f"<div>{escape_html(line)}</div>" for line in HOSPITAL_ADDRESS)
 	subtitle_html = f'<div class="report-subtitle">{escape_html(subtitle)}</div>' if subtitle else ""
 
 	# Portrait has roughly two-thirds the usable width of Landscape, so the
 	# same column count needs a smaller font there to stay legible once
 	# table-layout: fixed starts splitting that width between more columns.
-	column_count = len(columns)
+	# Sized off the widest section - a narrow section just gets some unused
+	# padding rather than every section fighting over its own font size.
+	column_count = max((len(s["columns"] or []) for s in sections), default=0)
 	if orientation == "Landscape":
 		table_font_size = 9 if column_count <= 10 else 8
 	else:
 		table_font_size = 9 if column_count <= 6 else 8 if column_count <= 9 else 7
+
+	def section_html(section):
+		columns = section["columns"] or []
+		rows = section["rows"] or []
+		if not columns:
+			return ""
+		heading_html = (
+			f'<div class="section-heading">{escape_html(section["heading"])}</div>' if section.get("heading") else ""
+		)
+		header_html = "".join(f"<th>{escape_html(str(c))}</th>" for c in columns)
+		body_html = "".join(
+			"<tr>" + "".join(f"<td>{escape_html(_cell_text(v))}</td>" for v in data_row) + "</tr>" for data_row in rows
+		)
+		return f"""
+	{heading_html}
+	<table class="data">
+		<thead><tr>{header_html}</tr></thead>
+		<tbody>{body_html}</tbody>
+	</table>"""
+
+	sections_html = "".join(section_html(section) for section in sections)
 
 	html = f"""<!DOCTYPE html>
 <html>
@@ -173,6 +231,14 @@ def build_pdf(title, columns, rows, subtitle=None, page_size="A4", orientation="
 		letter-spacing: 0.04em;
 	}}
 	.report-subtitle {{ text-align: center; font-size: 10px; color: #555555; margin-bottom: 10px; }}
+	.section-heading {{
+		font-size: 12px;
+		font-weight: 700;
+		color: {HEADER_COLOR};
+		margin: 14px 0 4px;
+		text-transform: uppercase;
+		letter-spacing: 0.03em;
+	}}
 	/* table-layout: fixed caps the table at the page's printable width no
 	   matter how much text is in a cell - without it, a header like
 	   "Voucher Type" refusing to wrap pushes the table wider than the page,
@@ -208,10 +274,7 @@ def build_pdf(title, columns, rows, subtitle=None, page_size="A4", orientation="
 	</table>
 	<div class="report-title">{escape_html(str(title))}</div>
 	{subtitle_html}
-	<table class="data">
-		<thead><tr>{header_html}</tr></thead>
-		<tbody>{body_html}</tbody>
-	</table>
+	{sections_html}
 </body>
 </html>"""
 

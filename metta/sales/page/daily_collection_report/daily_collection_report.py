@@ -18,7 +18,27 @@ def get_data(from_date, to_date):
 	return {
 		"user_wise_details": user_wise_details,
 		"advances": get_advances(from_date, to_date),
+		"item_type_collection": get_item_type_collection(from_date, to_date),
 	}
+
+
+def get_item_type_collection(from_date, to_date):
+	frappe.has_permission("Billing", "read", throw=True)
+
+	rows = frappe.db.sql(
+		"""
+		SELECT sbi.item_type, SUM(sbi.amount) AS amount, COUNT(DISTINCT sbi.parent) AS bill_count
+		FROM `tabSales Bill Item` sbi
+		INNER JOIN `tabBilling` b ON b.name = sbi.parent
+		WHERE b.docstatus = 1 AND b.sale_datetime BETWEEN %(from_date)s AND %(to_date)s
+		GROUP BY sbi.item_type
+		ORDER BY amount DESC
+		""",
+		{"from_date": f"{from_date} 00:00:00", "to_date": f"{to_date} 23:59:59"},
+		as_dict=True,
+	)
+
+	return {"rows": rows, "total": sum(flt(row.amount) for row in rows)}
 
 
 def get_advances(from_date, to_date):

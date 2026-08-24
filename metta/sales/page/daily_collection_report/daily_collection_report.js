@@ -216,10 +216,12 @@ class DailyCollectionReport {
 		const total_row = rows.length ? rows[rows.length - 1] : null;
 		const detail_rows = total_row ? rows.slice(0, -1) : [];
 		const advances = data.advances || { rows: [], total: 0 };
+		const item_type_collection = data.item_type_collection || { rows: [], total: 0 };
 
 		this.render_cards(total_row, advances);
 		this.render_table(detail_rows, total_row);
 		this.render_advances(advances);
+		this.render_item_type_collection(item_type_collection);
 	}
 
 	render_cards(total_row, advances) {
@@ -297,6 +299,49 @@ class DailyCollectionReport {
 		`);
 	}
 
+	render_item_type_collection(item_type_collection) {
+		if (!this.item_type_area) {
+			this.item_type_area = $(`<div></div>`).appendTo(this.page.body);
+		}
+		const rows = item_type_collection.rows || [];
+		if (!rows.length) {
+			this.item_type_area.html(`
+				<div class="dcr-subheading">${__("Item Type Collection")}</div>
+				<p class="text-muted">${__("No billed items found for this period.")}</p>
+			`);
+			return;
+		}
+
+		const total = item_type_collection.total;
+		const header = ["Item Type", "Amount", "Bills", "% of Total"].map((h) => `<th>${__(h)}</th>`).join("");
+
+		const row_html = (row) => `
+			<tr>
+				<td>${frappe.utils.escape_html(row.item_type || __("Not Set"))}</td>
+				<td class="text-center">${format_currency(row.amount)}</td>
+				<td class="text-center">${row.bill_count}</td>
+				<td class="text-center">${total ? ((flt(row.amount) / total) * 100).toFixed(1) : "0.0"}%</td>
+			</tr>`;
+
+		const body = rows.map(row_html).join("");
+		const total_html = `
+			<tr class="dcr-total">
+				<td>${__("Total")}</td>
+				<td class="text-center">${format_currency(total)}</td>
+				<td colspan="2"></td>
+			</tr>`;
+
+		this.item_type_area.html(`
+			<div class="dcr-subheading">${__("Item Type Collection")}</div>
+			<div class="table-wrapper" style="overflow-x: auto;">
+				<table class="table table-hover dcr-table">
+					<thead><tr>${header}</tr></thead>
+					<tbody>${body}${total_html}</tbody>
+				</table>
+			</div>
+		`);
+	}
+
 	render_table(detail_rows, total_row) {
 		if (!detail_rows.length) {
 			this.table_area.html(`<p class="text-muted">${__("No collections found for this period.")}</p>`);
@@ -351,8 +396,29 @@ class DailyCollectionReport {
 	}
 
 	get_export_data() {
-		if (!this.all_data || !this.all_data.user_wise_details) return null;
-		const rows = this.all_data.user_wise_details;
+		if (!this.all_data) return null;
+		const sections = [
+			this.user_wise_details_section(),
+			this.advances_section(),
+			this.item_type_collection_section(),
+		].filter(Boolean);
+		if (!sections.length) return null;
+
+		const filter_bits = [
+			`${__("From Date")}: ${format_ddmmyy(this.from_date_field.get_value())}`,
+			`${__("To Date")}: ${format_ddmmyy(this.to_date_field.get_value())}`,
+		];
+
+		return {
+			title: __("Daily Collection Report"),
+			subtitle: filter_bits.join("   |   "),
+			sections,
+			filename: "Daily_Collection_Report",
+		};
+	}
+
+	user_wise_details_section() {
+		const rows = this.all_data.user_wise_details || [];
 		if (!rows.length) return null;
 
 		const columns = [
@@ -378,22 +444,53 @@ class DailyCollectionReport {
 			"cash_amt",
 		];
 
+		// Collection Report's own "Total" row is already the last entry here -
+		// same row this page renders as the highlighted total, so it's
+		// exported as-is rather than recomputed a second time.
+		const data = rows.map((row) => [row.user_name || "", ...money_fields.map((f) => format_currency(row[f]))]);
+
+		return { heading: __("User Wise Details"), columns, rows: data };
+	}
+
+	advances_section() {
+		const advances = this.all_data.advances || { rows: [], total: 0 };
+		const rows = advances.rows || [];
+		if (!rows.length) return null;
+
+		const columns = ["Patient Visit", "Patient Name", "Amount", "Payment Mode", "Received By", "Received On", "Remarks"].map(
+			(c) => __(c)
+		);
+
 		const data = rows.map((row) => [
-			row.user_name || "",
-			...money_fields.map((f) => format_currency(row[f])),
+			row.patient_visit || "",
+			row.patient_label || "",
+			format_currency(row.amount),
+			row.payment_mode || "",
+			row.received_by_name || "",
+			frappe.datetime.str_to_user(row.received_on),
+			row.remarks || "",
 		]);
+		data.push([__("Total"), "", format_currency(advances.total), "", "", "", ""]);
 
-		const filter_bits = [
-			`${__("From Date")}: ${format_ddmmyy(this.from_date_field.get_value())}`,
-			`${__("To Date")}: ${format_ddmmyy(this.to_date_field.get_value())}`,
-		];
+		return { heading: __("Advances"), columns, rows: data };
+	}
 
-		return {
-			title: __("Daily Collection Report - User Wise Details"),
-			subtitle: filter_bits.join("   |   "),
-			columns,
-			rows: data,
-			filename: "Daily_Collection_Report_User_Wise_Details",
-		};
+	item_type_collection_section() {
+		const item_type_collection = this.all_data.item_type_collection || { rows: [], total: 0 };
+		const rows = item_type_collection.rows || [];
+		if (!rows.length) return null;
+
+		const total = item_type_collection.total;
+		const columns = ["Item Type", "Amount", "Bills", "% of Total"].map((c) => __(c));
+
+		const data = rows.map((row) => [
+			row.item_type || __("Not Set"),
+			format_currency(row.amount),
+			row.bill_count,
+			`${total ? ((flt(row.amount) / total) * 100).toFixed(1) : "0.0"}%`,
+		]);
+		data.push([__("Total"), format_currency(total), "", ""]);
+
+		return { heading: __("Item Type Collection"), columns, rows: data };
 	}
 }

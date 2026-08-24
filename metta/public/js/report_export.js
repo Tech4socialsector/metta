@@ -7,10 +7,23 @@ frappe.provide("metta.report_export");
 //
 // get_export_data() is called fresh on each click (not cached at page-load)
 // since the report's filters/results can change between clicks.
+// A report with several tables (Daily Collection Report's User Wise
+// Details + Advances + Item Type Collection) passes `sections`: an array of
+// {heading, columns, rows}, one per table, all stacked into a single
+// export. Every other report still passes plain columns/rows for its one
+// table - has_rows/build_args handle both shapes the same way.
+const has_rows = (data) =>
+	data.sections ? data.sections.some((s) => s.rows && s.rows.length) : !!(data.rows && data.rows.length);
+
+const build_args = (data) =>
+	data.sections
+		? { sections: JSON.stringify(data.sections) }
+		: { columns: JSON.stringify(data.columns), rows: JSON.stringify(data.rows) };
+
 metta.report_export.add_buttons = function (page, get_export_data) {
 	const download = (cmd, extra_args) => {
 		const data = get_export_data();
-		if (!data || !data.rows || !data.rows.length) {
+		if (!data || !has_rows(data)) {
 			frappe.msgprint(__("Nothing to export. Generate the report first."));
 			return;
 		}
@@ -18,8 +31,7 @@ metta.report_export.add_buttons = function (page, get_export_data) {
 			cmd,
 			title: data.title,
 			subtitle: data.subtitle || "",
-			columns: JSON.stringify(data.columns),
-			rows: JSON.stringify(data.rows),
+			...build_args(data),
 			filename: data.filename || data.title,
 			...extra_args,
 		});
@@ -27,7 +39,7 @@ metta.report_export.add_buttons = function (page, get_export_data) {
 
 	const prompt_pdf_options = () => {
 		const data = get_export_data();
-		if (!data || !data.rows || !data.rows.length) {
+		if (!data || !has_rows(data)) {
 			frappe.msgprint(__("Nothing to export. Generate the report first."));
 			return;
 		}

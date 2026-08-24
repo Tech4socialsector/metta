@@ -14,6 +14,7 @@
   "returned_by",
   "items",
   "total_value",
+  "payment_mode",
   "status",
   "amended_from"
  ],
@@ -72,6 +73,15 @@
    "fieldtype": "Currency",
    "label": "Total Value",
    "read_only": 1
+  },
+  {
+   "description": "How this refund was actually given back - Cash reduces that day's Cash Amt in Collection Report, Credit reduces Credit Bills. Not tied to Corporate Customer specifically - applies to any patient's return.",
+   "fieldname": "payment_mode",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Payment Mode",
+   "options": "\nCash\nCredit",
+   "reqd": 1
   },
   {
    "fieldname": "status",
