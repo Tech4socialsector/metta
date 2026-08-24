@@ -198,6 +198,14 @@ class PatientVisit(Document):
 			}
 		).insert(ignore_permissions=True)
 
+		# So the assigned doctor's dashboard picks up a newly-assigned patient
+		# on its own - without this, "Assigned Today" only updates the next
+		# time they happen to hit Refresh.
+		if self.doctor_name:
+			doctor_user = frappe.db.get_value("Doctor Master", self.doctor_name, "user")
+			if doctor_user:
+				frappe.publish_realtime("doctor_dashboard_update", user=doctor_user, after_commit=True)
+
 		# Only set when this visit came from "Check In" on a booked Appointment
 		# (see Appointment.get_visit_defaults) - most visits still won't have one.
 		if self.appointment:
@@ -304,6 +312,12 @@ def has_permission(doc, ptype, user):
 	roles = frappe.get_roles(user)
 	if "System Manager" in roles or "Front Desk" in roles or "Doctor" not in roles:
 		return True
+
+	# Opening a Form directly by URL passes just the docname, not a loaded
+	# Document - every other caller already passes the doc, so this only
+	# ever does the extra fetch on that one path.
+	if isinstance(doc, (str, int)):
+		doc = frappe.get_doc("Patient Visit", doc)
 
 	doctor = frappe.db.get_value("Doctor Master", {"user": user}, "name")
 	return bool(doctor) and doc.doctor_name == doctor

@@ -33,5 +33,11 @@ def has_permission(doc, ptype, user):
 	if "System Manager" in roles or "Front Desk" in roles or "Doctor" not in roles:
 		return True
 
+	# Opening a Form directly by URL passes just the docname, not a loaded
+	# Document - every other caller already passes the doc, so this only
+	# ever does the extra fetch on that one path.
+	if isinstance(doc, (str, int)):
+		doc = frappe.get_doc("Doctor Leave", doc)
+
 	doctor = frappe.db.get_value("Doctor Master", {"user": user}, "name")
 	return bool(doctor) and doc.doctor == doctor

@@ -72,6 +72,12 @@ def has_permission(doc, ptype, user):
 	if "System Manager" in roles or "Doctor" not in roles:
 		return True
 
+	# Opening a Form directly by URL passes just the docname, not a loaded
+	# Document - every other caller already passes the doc, so this only
+	# ever does the extra fetch on that one path.
+	if isinstance(doc, (str, int)):
+		doc = frappe.get_doc("Doctor Consultation", doc)
+
 	doctor = frappe.db.get_value("Doctor Master", {"user": user}, "name")
 	return bool(doctor) and doc.doctor == doctor
 
@@ -248,15 +254,23 @@ def get_my_dashboard_stats():
 			"visited": 0,
 			"ready": 0,
 			"waiting": 0,
+			"admitted": 0,
 			"assigned_visits": [],
 			"visited_visits": [],
 			"ready_visits": [],
 			"waiting_visits": [],
+			"admitted_visits": [],
+			"discharge_pending_visits": [],
+			"appointments_today": [],
+			"leave": None,
 		}
 
+	today = frappe.utils.today()
+
+	# Today's queue - the daily worklist, not an ever-growing all-time count.
 	assigned_visits = frappe.get_all(
 		"Patient Visit",
-		filters={"doctor_name": doctor},
+		filters={"doctor_name": doctor, "creation": [">=", today]},
 		fields=["name", "patient_name", "registration_category"],
 		order_by="creation desc",
 	)
@@ -303,12 +317,58 @@ def get_my_dashboard_stats():
 	for v in visited_visits:
 		v["consultation"] = consultation_by_visit.get(v.name)
 
+	# Admitted (IP) - a live census of who's currently under this doctor's
+	# care, not scoped to today like the queue above.
+	admitted_visits = frappe.get_all(
+		"Patient Visit",
+		filters={"doctor_name": doctor, "registration_category": "IP", "admission_status": "Admitted"},
+		fields=["name", "patient_name", "registration_category"],
+		order_by="admission_date desc",
+	)
+
+	# Discharged under this doctor but no Discharge Summary written yet.
+	discharged_visits = frappe.get_all(
+		"Patient Visit",
+		filters={"doctor_name": doctor, "registration_category": "IP", "admission_status": "Discharged"},
+		fields=["name", "patient_name", "discharge_date"],
+		order_by="discharge_date desc",
+	)
+	has_summary = set()
+	if discharged_visits:
+		has_summary = set(
+			frappe.get_all(
+				"Discharge Summary",
+				filters={"patient_visit": ["in", [v.name for v in discharged_visits]]},
+				pluck="patient_visit",
+			)
+		)
+	discharge_pending_visits = [v for v in discharged_visits if v.name not in has_summary]
+
+	appointments_today = frappe.get_all(
+		"Appointment",
+		filters={"doctor": doctor, "appointment_date": today, "status": ["!=", "Cancelled"]},
+		fields=["name", "patient_name", "appointment_time", "status", "reason_for_visit", "patient_visit"],
+		order_by="appointment_time asc",
+	)
+
+	# The nearest leave record that hasn't fully lapsed yet - covering today
+	# or still upcoming - so the banner only shows when it's actually relevant.
+	leave_rows = frappe.get_all(
+		"Doctor Leave",
+		filters={"doctor": doctor, "to_date": [">=", today]},
+		fields=["from_date", "to_date"],
+		order_by="from_date asc",
+		limit=1,
+	)
+	leave = leave_rows[0] if leave_rows else None
+
 	return {
 		"linked": True,
 		"assigned": len(assigned_visits),
 		"visited": len(visited_names),
 		"ready": len(ready_visits),
 		"waiting": len(waiting_visits),
+		"admitted": len(admitted_visits),
 		# Capped - this is a quick-glance dashboard, not a full report; the
 		# Patient Visit list (already filtered to this doctor) is where a
 		# long backlog should actually be worked through.
@@ -316,4 +376,42 @@ def get_my_dashboard_stats():
 		"visited_visits": visited_visits[:20],
 		"ready_visits": ready_visits[:20],
 		"waiting_visits": waiting_visits[:20],
+		"admitted_visits": admitted_visits[:20],
+		"discharge_pending_visits": discharge_pending_visits[:20],
+		"appointments_today": appointments_today[:20],
+		"leave": leave,
 	}
+
+
+@frappe.whitelist()
+def get_my_profile():
+	# Read-only, self-service - a Doctor looking at their own dashboard sees
+	# exactly what's on file for them, nothing more.
+	return frappe.db.get_value(
+		"Doctor Master",
+		{"user": frappe.session.user},
+		["name", "department", "specialization", "qualification", "registration_number", "mobile", "email"],
+		as_dict=True,
+	)
+
+
+@frappe.whitelist()
+def apply_my_leave(from_date, to_date, reason=None):
+	# Self-service - always against the caller's own Doctor Master record,
+	# never one they pass in, so a Doctor can only ever apply leave for
+	# themselves.
+	doctor = frappe.db.get_value("Doctor Master", {"user": frappe.session.user}, "name")
+	if not doctor:
+		frappe.throw(_("Your account isn't linked to a Doctor Master record."))
+
+	leave = frappe.get_doc(
+		{
+			"doctype": "Doctor Leave",
+			"doctor": doctor,
+			"from_date": from_date,
+			"to_date": to_date,
+			"reason": reason,
+		}
+	)
+	leave.insert()
+	return {"name": leave.name}

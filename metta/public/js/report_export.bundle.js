@@ -21,20 +21,28 @@ const build_args = (data) =>
 		: { columns: JSON.stringify(data.columns), rows: JSON.stringify(data.rows) };
 
 metta.report_export.add_buttons = function (page, get_export_data) {
-	const download = (cmd, extra_args) => {
+	const download = (cmd, extra_args, open_in_new_tab) => {
 		const data = get_export_data();
 		if (!data || !has_rows(data)) {
 			frappe.msgprint(__("Nothing to export. Generate the report first."));
 			return;
 		}
-		open_url_post(frappe.request.url, {
-			cmd,
-			title: data.title,
-			subtitle: data.subtitle || "",
-			...build_args(data),
-			filename: data.filename || data.title,
-			...extra_args,
-		});
+		// PDF is served with Content-Disposition: inline, so opening it in a
+		// new tab shows it straight in the browser's own PDF viewer instead
+		// of just triggering a silent download - Excel still downloads as a
+		// file either way, so it isn't opened this way.
+		open_url_post(
+			frappe.request.url,
+			{
+				cmd,
+				title: data.title,
+				subtitle: data.subtitle || "",
+				...build_args(data),
+				filename: data.filename || data.title,
+				...extra_args,
+			},
+			open_in_new_tab
+		);
 	};
 
 	const prompt_pdf_options = () => {
@@ -66,7 +74,7 @@ metta.report_export.add_buttons = function (page, get_export_data) {
 			],
 			primary_action_label: __("Download"),
 			primary_action: (values) => {
-				download("metta.utils.report_export.export_pdf", values);
+				download("metta.utils.report_export.export_pdf", values, true);
 				dialog.hide();
 			},
 		});

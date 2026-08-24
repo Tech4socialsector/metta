@@ -14,7 +14,59 @@ frappe.ui.form.on("Patient Registration", {
 		}
 		check_duplicate_phone(frm);
 	},
+	pin_code(frm) {
+		// Only look up once a full 6-digit Pin Code is actually entered - not
+		// on every keystroke while it's still being typed.
+		const pincode = String(frm.doc.pin_code || "");
+		if (!/^\d{6}$/.test(pincode)) return;
+
+		frappe.call({
+			method: "metta.metta.doctype.patient_registration.patient_registration.get_location_by_pincode",
+			args: { pincode },
+			freeze: true,
+			callback(r) {
+				const data = r.message;
+				if (!data) return;
+				frm.set_value("state", data.state || "");
+				frm.set_value("district", data.district || "");
+
+				const villages = data.villages || [];
+				if (villages.length === 1) {
+					// Only one village under this Pin Code - safe to fill in
+					// directly, same as State/District.
+					frm.set_value("address", villages[0]);
+				} else if (villages.length > 1) {
+					// A hilly Pin Code like this hospital's own commonly covers
+					// several villages - Front Desk picks the right one rather
+					// than guessing which post office name to keep.
+					prompt_village_choice(frm, villages);
+				}
+			},
+		});
+	},
 });
+
+function prompt_village_choice(frm, villages) {
+	const dialog = new frappe.ui.Dialog({
+		title: __("Which village?"),
+		fields: [
+			{
+				fieldtype: "Select",
+				fieldname: "village",
+				label: __("Village"),
+				options: villages,
+				default: villages[0],
+				reqd: 1,
+			},
+		],
+		primary_action_label: __("Select"),
+		primary_action(values) {
+			frm.set_value("address", values.village);
+			dialog.hide();
+		},
+	});
+	dialog.show();
+}
 
 function update_age_preview(frm) {
 	// Mirrors calculate_age() in patient_registration.py exactly - a live

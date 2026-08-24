@@ -13,6 +13,12 @@ frappe.ui.form.on("Appointment", {
 
 		if (frm.is_new() || frm.doc.status !== "Scheduled") return;
 
+		// Checking in is Front Desk's job - a Doctor (read-only on both
+		// Appointment and Patient Visit) has no create permission on Patient
+		// Visit, so this would otherwise open a form for them that can never
+		// actually be saved.
+		if (!frappe.model.can_create("Patient Visit")) return;
+
 		frm.add_custom_button(__("Check In"), () => {
 			frappe.call({
 				method: "metta.metta.doctype.appointment.appointment.get_visit_defaults",
@@ -31,6 +37,13 @@ frappe.ui.form.on("Appointment", {
 });
 
 function refresh_available_doctors(frm) {
+	// get_available_doctors() requires "create" on Appointment server-side
+	// (same gate as who can actually book one) - a read-only viewer (e.g. a
+	// Doctor just looking at their own schedule) would otherwise hit a
+	// permission error on every single visit to this form, not just when
+	// picking a doctor to book against.
+	if (!frappe.model.can_create("Appointment")) return;
+
 	// Until both are picked, there's nothing to filter against yet - show
 	// every doctor rather than an empty/misleading list.
 	if (!frm.doc.appointment_date || !frm.doc.appointment_time) {

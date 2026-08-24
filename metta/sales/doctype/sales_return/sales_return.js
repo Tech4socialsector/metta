@@ -55,6 +55,19 @@ frappe.ui.form.on("Sales Return", {
 				if (rows.length) frm.set_value("against_material_issue", rows[0].name);
 			});
 	},
+	against_sales_bill(frm) {
+		// A refund normally goes back the same way it was collected - still
+		// just a starting point, staff can pick a different Payment Mode if
+		// this particular refund is actually being handled differently.
+		// Billing's Payment Mode has finer options (Cash/UPI/Card/Credit -
+		// Corporate) than this doctype's plain Cash/Credit, so it's mapped
+		// down rather than copied directly.
+		if (!frm.doc.against_sales_bill) return;
+		frappe.db.get_value("Billing", frm.doc.against_sales_bill, "payment_mode", (r) => {
+			if (!r || !r.payment_mode) return;
+			frm.set_value("payment_mode", r.payment_mode === "Credit - Corporate" ? "Credit" : "Cash");
+		});
+	},
 });
 
 frappe.ui.form.on("Sales Return Item", {

@@ -27,6 +27,7 @@ def get_columns():
 	return [
 		{"label": "User Name", "fieldname": "user_name", "fieldtype": "Data", "width": 160},
 		{"label": "Gross Amt", "fieldname": "gross_amt", "fieldtype": "Currency", "width": 110},
+		{"label": "Charity", "fieldname": "charity", "fieldtype": "Currency", "width": 100},
 		{"label": "Epay", "fieldname": "epay", "fieldtype": "Currency", "width": 100},
 		{"label": "Credit Bills", "fieldname": "credit_bills", "fieldtype": "Currency", "width": 110},
 		{"label": "Sales Ret", "fieldname": "sales_ret", "fieldtype": "Currency", "width": 100},
@@ -44,6 +45,7 @@ def get_data(filters):
 		SELECT
 			owner,
 			SUM(net_amount) AS gross_amt,
+			SUM(discount_amount) AS charity,
 			-- amount_collected, not net_amount - a bill fully (or partly)
 			-- covered by Advance Adjusted still keeps whatever Payment Mode
 			-- was picked, even though nothing (or only part) was actually
@@ -93,6 +95,7 @@ def get_data(filters):
 	full_names = _get_full_names(rows_by_user.keys())
 	amount_fields = (
 		"gross_amt",
+		"charity",
 		"epay",
 		"credit_bills",
 		"sales_ret",

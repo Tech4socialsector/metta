@@ -250,6 +250,16 @@ def build_pdf(title, sections, subtitle=None, page_size="A4", orientation="Portr
 		word-wrap: break-word;
 		overflow-wrap: break-word;
 	}}
+	/* Every table leads with a narrow Sl No column, then the actual label
+	   (User Name, Item Type, Particulars, Category, Patient...) - the one
+	   column whose content actually varies in length, while every other
+	   column is a short, evenly-sized currency figure. Giving Sl No a
+	   sliver and the label a fixed head start, then letting table-layout:
+	   fixed split the rest evenly, reads far better than dividing every
+	   column the same width regardless of what's in it. */
+	table.data th:first-child, table.data td:first-child {{ width: 6%; }}
+	table.data td:first-child {{ text-align: center; }}
+	table.data th:nth-child(2), table.data td:nth-child(2) {{ width: 22%; }}
 	table.data th {{
 		background: #f0f0f0;
 		color: #000000;
