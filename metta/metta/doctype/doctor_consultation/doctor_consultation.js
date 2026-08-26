@@ -93,23 +93,32 @@ frappe.ui.form.on("Doctor Consultation", {
 							// A full prefill (item, rate, uom, gst, amount) rather than
 							// just the item code - child-row fetch_from/change-handlers
 							// don't fire for values set this way, so everything Billing
-							// needs to see is filled in directly.
+							// needs to see is filled in directly. Medicines go to Pharmacy
+							// Items, tests go to Service Items - two separate tables now.
+							const as_row = (i) => ({
+								item: i.item,
+								item_name: i.item_name,
+								qty: i.qty,
+								uom: i.uom,
+								rate: i.rate,
+								gst_percent: i.gst_percent,
+								amount: i.amount,
+							});
+							const bill_type =
+								data.pharmacy_items.length && data.service_items.length
+									? "Mixed"
+									: data.pharmacy_items.length
+										? "Pharmacy"
+										: "Service";
 							frappe.new_doc("Billing", {
 								doctor_consultation: frm.doc.name,
 								patient: data.patient,
 								prescribed_by: data.doctor,
 								billing_category: data.billing_category,
-								bill_type: data.bill_type,
 								sale_datetime: frappe.datetime.now_datetime(),
-								items: data.items.map((i) => ({
-									item: i.item,
-									item_name: i.item_name,
-									qty: i.qty,
-									uom: i.uom,
-									rate: i.rate,
-									gst_percent: i.gst_percent,
-									amount: i.amount,
-								})),
+								bill_type: bill_type,
+								pharmacy_items: data.pharmacy_items.map(as_row),
+								service_items: data.service_items.map(as_row),
 							});
 						},
 					});
@@ -163,15 +172,16 @@ frappe.ui.form.on("Doctor Consultation", {
 	},
 });
 
-// Tracks which document this was last shown for, so it pops up once per
-// time a consultation is actually opened/loaded - not again on every
-// intermediate Save while the doctor is still writing it up.
-let vitals_popup_shown_for = null;
-
 function show_vitals_popup(frm) {
-	if (!frm.doc.patient_consultation) return;
-	if (vitals_popup_shown_for === frm.doc.name) return;
-	vitals_popup_shown_for = frm.doc.name;
+	// Only when a brand-new consultation is first opened for a patient -
+	// never again once it's been saved (frm.doc.name changing from a
+	// temporary "new-doctor-consultation-..." id to the real DC-2026-00020
+	// the moment it's first saved used to defeat a same-name-based guard
+	// here, re-popping this right after the doctor's first Save), and never
+	// again on reopening an already-saved consultation later either.
+	if (!frm.is_new() || !frm.doc.patient_consultation) return;
+	if (frm._vitals_popup_shown) return;
+	frm._vitals_popup_shown = true;
 
 	frappe.call({
 		method: "metta.metta.doctype.doctor_consultation.doctor_consultation.get_latest_vitals",

@@ -23,6 +23,9 @@ frappe.ui.form.on("Nurse Interventions", {
 	refresh(frm) {
 		Object.keys(STATUS_COLORS).forEach((fieldname) => colour_status_field(frm, fieldname));
 	},
+	patient_unique_id(frm) {
+		update_blood_sugar_history_preview(frm);
+	},
 	height(frm) {
 		update_bmi_preview(frm);
 	},
@@ -91,6 +94,36 @@ function update_anemia_preview(frm) {
 
 	const threshold = frm.doc.gender === "Male" ? 13.0 : 12.0;
 	frm.set_value("anemia_status", frm.doc.hemoglobin_level >= threshold ? "Normal" : "Anemic");
+}
+
+function update_blood_sugar_history_preview(frm) {
+	// Mirrors update_blood_sugar_history() in nurse_interventions.py - a live
+	// preview so the nurse sees this patient's past readings the moment the
+	// patient is picked, without having to Save first; validate() on the
+	// server is still what actually gets stored. Each row is a real Blood
+	// Sugar History Entry child row (Visit Record links back to the original
+	// Nurse Interventions it came from) - Frappe's own grid shows 5 at a
+	// time (grid_page_length on that child doctype) with its own built-in
+	// "load more", so there's nothing custom to build for that part.
+	frm.clear_table("blood_sugar_history");
+	if (frm.doc.patient_unique_id) {
+		frappe.call({
+			method: "metta.metta.doctype.nurse_interventions.nurse_interventions.get_blood_sugar_history",
+			args: { patient_unique_id: frm.doc.patient_unique_id, exclude: frm.doc.name },
+			callback(r) {
+				(r.message || []).forEach((row) => {
+					const child = frm.add_child("blood_sugar_history");
+					child.nurse_intervention = row.name;
+					child.date = row.date;
+					child.rbg_level = row.rbg_level;
+					child.blood_sugar_status = row.blood_sugar_status;
+				});
+				frm.refresh_field("blood_sugar_history");
+			},
+		});
+	} else {
+		frm.refresh_field("blood_sugar_history");
+	}
 }
 
 function colour_status_field(frm, fieldname) {

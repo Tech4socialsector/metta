@@ -1,0 +1,58 @@
+{
+ "actions": [],
+ "creation": "2026-08-25 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "nurse_intervention",
+  "date",
+  "rbg_level",
+  "blood_sugar_status"
+ ],
+ "fields": [
+  {
+   "fieldname": "nurse_intervention",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Visit Record",
+   "options": "Nurse Interventions",
+   "read_only": 1
+  },
+  {
+   "fieldname": "date",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "rbg_level",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "RBG Level (gm/dl)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "blood_sugar_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "\nLow\nNormal\nHigh",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 5,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-08-25 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "metta",
+ "name": "Blood Sugar History Entry",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

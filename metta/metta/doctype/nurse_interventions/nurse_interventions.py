@@ -14,6 +14,46 @@ class NurseInterventions(Document):
 		self.update_bmi()
 		self.update_blood_sugar_status()
 		self.update_anemia_status()
+		# Saving this form WITH the actual vitals filled in is what
+		# "completed" means here - the blank placeholder Patient Visit
+		# creates up front (see its after_insert(), which deliberately
+		# bypasses these same fields' own Mandatory check) stays Pending
+		# until a nurse actually records a real assessment.
+		if self.temperature:
+			self.status = "Completed"
+		self.update_blood_sugar_history()
+		self.notify_doctor_dashboard_if_ready()
+
+	def notify_doctor_dashboard_if_ready(self):
+		# Same event Patient Visit.after_insert() already fires for a newly
+		# assigned patient - reused here so the doctor's "Ready to Consult"
+		# tile picks up vitals the moment the nurse finishes them, instead of
+		# only on the doctor's next manual Refresh.
+		if self.status != "Completed" or not self.has_value_changed("status"):
+			return
+		doctor = frappe.db.get_value("Patient Visit", self.patient_registration, "doctor_name")
+		doctor_user = frappe.db.get_value("Doctor Master", doctor, "user") if doctor else None
+		if doctor_user:
+			frappe.publish_realtime("doctor_dashboard_update", user=doctor_user, after_commit=True)
+
+	def update_blood_sugar_history(self):
+		# Rebuilt fresh on every save from this patient's own past readings -
+		# never hand-entered. Each row links back to the Nurse Interventions
+		# record it came from (Visit Record), so clicking through it in the
+		# grid opens that original assessment directly.
+		self.set("blood_sugar_history", [])
+		if not self.patient_unique_id:
+			return
+		for row in get_blood_sugar_history_rows(self.patient_unique_id, exclude=self.name):
+			self.append(
+				"blood_sugar_history",
+				{
+					"nurse_intervention": row.name,
+					"date": row.date,
+					"rbg_level": row.rbg_level,
+					"blood_sugar_status": row.blood_sugar_status,
+				},
+			)
 
 	def update_age(self):
 		dob = frappe.db.get_value("Patient Registration", self.patient_unique_id, "dob") if self.patient_unique_id else None
@@ -63,6 +103,34 @@ class NurseInterventions(Document):
 			return
 		threshold = 13.0 if self.gender == "Male" else 12.0
 		self.anemia_status = "Normal" if flt(self.hemoglobin_level) >= threshold else "Anemic"
+
+
+def get_blood_sugar_history_rows(patient_unique_id, exclude=None):
+	# Every past reading (Low/Normal/High), not just High ones - the nurse
+	# taking a fresh reading sees the full trend, not only a High-only alert.
+	# Not capped here - the Blood Sugar History child table's own grid_page_length
+	# (see that doctype) shows 5 at a time with Frappe's native "load more",
+	# so there's no need to truncate the underlying data itself.
+	if not patient_unique_id:
+		return []
+	filters = {"patient_unique_id": patient_unique_id, "blood_sugar_status": ["!=", ""]}
+	if exclude:
+		filters["name"] = ["!=", exclude]
+	return frappe.get_all(
+		"Nurse Interventions",
+		filters=filters,
+		fields=["name", "date", "rbg_level", "blood_sugar_status"],
+		order_by="date desc",
+	)
+
+
+@frappe.whitelist()
+def get_blood_sugar_history(patient_unique_id, exclude=None):
+	# Client-side live preview before the doc is actually saved (see
+	# update_blood_sugar_history() above for the authoritative, server-side
+	# version that actually gets stored).
+	frappe.has_permission("Nurse Interventions", "read", throw=True)
+	return get_blood_sugar_history_rows(patient_unique_id, exclude=exclude)
 
 
 def get_permission_query_conditions(user=None):

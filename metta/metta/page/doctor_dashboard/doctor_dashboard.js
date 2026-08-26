@@ -13,6 +13,18 @@ frappe.pages["doctor-dashboard"].on_page_load = function (wrapper) {
 	load_profile(page);
 
 	page.add_inner_button(__("Apply Leave"), () => open_apply_leave_dialog(page));
+	page.add_inner_button(__("My Profile"), () => {
+		// Straight to their own Doctor Master record - profile details and
+		// Weekly Schedule (availability) both live there, and a Doctor can
+		// now write to their own record specifically (see has_permission on
+		// Doctor Master - every other doctor's record stays read-only to them).
+		if (!page._my_doctor_name) {
+			frappe.msgprint(__("Your profile is still loading - try again in a moment."));
+			return;
+		}
+		frappe.set_route("Form", "Doctor Master", page._my_doctor_name);
+	});
+	page.add_inner_button(__("Open Workspace"), () => frappe.set_route("doctor"));
 
 	// Everything a Doctor used to reach through the "Doctor" workspace's own
 	// shortcut cards - this dashboard page is now the one place the "Doctor"
@@ -43,6 +55,7 @@ function load_profile(page) {
 
 function render_profile(page, profile) {
 	const $target = page.body.find(".doctor-profile-bar");
+	page._my_doctor_name = profile ? profile.name : null;
 	if (!profile) {
 		$target.empty();
 		return;
@@ -181,7 +194,7 @@ function render_tiles(page) {
 	};
 
 	$wrapper.find(".dashboard-tiles").html(
-		["assigned", "visited", "ready", "waiting", "admitted"].map(tile_html).join("")
+		["assigned", "waiting", "ready", "visited", "admitted"].map(tile_html).join("")
 	);
 
 	$wrapper.find(".dashboard-tile").on("click", function () {

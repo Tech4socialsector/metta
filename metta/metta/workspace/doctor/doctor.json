@@ -1,7 +1,7 @@
 {
  "app": "metta",
  "charts": [],
- "content": "[{\"id\":\"docHeader01\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Welcome to the Doctor workspace</span>\",\"col\":12}},{\"id\":\"docShort01\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"My Dashboard\",\"col\":4}},{\"id\":\"docCard01\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Doctor Consultation\",\"col\":6}},{\"id\":\"docShort03\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Patient Visit\",\"col\":4}},{\"id\":\"docShort04\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Nurse Interventions\",\"col\":4}},{\"id\":\"docShort05\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Doctor Leave\",\"col\":4}}]",
+ "content": "[{\"id\":\"docHeader01\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Welcome to the Doctor workspace</span>\",\"col\":12}},{\"id\":\"docShort01\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"My Dashboard\",\"col\":4}},{\"id\":\"docCard01\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Doctor Consultation\",\"col\":6}},{\"id\":\"docShort03\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Patient Visit\",\"col\":4}},{\"id\":\"docShort04\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Nurse Interventions\",\"col\":4}},{\"id\":\"docShort05\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Doctor Leave\",\"col\":4}},{\"id\":\"docShort06\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Doctor Profile\",\"col\":4}}]",
  "creation": "2026-08-11 00:00:00",
  "custom_blocks": [],
  "docstatus": 0,
@@ -64,6 +64,14 @@
    "doc_view": "List",
    "label": "Doctor Leave",
    "link_to": "Doctor Leave",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Doctor Profile",
+   "link_to": "Doctor Master",
    "stats_filter": "[]",
    "type": "DocType"
   }

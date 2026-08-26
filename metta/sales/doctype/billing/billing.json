@@ -8,13 +8,21 @@
  "field_order": [
   "bill_type",
   "warehouse",
+  "op_id",
+  "ip_id",
   "patient",
   "registration_category",
   "customer_name",
   "billing_category",
   "sale_datetime",
   "doctor_consultation",
-  "items",
+  "pharmacy_section",
+  "pharmacy_item_search_area",
+  "pharmacy_items",
+  "service_section",
+  "service_item_search_area",
+  "service_items",
+  "totals_section",
   "subtotal",
   "discount_percent",
   "discount_amount",
@@ -30,21 +38,21 @@
  ],
  "fields": [
   {
-   "description": "Picked first so the Item picker below only shows the relevant items - Pharmacy for medicines, Service for lab/X-ray/other services. Re-checked against what's actually on the bill when saved, so it always ends up accurate even if picked before any items were added.",
    "fieldname": "bill_type",
    "fieldtype": "Select",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Bill Type",
-   "options": "\nPharmacy\nService\nMixed"
+   "options": "\nPharmacy\nService\nMixed",
+   "reqd": 1
   },
   {
    "fieldname": "warehouse",
    "fieldtype": "Link",
-   "in_list_view": 1,
+   "hidden": 1,
    "label": "Warehouse",
    "options": "Warehouse",
-   "reqd": 1
+   "read_only": 1
   },
   {
    "fieldname": "doctor_consultation",
@@ -53,10 +61,25 @@
    "options": "Doctor Consultation"
   },
   {
+   "fieldname": "op_id",
+   "fieldtype": "Link",
+   "label": "OP ID",
+   "options": "Patient Visit"
+  },
+  {
+   "description": "Auto-filled once the OP ID above has been admitted to IP - or type it directly if this bill is for an admission with no OP visit at all.",
+   "fieldname": "ip_id",
+   "fieldtype": "Link",
+   "label": "IP ID",
+   "options": "Patient Visit"
+  },
+  {
    "fieldname": "patient",
    "fieldtype": "Link",
+   "hidden": 1,
    "label": "Patient",
-   "options": "Patient Visit"
+   "options": "Patient Visit",
+   "read_only": 1
   },
   {
    "fetch_from": "patient.registration_category",
@@ -70,7 +93,7 @@
   {
    "fieldname": "customer_name",
    "fieldtype": "Data",
-   "label": "Customer Name"
+   "label": "Patient Name"
   },
   {
    "fetch_from": "patient.billing_category",
@@ -88,16 +111,51 @@
    "reqd": 1
   },
   {
-   "fieldname": "items",
+   "depends_on": "eval:doc.bill_type=='Pharmacy' || doc.bill_type=='Mixed'",
+   "fieldname": "pharmacy_section",
+   "fieldtype": "Section Break",
+   "label": "Pharmacy Items"
+  },
+  {
+   "depends_on": "eval:doc.docstatus==0",
+   "fieldname": "pharmacy_item_search_area",
+   "fieldtype": "HTML",
+   "label": "Add Medicine"
+  },
+  {
+   "fieldname": "pharmacy_items",
    "fieldtype": "Table",
-   "label": "Items",
-   "options": "Sales Bill Item",
-   "reqd": 1
+   "label": "Pharmacy Items",
+   "options": "Sales Bill Item"
+  },
+  {
+   "depends_on": "eval:doc.bill_type=='Service' || doc.bill_type=='Mixed'",
+   "fieldname": "service_section",
+   "fieldtype": "Section Break",
+   "label": "Service Items"
+  },
+  {
+   "depends_on": "eval:doc.docstatus==0",
+   "fieldname": "service_item_search_area",
+   "fieldtype": "HTML",
+   "label": "Add Service"
+  },
+  {
+   "fieldname": "service_items",
+   "fieldtype": "Table",
+   "label": "Service Items",
+   "options": "Sales Bill Item"
+  },
+  {
+   "fieldname": "totals_section",
+   "fieldtype": "Section Break",
+   "label": "Total"
   },
   {
    "fieldname": "subtotal",
    "fieldtype": "Currency",
    "label": "Subtotal",
+   "precision": "2",
    "read_only": 1
   },
   {
@@ -110,12 +168,14 @@
    "fieldname": "discount_amount",
    "fieldtype": "Currency",
    "label": "Discount Amount",
+   "precision": "2",
    "read_only": 1
   },
   {
    "fieldname": "gst_amount",
    "fieldtype": "Currency",
    "label": "GST Amount",
+   "precision": "2",
    "read_only": 1
   },
   {
@@ -123,6 +183,7 @@
    "fieldtype": "Currency",
    "in_list_view": 1,
    "label": "Net Amount",
+   "precision": "2",
    "read_only": 1
   },
   {
@@ -130,23 +191,25 @@
    "description": "Amount adjusted from this patient's IP admission advance - reduces what's actually collected now.",
    "fieldname": "advance_adjusted",
    "fieldtype": "Currency",
-   "label": "Advance Adjusted"
+   "label": "Advance Adjusted",
+   "precision": "2"
   },
   {
-   "description": "Net Amount minus Advance Adjusted - what's actually being collected now via Payment Mode.",
    "fieldname": "amount_due",
    "fieldtype": "Currency",
    "in_list_view": 1,
    "label": "Amount Due",
+   "precision": "2",
    "read_only": 1
   },
   {
-   "description": "Defaults to Amount Due - reduce this only if the patient is genuinely paying less than the full amount today. Used by Collection Report so an advance-covered bill isn't also counted as collected via Payment Mode.",
    "fieldname": "amount_collected",
    "fieldtype": "Currency",
-   "label": "Amount Collected Now"
+   "label": "Amount Collected Now",
+   "precision": "2"
   },
   {
+   "depends_on": "eval:doc.billing_category!='Staff'",
    "fieldname": "payment_mode",
    "fieldtype": "Select",
    "label": "Payment Mode",

@@ -14,10 +14,15 @@ from metta.stock.doctype.stock_ledger_entry.stock_ledger_entry import (
 )
 
 
+PHARMACY_ITEM_TYPES = ("Medicine", "Consumable")
+
+
 class Billing(Document):
 	def validate(self):
+		self.clear_items_not_matching_bill_type()
+		self.validate_has_items()
+		self.set_pharmacy_warehouse()
 		self.validate_warehouse()
-		self.update_bill_type()
 
 		# mandatory_depends_on only blocks the Save button in the browser -
 		# it isn't checked by Frappe's server-side mandatory-field validation,
@@ -53,21 +58,31 @@ class Billing(Document):
 		# it, using the same +/- formula either way.
 		signed_percent = -flt(self.discount_percent) if adjustment_type == "Increase" else flt(self.discount_percent)
 
+		# Rounded to currency precision at every step - an unrounded float
+		# (e.g. 0.07200000000000001) recomputed on a later re-save of an
+		# already-submitted bill would otherwise differ from the originally
+		# stored value at the 17th decimal place, which Frappe treats as a
+		# real edit and blocks with "Cannot Update After Submit".
 		subtotal = 0
 		gst_total = 0
-		for row in self.items:
-			row.amount = flt(row.qty) * flt(row.rate)
+		for row in self.pharmacy_items + self.service_items:
+			if not flt(row.qty):
+				frappe.throw(
+					_("Row {0} ({1}): Qty must be greater than 0.").format(row.idx, row.item_name or row.item),
+					title=_("Invalid Qty"),
+				)
+			row.amount = flt(flt(row.qty) * flt(row.rate), 2)
 			taxable_value = row.amount * (1 - signed_percent / 100)
-			row.gst_amount = taxable_value * flt(row.gst_percent) / 100
+			row.gst_amount = flt(taxable_value * flt(row.gst_percent) / 100, 2)
 			subtotal += row.amount
 			gst_total += row.gst_amount
-		self.subtotal = subtotal
+		self.subtotal = flt(subtotal, 2)
 		# discount_amount stays signed too, so the same subtraction below
 		# works for both directions: positive shrinks net_amount (Discount),
 		# negative grows it (Increase).
-		self.discount_amount = subtotal * signed_percent / 100
-		self.gst_amount = gst_total
-		self.net_amount = subtotal - self.discount_amount + gst_total
+		self.discount_amount = flt(self.subtotal * signed_percent / 100, 2)
+		self.gst_amount = flt(gst_total, 2)
+		self.net_amount = flt(self.subtotal - self.discount_amount + self.gst_amount, 2)
 
 		self.validate_advance_adjustment()
 		self.validate_amount_collected()
@@ -121,22 +136,55 @@ class Billing(Document):
 
 		self.amount_due = flt(self.net_amount) - flt(self.advance_adjusted)
 
-	def update_bill_type(self):
-		# Whatever was picked before adding items (to drive the Item picker's
-		# filter in the browser) is only a starting point - this is the
-		# authoritative recompute from what's actually on the bill, so the
-		# stored value is always correct for the collection report's Pharmacy
-		# vs Service split, not just whatever was selected first.
-		item_types = {row.item_type for row in self.items if row.item_type}
-		pharmacy_types = {"Medicine", "Consumable"}
-		if not item_types:
+	def validate_has_items(self):
+		# Pharmacy Items and Service Items are two separate tables now (each
+		# individually optional, since a pure-service bill has no pharmacy
+		# rows and vice versa) - but a bill with nothing in either is empty
+		# and shouldn't be allowed to save at all.
+		if not (self.pharmacy_items or self.service_items):
+			frappe.throw(
+				_("Add at least one item to Pharmacy Items or Service Items before saving."),
+				title=_("No Items"),
+			)
+
+	def clear_items_not_matching_bill_type(self):
+		# Bill Type is what actually decides which section(s) are shown - if
+		# it's narrowed after the other section already had rows in it (e.g.
+		# switched from Mixed to Pharmacy-only), those hidden rows shouldn't
+		# silently keep existing in the background; they're cleared here
+		# rather than lingering un-shown but still billed.
+		dropped = False
+		if self.bill_type == "Pharmacy" and self.service_items:
+			self.set("service_items", [])
+			dropped = True
+		elif self.bill_type == "Service" and self.pharmacy_items:
+			self.set("pharmacy_items", [])
+			dropped = True
+
+		if dropped:
+			# The bill just got smaller - whatever was previously typed into
+			# Advance Adjusted / Amount Collected Now could easily exceed the
+			# new, smaller total. Clearing them lets validate_advance_adjustment()/
+			# validate_amount_collected() below recompute correct defaults for
+			# the new total instead of throwing over a stale prior value.
+			self.advance_adjusted = 0
+			self.amount_collected = 0
+
+	def set_pharmacy_warehouse(self):
+		# Warehouse is no longer a field staff pick by hand - there's only
+		# ever one real pharmacy dispensing point, so it's looked up and set
+		# automatically whenever Pharmacy Items actually has something on it.
+		if not self.pharmacy_items:
+			self.warehouse = None
 			return
-		if item_types <= pharmacy_types:
-			self.bill_type = "Pharmacy"
-		elif item_types == {"Service"}:
-			self.bill_type = "Service"
-		else:
-			self.bill_type = "Mixed"
+		if self.warehouse:
+			return
+		self.warehouse = get_pharmacy_warehouse()
+		if not self.warehouse:
+			frappe.throw(
+				_("No active Pharmacy warehouse is set up - ask an admin to create one before billing medicines."),
+				title=_("No Pharmacy Warehouse"),
+			)
 
 	def validate_warehouse(self):
 		# Central Store only ever receives from suppliers and distributes to
@@ -155,10 +203,9 @@ class Billing(Document):
 	def on_submit(self):
 		# Stock moves immediately on submit - Billing Staff finalizing the
 		# bill is what hands the medicine over, so this is the point stock
-		# has to reflect that.
-		for row in self.items:
-			if row.item_type == "Service":
-				continue
+		# has to reflect that. Service Items never reach here at all - only
+		# Pharmacy Items can hold real stock rows.
+		for row in self.pharmacy_items:
 			row.stock_qty = flt(row.qty) * flt(row.conversion_factor or 1)
 			row.db_set("stock_qty", row.stock_qty, update_modified=False)
 			validate_sufficient_stock(row.item, self.warehouse, row.stock_qty)
@@ -189,9 +236,77 @@ def get_category_adjustment(billing_category):
 	return category or {"adjustment_type": None, "discount_status": None}
 
 
+IP_ADMISSION_CHARGE_ITEM = "IP-ADMISSION-CHARGE"
+
+
+@frappe.whitelist()
+def get_admission_charge_row(patient):
+	# Mirrors the legacy system: converting OP to IP brings a flat admission
+	# charge onto the bill automatically the moment the IP visit is entered
+	# here - not something Billing Staff has to remember to add by hand.
+	# Checked against every non-cancelled bill already raised for this same
+	# visit so re-opening/re-billing the same admission never double-charges it.
+	frappe.has_permission("Billing", "read", throw=True)
+	if not patient:
+		return None
+	registration_category = frappe.db.get_value("Patient Visit", patient, "registration_category")
+	if registration_category != "IP":
+		return None
+
+	already_charged = frappe.db.exists(
+		"Sales Bill Item",
+		{
+			"item": IP_ADMISSION_CHARGE_ITEM,
+			"parenttype": "Billing",
+			"parent": ["in", frappe.get_all("Billing", filters={"patient": patient, "docstatus": ["!=", 2]}, pluck="name")],
+		},
+	)
+	if already_charged:
+		return None
+
+	return _billing_row(IP_ADMISSION_CHARGE_ITEM, "IP Admission Charge", 1)
+
+
+def get_pharmacy_warehouse():
+	# There's only ever one real pharmacy dispensing point in this hospital -
+	# shared by the auto-warehouse logic and the FEFO batch lookup below,
+	# both of which need to know which warehouse's stock actually applies.
+	return frappe.db.get_value("Warehouse", {"warehouse_type": "Pharmacy", "is_active": 1}, "name", order_by="name")
+
+
+@frappe.whitelist()
+def get_fefo_batch(item_code):
+	# First-Expiry-First-Out - standard pharmacy dispensing practice, and
+	# not something a busy front desk should have to remember to apply by
+	# hand every time; still just a starting point, the field stays editable
+	# if a specific batch genuinely needs to be picked instead.
+	frappe.has_permission("Billing", "read", throw=True)
+	if not item_code or not frappe.db.get_value("Item", item_code, "has_batch"):
+		return None
+	warehouse = get_pharmacy_warehouse()
+	if not warehouse:
+		return None
+	rows = frappe.db.sql(
+		"""
+		select sle.batch_no
+		from `tabStock Ledger Entry` sle
+		inner join `tabBatch` b on b.name = sle.batch_no
+		where sle.item = %(item)s and sle.warehouse = %(warehouse)s
+			and sle.batch_no is not null and sle.batch_no != '' and b.disabled = 0
+		group by sle.batch_no
+		having sum(sle.qty_change) > 0
+		order by b.expiry_date asc
+		limit 1
+		""",
+		{"item": item_code, "warehouse": warehouse},
+		as_dict=True,
+	)
+	return rows[0].batch_no if rows else None
+
+
 def _billing_row(item_code, item_name, qty):
 	item_details = frappe.db.get_value(
-		"Item", item_code, ["sale_uom", "standard_selling_rate", "gst_percent"], as_dict=True
+		"Item", item_code, ["sale_uom", "standard_selling_rate", "gst_percent", "has_batch"], as_dict=True
 	) or frappe._dict()
 	rate = flt(item_details.standard_selling_rate)
 	return {
@@ -202,7 +317,61 @@ def _billing_row(item_code, item_name, qty):
 		"rate": rate,
 		"gst_percent": flt(item_details.gst_percent),
 		"amount": rate * flt(qty),
+		"batch_no": get_fefo_batch(item_code) if item_details.has_batch else None,
 	}
+
+
+@frappe.whitelist()
+def search_items_for_billing(search_term="", table="pharmacy_items"):
+	# Powers the quick-add widget above each Items table - Pharmacy Items
+	# only ever searches Medicine/Consumable, Service Items only ever
+	# searches Service, same split the two tables themselves enforce.
+	frappe.has_permission("Billing", "read", throw=True)
+	item_types = list(PHARMACY_ITEM_TYPES) if table == "pharmacy_items" else ["Service"]
+	filters = {"item_type": ["in", item_types], "is_active": 1}
+	if search_term:
+		filters["item_name"] = ["like", f"%{search_term}%"]
+
+	items = frappe.get_all(
+		"Item",
+		fields=["name as item_code", "item_name", "standard_selling_rate"],
+		filters=filters,
+		limit=20,
+	)
+
+	pharmacy_warehouse = None
+	if table == "pharmacy_items":
+		pharmacy_warehouse = frappe.db.get_value("Warehouse", {"warehouse_type": "Pharmacy", "is_active": 1}, "name")
+
+	result = []
+	for it in items:
+		avail_qty = None
+		if pharmacy_warehouse:
+			avail_qty = (
+				frappe.db.get_value(
+					"Stock Balance", {"item": it.item_code, "warehouse": pharmacy_warehouse}, "actual_qty"
+				)
+				or 0
+			)
+		result.append(
+			{
+				"item_code": it.item_code,
+				"name": it.item_name,
+				"rate": flt(it.standard_selling_rate),
+				"avail_qty": avail_qty,
+			}
+		)
+	return result
+
+
+@frappe.whitelist()
+def get_billing_item_row(item_code, qty=1):
+	# Same shape _billing_row() already builds for the auto-added admission
+	# charge - reused here so the quick-add widget's "Add" button fills in
+	# uom/rate/gst_percent/amount exactly the same way.
+	frappe.has_permission("Billing", "read", throw=True)
+	item_name = frappe.db.get_value("Item", item_code, "item_name") or item_code
+	return _billing_row(item_code, item_name, qty)
 
 
 @frappe.whitelist()
@@ -282,25 +451,87 @@ def get_billing_items_for_consultation(consultation):
 	if not medicines and not tests:
 		frappe.throw(_("This consultation has no prescribed medicines or suggested tests to bill."))
 
-	# Known from which list each came from (prescribed_items is always
-	# Medicine, suggested_tests is always Service - see the query filters on
-	# Doctor Consultation) rather than re-checking each item's own type here -
-	# update_bill_type() on save still re-derives this authoritatively from
-	# what's actually on the bill either way.
-	if medicines and tests:
-		bill_type = "Mixed"
-	elif medicines:
-		bill_type = "Pharmacy"
-	else:
-		bill_type = "Service"
-
+	# Medicines go to Pharmacy Items, tests go to Service Items - known from
+	# which list each came from (prescribed_items is always Medicine,
+	# suggested_tests is always Service, per Doctor Consultation's own query
+	# filters) rather than re-checking each item's own type here.
 	return {
 		"patient": consult.patient_consultation,
 		"doctor": consult.doctor,
 		"billing_category": billing_category,
-		"bill_type": bill_type,
-		"items": medicines + tests,
+		"pharmacy_items": medicines,
+		"service_items": tests,
 	}
+
+
+@frappe.whitelist()
+def has_discharge_summary(patient_visit):
+	# The final bill is only meaningful once the doctor has actually signed
+	# off clinically - Billing shouldn't be able to hand over a "discharge"
+	# bill before that's on record.
+	frappe.has_permission("Billing", "read", throw=True)
+	if not patient_visit:
+		return False
+	return bool(frappe.db.exists("Discharge Summary", {"patient_visit": patient_visit}))
+
+
+def _visit_id_query(registration_category, txt, start, page_len):
+	# Patient Visit's own title (patient name) would otherwise be the only
+	# thing shown while searching, making same-named patients indistinguishable -
+	# returning the name as a second column shows it as a small line under
+	# the actual ID, without changing what ends up in the field once picked.
+	frappe.has_permission("Billing", "read", throw=True)
+	return frappe.db.sql(
+		"""
+		select pv.name, pr.patient_name
+		from `tabPatient Visit` pv
+		left join `tabPatient Registration` pr on pr.name = pv.uhin_id
+		where pv.registration_category = %(registration_category)s
+			and (pv.name like %(txt)s or pr.patient_name like %(txt)s)
+		order by pv.name desc
+		limit %(page_len)s offset %(start)s
+		""",
+		{
+			"registration_category": registration_category,
+			"txt": f"%{txt}%",
+			"start": start,
+			"page_len": page_len,
+		},
+	)
+
+
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def op_id_query(doctype, txt, searchfield, start, page_len, filters):
+	return _visit_id_query("OP", txt, start, page_len)
+
+
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def ip_id_query(doctype, txt, searchfield, start, page_len, filters):
+	return _visit_id_query("IP", txt, start, page_len)
+
+
+@frappe.whitelist()
+def get_ip_id_for_op(op_id):
+	# Typing the OP ID should surface the IP admission on its own once that
+	# OP visit has actually been converted - staff shouldn't have to already
+	# know the IP number by heart to look it up.
+	frappe.has_permission("Billing", "read", throw=True)
+	if not op_id:
+		return None
+	return frappe.db.get_value("Patient Visit", {"converted_from_registration": op_id}, "name")
+
+
+@frappe.whitelist()
+def get_op_id_for_ip(ip_id):
+	# Mirrors get_ip_id_for_op() in reverse - typing the IP ID directly
+	# (the common case for IP billing) still surfaces the OP visit it came
+	# from, for reference, without staff having to go find it themselves.
+	frappe.has_permission("Billing", "read", throw=True)
+	if not ip_id:
+		return None
+	return frappe.db.get_value("Patient Visit", ip_id, "converted_from_registration")
 
 
 @frappe.whitelist()
@@ -314,14 +545,14 @@ def get_patient_name(patient):
 	if not uhin_id:
 		return ""
 	registration = frappe.db.get_value(
-		"Patient Registration", uhin_id, ["patient_name", "first_name", "middle_name", "last_name"], as_dict=True
+		"Patient Registration", uhin_id, ["patient_name", "first_name", "last_name"], as_dict=True
 	)
 	if not registration:
 		return ""
 	if registration.patient_name:
 		return registration.patient_name
-	# "Full Name" is a separate, manually-entered field - it's easy for it to
-	# be left blank even when First/Last Name were filled in, so fall back to
-	# building it from those rather than surfacing a name that's technically
-	# on file but just wasn't copied into this one field.
-	return " ".join(filter(None, [registration.first_name, registration.middle_name, registration.last_name]))
+	# Full Name is always derived from First/Last Name on save, but an older
+	# record saved before that rule existed could still have it blank - fall
+	# back to building it from those rather than surfacing a name that's
+	# technically on file but just wasn't copied into this one field.
+	return " ".join(filter(None, [registration.first_name, registration.last_name]))

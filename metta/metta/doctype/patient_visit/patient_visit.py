@@ -7,7 +7,7 @@ from frappe.model.document import Document
 from frappe.model.naming import make_autoname
 from frappe.utils import flt, getdate
 
-from metta.metta.doctype.patient_registration.patient_registration import calculate_age
+from metta.metta.doctype.patient_registration.patient_registration import GENERAL_CATEGORY, calculate_age
 from metta.metta.utils import validate_phone_number
 
 
@@ -23,6 +23,7 @@ class PatientVisit(Document):
 	def validate(self):
 		validate_phone_number(self.phone, "Phone")
 		self.validate_registration_category()
+		self.clear_op_fee_for_ip()
 		self.validate_bed_availability()
 		self.validate_room_availability()
 		self.validate_discharge()
@@ -65,7 +66,22 @@ class PatientVisit(Document):
 		# Billing applies for the same two adjustment types.
 		signed_percent = -raw_percent if adjustment_type == "Increase" else raw_percent
 
-		self.discount_amount = flt(self.fee_amount) * signed_percent / 100
+		if flt(self.charity_amount):
+			if flt(self.charity_amount) < 0:
+				frappe.throw(_("Charity Amount cannot be negative."))
+			# Only for a General (i.e. not Staff-related) patient - Staff/Staff
+			# Dependent already gets its charity automatically from Billing
+			# Category, so a hand-typed amount on top of that would be a
+			# second, conflicting discount.
+			if self.billing_category != GENERAL_CATEGORY:
+				frappe.throw(_("Charity Amount can only be entered for Billing Category 'General'."))
+			# A hand-typed rupee figure for this specific patient's situation
+			# wins over the percentage-based discount - never both at once,
+			# so the two can't be stacked into an unintended double discount.
+			# Capped at the fee itself so the visit can never net negative.
+			self.discount_amount = min(flt(self.charity_amount), flt(self.fee_amount))
+		else:
+			self.discount_amount = flt(self.fee_amount) * signed_percent / 100
 		self.net_amount = flt(self.fee_amount) - self.discount_amount
 
 		# Recorded the first time a payment mode is actually picked - not
@@ -114,6 +130,7 @@ class PatientVisit(Document):
 		# Only IP admissions go through Admitted/Discharged at all.
 		if self.registration_category != "IP":
 			return
+		self.validate_discharge_authorised_by_doctor()
 		if self.admission_status == "Discharged":
 			# Whoever flips the status is doing it right now, at the moment
 			# the patient is actually leaving - not backdating it, so "today"
@@ -129,6 +146,23 @@ class PatientVisit(Document):
 			# Re-admitting after a correction shouldn't leave a stale discharge
 			# date lingering on an otherwise-active admission.
 			self.discharge_date = None
+
+	def validate_discharge_authorised_by_doctor(self):
+		# Whether to discharge a patient is a clinical call, not something
+		# Front Desk should be deciding by editing a status field - only a
+		# Doctor (or an admin correcting a mistake) can flip it either way.
+		# A brand-new admission defaulting to "Admitted" isn't a discharge
+		# decision, so this only fires when an existing record's value
+		# actually changes.
+		if self.is_new() or not self.has_value_changed("admission_status"):
+			return
+		roles = frappe.get_roles(frappe.session.user)
+		if "System Manager" in roles or "Doctor" in roles:
+			return
+		frappe.throw(
+			_("Only a Doctor can change Admission Status."),
+			title=_("Not Authorised"),
+		)
 
 	def log_bed_transfer(self):
 		# Runs during validate() - the DB still holds the pre-save location at
@@ -189,14 +223,17 @@ class PatientVisit(Document):
 	def after_insert(self):
 		# Every registered patient needs a triage/vitals check - creating this
 		# up front (rather than waiting for a nurse to remember) is what makes
-		# "Pending" status on Nurse Interventions a reliable worklist.
+		# "Pending" status on Nurse Interventions a reliable worklist. This
+		# placeholder is deliberately blank - ignore_mandatory skips past its
+		# own vitals fields being required, which only applies once a nurse
+		# actually opens it and saves their real assessment.
 		frappe.get_doc(
 			{
 				"doctype": "Nurse Interventions",
 				"patient_registration": self.name,
 				"status": "Pending",
 			}
-		).insert(ignore_permissions=True)
+		).insert(ignore_permissions=True, ignore_mandatory=True)
 
 		# So the assigned doctor's dashboard picks up a newly-assigned patient
 		# on its own - without this, "Assigned Today" only updates the next
@@ -212,6 +249,17 @@ class PatientVisit(Document):
 			frappe.db.set_value(
 				"Appointment", self.appointment, {"status": "Checked-in", "patient_visit": self.name}
 			)
+
+	def clear_op_fee_for_ip(self):
+		# Registration Type / Fee Amount are an OP-only concept (New Reg vs
+		# Revisit). A brand-new admission can otherwise still carry a stale
+		# value here - e.g. Patient ID was typed before Registration Category
+		# was switched to IP, auto-suggesting an OP fee that then just sits
+		# hidden instead of being cleared. IP's own admission charge is billed
+		# separately (see Billing's auto-added "IP Admission Charge" item).
+		if self.registration_category == "IP" and self.registration_type:
+			self.registration_type = ""
+			self.fee_amount = 0
 
 	def validate_bed_availability(self):
 		# Only IP admissions occupy a physical bed; OP visits, Room-type
@@ -381,6 +429,26 @@ def check_bed_availability(ward, bed_no, registration=None):
 
 
 @frappe.whitelist()
+def has_prior_visit_of_type(uhin_id, emergency):
+	# Drives the New Reg vs Revisit suggestion on Registration Type - tracked
+	# separately per General/Emergency, not as one combined visit history. A
+	# patient who has only ever come in during regular hours still counts as
+	# a first-time Emergency visit the first time they show up after 5:30 PM
+	# (Emergency New Reg), and the same in reverse - the two are genuinely
+	# separate registration histories, billed at different rates.
+	frappe.has_permission("Patient Visit", "read", throw=True)
+	if not uhin_id:
+		return False
+	emergency = frappe.utils.cint(emergency)
+	reg_types = frappe.get_all("Patient Visit", filters={"uhin_id": uhin_id}, pluck="registration_type")
+	for reg_type in reg_types:
+		is_emergency_type = bool(reg_type) and reg_type.startswith("Emergency")
+		if is_emergency_type == bool(emergency):
+			return True
+	return False
+
+
+@frappe.whitelist()
 def get_admission_defaults(op_registration):
 	# Patient, consulting doctor, and billing category all carry over -
 	# billing_category is the person's own discount/rate policy (e.g. staff
@@ -394,12 +462,24 @@ def get_admission_defaults(op_registration):
 		frappe.throw(_("Only an OP registration can be converted into an admission."))
 	return {
 		"uhin_id": op.uhin_id,
+		"department_name": op.department_name,
 		"doctor_name": op.doctor_name,
 		"converted_from_registration": op.name,
 		"billing_category": op.billing_category,
 		"discount_percent": op.discount_percent,
 		"adjustment_type": op.adjustment_type,
 	}
+
+
+@frappe.whitelist()
+def get_doctors_by_department(department):
+	# Department is picked first now - Doctor name is then narrowed down (or
+	# auto-filled, if only one doctor covers that department) rather than the
+	# other way round.
+	frappe.has_permission("Patient Visit", "read", throw=True)
+	if not department:
+		return []
+	return frappe.get_all("Doctor Master", filters={"department": department}, pluck="name", order_by="name")
 
 
 @frappe.whitelist()

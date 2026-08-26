@@ -5,20 +5,81 @@ import requests
 
 import frappe
 from frappe.model.document import Document
-from frappe.utils import getdate, today
+from frappe.utils import flt, getdate, today
 
 from metta.metta.utils import validate_phone_number
 
 PINCODE_API_URL = "https://api.postalpincode.in/pincode/{pincode}"
 
+# Billing Category names this feature manages - matched exactly, so renaming
+# one of these Category Price Adjustment records breaks the automatic
+# assignment below until it's renamed back.
+STAFF_CATEGORY = "Staff"
+STAFF_DEPENDENT_CATEGORY = "Staff Dependent"
+GENERAL_CATEGORY = "General"
+
+# A Son/Daughter is the only relationship that ages out of the Staff
+# Dependent charity - Husband/Wife/Father/Mother never do, since a spouse or
+# parent's own age has no bearing on their dependent status.
+CHILD_RELATIONSHIPS = {"Son", "Daughter"}
+DEPENDENT_CHILD_AGE_LIMIT = 21
+
 
 class PatientRegistration(Document):
 	def validate(self):
 		validate_phone_number(self.phone, "Phone")
-		# Age is always derived from Date of Birth, never entered by hand - the
-		# same rule Patient Visit and Nurse Interventions already follow, using
-		# this same calculate_age() (see its own docstring below).
-		self.age = calculate_age(self.dob)
+		# Age is derived from Date of Birth when it's known, same as Patient
+		# Visit and Nurse Interventions - but here DOB itself is optional, so
+		# a manually typed Age is kept as-is when there's no DOB to compute it
+		# from instead.
+		if self.dob:
+			self.age = calculate_age(self.dob)
+		# Full Name is always derived from First/Last Name, never typed
+		# separately - same reasoning as Age above.
+		self.patient_name = calculate_full_name(self.first_name, self.last_name)
+		self.validate_staff_dependent()
+		self.validate_charity_amount()
+
+	def validate_charity_amount(self):
+		# A hand-typed recommendation for a patient who can't afford full price
+		# right at Registration - independent of Billing Category, since it's
+		# a one-off judgment call for this specific person, not a standing
+		# rule. Patient Visit has its own separate Charity Amount for the same
+		# situation coming up again at a later visit - the two are deliberately
+		# independent, not one flowing into the other.
+		#
+		# Only for a General (i.e. not Staff-related) patient - Staff/Staff
+		# Dependent already gets its charity automatically from Billing
+		# Category, so a hand-typed amount on top of that would be a second,
+		# conflicting discount.
+		if not flt(self.charity_amount):
+			return
+		if flt(self.charity_amount) < 0:
+			frappe.throw(frappe._("Charity Amount cannot be negative."))
+		if self.billing_category != GENERAL_CATEGORY:
+			frappe.throw(
+				frappe._("Charity Amount can only be entered for Billing Category 'General'.")
+			)
+
+	def validate_staff_dependent(self):
+		auto_category = calculate_billing_category(
+			self.staff_status, self.dependent_relationship, self.age
+		)
+		# Only Staff/Dependent registrations are auto-assigned a category this
+		# way - an ordinary patient's Billing Category stays exactly whatever
+		# Front Desk picked by hand.
+		if not auto_category:
+			return
+		if self.billing_category != auto_category:
+			self.billing_category = auto_category
+			# discount_percent is normally kept correct by the client's own
+			# fetch_from - but this can also run with no client involved (the
+			# daily age-out job), so it's resynced here directly rather than
+			# trusting whatever discount_percent happened to already be on
+			# the document.
+			self.discount_percent = (
+				frappe.db.get_value("Category Price Adjustment", auto_category, "discount_percent") or 0
+			)
 
 
 @frappe.whitelist()
@@ -75,6 +136,12 @@ def get_location_by_pincode(pincode):
 	}
 
 
+def calculate_full_name(first_name, last_name):
+	# Only First Name is mandatory - Last Name is optional, so a patient with
+	# just a first name still gets a Full Name instead of a blank field.
+	return " ".join(part for part in (first_name, last_name) if part)
+
+
 def calculate_age(dob):
 	# Shared by Patient Visit and Nurse Interventions - Age is always
 	# derived from Date of Birth, never entered or fetched directly, so it
@@ -84,3 +151,59 @@ def calculate_age(dob):
 	dob = getdate(dob)
 	current = getdate(today())
 	return current.year - dob.year - ((current.month, current.day) < (dob.month, dob.day))
+
+
+def calculate_billing_category(staff_status, dependent_relationship, age):
+	# Returns the Billing Category this Staff Status implies, or None if the
+	# patient isn't Staff-related at all (in which case the caller must leave
+	# Billing Category exactly as manually set).
+	if staff_status == "Staff":
+		return STAFF_CATEGORY
+	if staff_status == "Staff Dependent":
+		aged_out = dependent_relationship in CHILD_RELATIONSHIPS and age is not None and age >= DEPENDENT_CHILD_AGE_LIMIT
+		return GENERAL_CATEGORY if aged_out else STAFF_DEPENDENT_CATEGORY
+	return None
+
+
+def ensure_default_billing_categories():
+	# Called once per migrate (see hooks.py's after_migrate) - creates the
+	# three Billing Categories this feature depends on if the hospital
+	# hasn't already set them up by hand, so Staff/Dependent auto-assignment
+	# never fails with "Category Price Adjustment not found" on a fresh site.
+	defaults = {
+		STAFF_CATEGORY: 100,
+		STAFF_DEPENDENT_CATEGORY: 60,
+		GENERAL_CATEGORY: 0,
+	}
+	for category_name, discount_percent in defaults.items():
+		if frappe.db.exists("Category Price Adjustment", category_name):
+			continue
+		frappe.get_doc(
+			{
+				"doctype": "Category Price Adjustment",
+				"name": category_name,
+				"adjustment_type": "Discount",
+				"discount_percent": discount_percent,
+				"discount_status": "Active",
+			}
+		).insert(ignore_permissions=True)
+
+
+def age_out_staff_dependents():
+	# Daily scheduled task (see hooks.py) - a dependent child crossing 21
+	# happens passively with no one editing their record, so nothing would
+	# otherwise trigger validate() to notice and switch them off the Staff
+	# Dependent charity. Re-saving every dependent lets validate_staff_dependent()
+	# recompute the same rule it already applies on every manual save.
+	names = frappe.get_all(
+		"Patient Registration", filters={"staff_status": "Staff Dependent"}, pluck="name"
+	)
+	for name in names:
+		doc = frappe.get_doc("Patient Registration", name)
+		before = doc.billing_category
+		doc.save(ignore_permissions=True)
+		if doc.billing_category != before:
+			frappe.logger().info(
+				f"Patient Registration {name}: Billing Category aged out from {before!r} to {doc.billing_category!r}"
+			)
+	frappe.db.commit()

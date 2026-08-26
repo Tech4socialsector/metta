@@ -11,12 +11,12 @@
  "engine": "InnoDB",
  "field_order": [
   "basic_info",
+  "uhin_id",
   "registration_category",
   "emergency_admission",
   "converted_from_registration",
   "registration_type",
   "appointment",
-  "uhin_id",
   "first_name",
   "last_name",
   "patient_name",
@@ -25,7 +25,6 @@
   "age",
   "blood_group",
   "column_break_14",
-  "middle_name",
   "marital_status",
   "uid",
   "phone",
@@ -48,9 +47,9 @@
   "expected_discharge_date",
   "discharge_date",
   "consultation_details_section",
-  "doctor_name",
-  "column_break_uycx",
   "department_name",
+  "column_break_uycx",
+  "doctor_name",
   "customer_details_section",
   "fee_amount",
   "default_currency",
@@ -58,6 +57,7 @@
   "billing_category",
   "discount_percent",
   "adjustment_type",
+  "charity_amount",
   "discount_amount",
   "net_amount",
   "payment_mode",
@@ -121,6 +121,7 @@
    "read_only": 1
   },
   {
+   "depends_on": "eval:doc.registration_category!='IP'",
    "fieldname": "registration_type",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -222,13 +223,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "fetch_from": "uhin_id.middle_name",
-   "fieldname": "middle_name",
-   "fieldtype": "Data",
-   "label": "Middle Name (optional)",
-   "no_copy": 1
-  },
-  {
    "fetch_from": "uhin_id.marital_status",
    "fieldname": "marital_status",
    "fieldtype": "Select",
@@ -279,11 +273,9 @@
    "label": "Date"
   },
   {
-   "default": "Now",
    "fieldname": "time",
-   "fieldtype": "Time",
-   "label": "Time",
-   "options": "Now"
+   "fieldtype": "Data",
+   "label": "Time"
   },
   {
    "fetch_from": "uhin_id.address",
@@ -381,21 +373,20 @@
    "label": "Consultation Details"
   },
   {
-   "fieldname": "doctor_name",
+   "fieldname": "department_name",
    "fieldtype": "Link",
-   "label": "Doctor name",
-   "options": "Doctor Master"
+   "label": "Department Name",
+   "options": "Department"
   },
   {
    "fieldname": "column_break_uycx",
    "fieldtype": "Column Break"
   },
   {
-   "fetch_from": "doctor_name.department",
-   "fieldname": "department_name",
-   "fieldtype": "Data",
-   "label": "Department Name",
-   "read_only": 1
+   "fieldname": "doctor_name",
+   "fieldtype": "Link",
+   "label": "Doctor name",
+   "options": "Doctor Master"
   },
   {
    "fieldname": "customer_details_section",
@@ -403,6 +394,7 @@
    "label": "Billing Category"
   },
   {
+   "depends_on": "eval:doc.registration_category!='IP'",
    "fetch_from": "registration_type.fee_amount",
    "fieldname": "fee_amount",
    "fieldtype": "Currency",
@@ -429,6 +421,7 @@
   },
   {
    "fetch_from": "billing_category.discount_percent",
+   "fetch_if_empty": 1,
    "fieldname": "discount_percent",
    "fieldtype": "Data",
    "label": "Discount Percent"
@@ -439,6 +432,12 @@
    "fieldtype": "Select",
    "label": "Adjustment Type",
    "options": "\nDiscount\nIncrease"
+  },
+  {
+   "depends_on": "eval:doc.billing_category=='General'",
+   "fieldname": "charity_amount",
+   "fieldtype": "Currency",
+   "label": "Charity Amount"
   },
   {
    "fieldname": "discount_amount",
@@ -453,6 +452,7 @@
    "read_only": 1
   },
   {
+   "depends_on": "eval:doc.billing_category!='Staff'",
    "fieldname": "payment_mode",
    "fieldtype": "Select",
    "label": "Payment Mode",
@@ -615,7 +615,7 @@
   }
  ],
  "max_attachments": 50,
- "modified": "2026-08-20 18:11:05.348299",
+ "modified": "2026-08-25 21:43:03.384787",
  "modified_by": "Administrator",
  "module": "metta",
  "name": "Patient Visit",
@@ -651,7 +651,8 @@
    "read": 1,
    "report": 1,
    "role": "Doctor",
-   "share": 1
+   "share": 1,
+   "write": 1
   },
   {
    "email": 1,

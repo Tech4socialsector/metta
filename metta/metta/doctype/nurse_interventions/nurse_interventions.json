@@ -14,9 +14,7 @@
   "patient_name",
   "age",
   "gender",
-  "occupation",
   "column_break_ilvw",
-  "address",
   "date",
   "physical_examination_section",
   "temperature",
@@ -31,6 +29,7 @@
   "blood_pressure_mmhg",
   "rbg_level",
   "blood_sugar_status",
+  "blood_sugar_history",
   "hemoglobin_level",
   "anemia_status",
   "piccle",
@@ -84,29 +83,21 @@
    "read_only": 1
   },
   {
+   "fetch_from": "patient_unique_id.sex",
    "fieldname": "gender",
    "fieldtype": "Select",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Gender",
-   "options": "\nMale\nFemale\nOthers"
-  },
-  {
-   "fieldname": "occupation",
-   "fieldtype": "Data",
-   "label": "Occupation"
+   "options": "\nMale\nFemale\nOthers",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_ilvw",
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "address",
-   "fieldtype": "Small Text",
-   "in_standard_filter": 1,
-   "label": "Address"
-  },
-  {
+   "default": "Now",
    "fieldname": "date",
    "fieldtype": "Datetime",
    "label": "Date"
@@ -120,38 +111,44 @@
    "description": "<i>Iin degree Fahrenheit</i>",
    "fieldname": "temperature",
    "fieldtype": "Data",
-   "label": "Temperature (F)"
+   "label": "Temperature (F)",
+   "reqd": 1
   },
   {
    "description": "<i>Beats per minute</i>",
    "fieldname": "pulse",
    "fieldtype": "Data",
-   "label": "Pulse (b/m)"
+   "label": "Pulse (b/m)",
+   "reqd": 1
   },
   {
    "description": "<i>Beats per minute</i>",
    "fieldname": "respiration",
    "fieldtype": "Data",
-   "label": "Respiration (b/m)"
+   "label": "Respiration (b/m)",
+   "reqd": 1
   },
   {
    "description": "<i>Percentage</i>",
    "fieldname": "saturation",
    "fieldtype": "Data",
-   "label": "Saturation (Spo2)"
+   "label": "Saturation (Spo2)",
+   "reqd": 1
   },
   {
    "fieldname": "height",
    "fieldtype": "Float",
    "label": "Height (cm)",
-   "non_negative": 1
+   "non_negative": 1,
+   "reqd": 1
   },
   {
    "description": "<i>In KG</i>",
    "fieldname": "weight",
    "fieldtype": "Float",
    "label": "Weight (Kg)",
-   "non_negative": 1
+   "non_negative": 1,
+   "reqd": 1
   },
   {
    "fieldname": "column_break_tloo",
@@ -175,19 +172,29 @@
   {
    "fieldname": "blood_pressure_mmhg",
    "fieldtype": "Data",
-   "label": "Blood pressure (mmhg)</h4>"
+   "label": "Blood pressure (mmhg)</h4>",
+   "reqd": 1
   },
   {
    "description": "<i>gm/dl</i>",
    "fieldname": "rbg_level",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Random Blood Glucose Level (gm/dl)"
   },
   {
    "fieldname": "blood_sugar_status",
    "fieldtype": "Select",
+   "in_list_view": 1,
    "label": "Blood Sugar Status",
    "options": "\nLow\nNormal\nHigh",
+   "read_only": 1
+  },
+  {
+   "fieldname": "blood_sugar_history",
+   "fieldtype": "Table",
+   "label": "Blood Sugar History",
+   "options": "Blood Sugar History Entry",
    "read_only": 1
   },
   {

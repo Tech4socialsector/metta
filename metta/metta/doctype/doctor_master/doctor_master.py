@@ -36,3 +36,16 @@ class DoctorMaster(Document):
 						title=_("Overlapping Schedule Slots"),
 					)
 			by_day.setdefault(row.day, []).append((row.idx, from_time, to_time))
+
+
+def has_permission(doc, ptype, user):
+	# Read stays open to everyone who already has it (scheduling reference,
+	# department listings) - only WRITE is scoped, and only to a Doctor
+	# editing their own profile/weekly availability, never a colleague's.
+	roles = frappe.get_roles(user)
+	if "System Manager" in roles or "Doctor" not in roles or ptype != "write":
+		return True
+
+	if isinstance(doc, (str, int)):
+		doc = frappe.get_doc("Doctor Master", doc)
+	return doc.user == user

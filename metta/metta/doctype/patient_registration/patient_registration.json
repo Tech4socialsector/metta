@@ -10,7 +10,6 @@
  "field_order": [
   "basic_info",
   "first_name",
-  "middle_name",
   "last_name",
   "patient_name",
   "blood_group",
@@ -21,6 +20,7 @@
   "column_break_isoy",
   "uid",
   "phone",
+  "emergency_contact_name",
   "emergency_phone_number",
   "relationship_to_the_patient",
   "email",
@@ -28,9 +28,14 @@
   "state",
   "district",
   "address",
+  "staff_dependent_section",
+  "staff_status",
+  "staff_member",
+  "dependent_relationship",
   "billing_section",
   "billing_category",
   "discount_percent",
+  "charity_amount",
   "default_currency"
  ],
  "fields": [
@@ -46,11 +51,6 @@
    "reqd": 1
   },
   {
-   "fieldname": "middle_name",
-   "fieldtype": "Data",
-   "label": "Middle Name"
-  },
-  {
    "fieldname": "last_name",
    "fieldtype": "Data",
    "label": "Last Name"
@@ -60,6 +60,7 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Full Name",
+   "read_only": 1,
    "search_index": 1
   },
   {
@@ -77,8 +78,7 @@
   {
    "fieldname": "age",
    "fieldtype": "Int",
-   "label": "Age",
-   "read_only": 1
+   "label": "Age"
   },
   {
    "fieldname": "sex",
@@ -101,10 +101,10 @@
   {
    "fieldname": "uid",
    "fieldtype": "Data",
+   "hidden": 1,
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Identification Number (UID)",
-   "reqd": 1,
    "unique": 1
   },
   {
@@ -124,8 +124,33 @@
   },
   {
    "fieldname": "address",
-   "fieldtype": "Data",
+   "fieldtype": "Autocomplete",
    "label": "Village"
+  },
+  {
+   "fieldname": "staff_dependent_section",
+   "fieldtype": "Section Break",
+   "label": "Staff / Dependent"
+  },
+  {
+   "fieldname": "staff_status",
+   "fieldtype": "Select",
+   "label": "Staff Status",
+   "options": "\nStaff\nStaff Dependent"
+  },
+  {
+   "depends_on": "eval:doc.staff_status",
+   "fieldname": "staff_member",
+   "fieldtype": "Link",
+   "label": "Staff Member",
+   "options": "Staff Member"
+  },
+  {
+   "depends_on": "eval:doc.staff_status=='Staff Dependent'",
+   "fieldname": "dependent_relationship",
+   "fieldtype": "Select",
+   "label": "Relationship to Staff Member",
+   "options": "\nHusband\nWife\nSon\nDaughter\nFather\nMother"
   },
   {
    "fieldname": "billing_section",
@@ -137,7 +162,8 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Billing Category",
-   "options": "Category Price Adjustment"
+   "options": "Category Price Adjustment",
+   "read_only_depends_on": "eval:doc.staff_status"
   },
   {
    "fetch_from": "billing_category.discount_percent",
@@ -147,6 +173,12 @@
    "label": "Discount Percent"
   },
   {
+   "depends_on": "eval:doc.billing_category=='General'",
+   "fieldname": "charity_amount",
+   "fieldtype": "Currency",
+   "label": "Charity Amount"
+  },
+  {
    "default": "INR",
    "fieldname": "default_currency",
    "fieldtype": "Select",
@@ -154,9 +186,16 @@
    "options": "\nINR\nUSD\nAED"
   },
   {
+   "fieldname": "emergency_contact_name",
+   "fieldtype": "Data",
+   "label": "Emergency Contact Name"
+  },
+  {
    "fieldname": "emergency_phone_number",
-   "fieldtype": "Int",
-   "label": "Emergency Phone Number"
+   "fieldtype": "Data",
+   "label": "Emergency Phone Number",
+   "length": 10,
+   "options": "Phone"
   },
   {
    "fieldname": "pin_code",
@@ -188,7 +227,7 @@
   }
  ],
  "max_attachments": 50,
- "modified": "2026-08-24 11:40:19.541339",
+ "modified": "2026-08-25 18:54:48.045698",
  "modified_by": "Administrator",
  "module": "metta",
  "name": "Patient Registration",

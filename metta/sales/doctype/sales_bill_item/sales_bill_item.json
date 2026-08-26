@@ -52,6 +52,7 @@
    "options": "Batch"
   },
   {
+   "default": "1",
    "fieldname": "qty",
    "fieldtype": "Float",
    "in_list_view": 1,
@@ -83,6 +84,7 @@
    "fieldtype": "Currency",
    "in_list_view": 1,
    "label": "Rate (MRP)",
+   "precision": "2",
    "reqd": 1
   },
   {
@@ -90,6 +92,7 @@
    "fieldtype": "Currency",
    "in_list_view": 1,
    "label": "Amount",
+   "precision": "2",
    "read_only": 1
   },
   {
@@ -102,6 +105,7 @@
    "fieldname": "gst_amount",
    "fieldtype": "Currency",
    "label": "GST Amount",
+   "precision": "2",
    "read_only": 1
   }
  ],

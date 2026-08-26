@@ -8,13 +8,22 @@
  "field_order": [
   "patient_visit",
   "patient_name",
+  "place",
   "doctor",
   "column_break_ds",
+  "sex",
+  "age",
+  "ward",
   "admission_date",
   "discharge_date",
   "clinical_section",
+  "care_department",
+  "column_break_care",
   "diagnosis_at_discharge",
+  "associated_diagnosis",
+  "complications",
   "treatment_summary",
+  "lab_investigations",
   "condition_at_discharge",
   "medicines_section",
   "medicines_on_discharge",
@@ -42,6 +51,12 @@
    "read_only": 1
   },
   {
+   "description": "School/institution or place the patient came from, if relevant (e.g. a boarding school) - not tracked anywhere else on file.",
+   "fieldname": "place",
+   "fieldtype": "Data",
+   "label": "Place"
+  },
+  {
    "fetch_from": "patient_visit.doctor_name",
    "fieldname": "doctor",
    "fieldtype": "Link",
@@ -52,6 +67,29 @@
   {
    "fieldname": "column_break_ds",
    "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "patient_visit.sex",
+   "fieldname": "sex",
+   "fieldtype": "Select",
+   "label": "Sex",
+   "options": "\nMale\nFemale\nOthers",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "patient_visit.age",
+   "fieldname": "age",
+   "fieldtype": "Data",
+   "label": "Age",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "patient_visit.ward",
+   "fieldname": "ward",
+   "fieldtype": "Link",
+   "label": "Ward",
+   "options": "Ward Master",
+   "read_only": 1
   },
   {
    "fetch_from": "patient_visit.admission_date",
@@ -73,23 +111,49 @@
    "label": "Clinical Summary"
   },
   {
+   "fieldname": "care_department",
+   "fieldtype": "Select",
+   "label": "Care",
+   "options": "\nMedicine\nSurgery\nPaediatrics\nObstetrics\nGynaecology\nEye\nOrtho",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_care",
+   "fieldtype": "Column Break"
+  },
+  {
    "fieldname": "diagnosis_at_discharge",
    "fieldtype": "Small Text",
-   "label": "Diagnosis at Discharge",
+   "label": "Diagnosis",
    "reqd": 1
+  },
+  {
+   "fieldname": "associated_diagnosis",
+   "fieldtype": "Small Text",
+   "label": "Associated Diagnosis"
+  },
+  {
+   "fieldname": "complications",
+   "fieldtype": "Small Text",
+   "label": "Complications"
   },
   {
    "fieldname": "treatment_summary",
    "fieldtype": "Small Text",
-   "label": "Treatment Summary"
+   "label": "Operation/Procedure Performed"
+  },
+  {
+   "fieldname": "lab_investigations",
+   "fieldtype": "Small Text",
+   "label": "Significant Findings / Lab Investigations"
   },
   {
    "fieldname": "condition_at_discharge",
    "fieldtype": "Select",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Condition at Discharge",
-   "options": "Recovered\nImproved\nSame\nReferred\nDeceased",
+   "label": "Discharge Status",
+   "options": "\nImproved\nWorse\nLAMA\nUnchanged\nDied\nTransfer\nAbsconded\nReferred",
    "reqd": 1
   },
   {

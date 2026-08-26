@@ -3,29 +3,61 @@
 
 frappe.ui.form.on("Billing", {
 	setup(frm) {
-		// Picking Bill Type first narrows this to just the relevant items -
-		// Pharmacy shows medicines/consumables, Service shows only services -
-		// so Billing isn't hunting through the whole Item master to find what
-		// they actually need. Left blank (or "Mixed", for a bill auto-created
-		// from a consultation with both), it falls back to showing everything -
-		// never a fixed asset either way, that's never billed to a patient.
-		frm.set_query("item", "items", () => {
-			const by_bill_type = {
-				Pharmacy: ["Medicine", "Consumable"],
-				Service: ["Service"],
-			};
-			return {
-				filters: { item_type: ["in", by_bill_type[frm.doc.bill_type] || ["Medicine", "Consumable", "Service"]] },
-			};
-		});
-		// Central Store only ever receives from suppliers and distributes to
-		// sub-stores - it never dispenses directly to a patient, so it has no
-		// business being billed from here.
-		frm.set_query("warehouse", () => ({
-			filters: { warehouse_type: ["!=", "Central Store"] },
+		// Pharmacy Items and Service Items are two separate tables now - each
+		// one's own picker only ever offers the item types that actually
+		// belong there, so staff can't put a medicine in the service table
+		// or a charge in the pharmacy table by mistake.
+		frm.set_query("item", "pharmacy_items", () => ({
+			filters: { item_type: ["in", ["Medicine", "Consumable"]] },
 		}));
+		frm.set_query("item", "service_items", () => ({
+			filters: { item_type: "Service" },
+		}));
+		// Custom queries so the dropdown shows the patient's name as a small
+		// line under each ID - needed since Patient Visit's title (patient
+		// name) would otherwise be the only thing shown while searching,
+		// making same-named patients indistinguishable.
+		frm.set_query("op_id", () => ({ query: "metta.sales.doctype.billing.billing.op_id_query" }));
+		frm.set_query("ip_id", () => ({ query: "metta.sales.doctype.billing.billing.ip_id_query" }));
+		// Once something's picked though, Patient Visit's doctype-wide "show
+		// title instead of ID" setting would replace the input's own display
+		// with the patient's name - overridden just for these two fields, to
+		// keep is_title_link() itself (and so the dropdown's ID line above)
+		// untouched, and only skip the title lookup for what ends up shown.
+		frm.fields_dict.op_id.set_link_title = function (value) {
+			this.translate_and_set_input_value(value, value);
+		};
+		frm.fields_dict.ip_id.set_link_title = function (value) {
+			this.translate_and_set_input_value(value, value);
+		};
+		// A submitted/read-only doc renders this same field through a
+		// completely different path (set_disp_area, not set_link_title) -
+		// forcing options.label keeps the click-through link but shows the
+		// ID as its text instead of the title formatter's usual pick.
+		const show_id_not_title = function (value) {
+			value = this.value || value;
+			const doc = this.doc || (this.frm && this.frm.doc);
+			const display_value = frappe.format(value, this.df, { no_icon: true, inline: true, label: value }, doc);
+			if (this.disp_area) $(this.disp_area).html(display_value);
+		};
+		frm.fields_dict.op_id.set_disp_area = show_id_not_title;
+		frm.fields_dict.ip_id.set_disp_area = show_id_not_title;
 	},
 	refresh(frm) {
+		// An existing bill saved before OP ID / IP ID existed only has
+		// `patient` on it - infer which box that belongs in so it doesn't
+		// show up blank on reopening.
+		if (frm.doc.patient && !frm.doc.op_id && !frm.doc.ip_id) {
+			if (frm.doc.registration_category === "IP") {
+				frm.set_value("ip_id", frm.doc.patient);
+				frappe.db.get_value("Patient Visit", frm.doc.patient, "converted_from_registration", (r) => {
+					if (r && r.converted_from_registration) frm.set_value("op_id", r.converted_from_registration);
+				});
+			} else {
+				frm.set_value("op_id", frm.doc.patient);
+			}
+		}
+
 		// billing_category can already be set when the form first loads (an
 		// existing bill, or one prefilled by the Pharmacy Dashboard's Dispense
 		// action) without the field's own change handler ever having fired to
@@ -60,6 +92,81 @@ frappe.ui.form.on("Billing", {
 		} else {
 			add_advance_button(frm);
 		}
+
+		// Only IP admissions have a running stay of Billing entries worth
+		// consolidating into one final bill - an OP visit is always just this
+		// one bill on its own. Even then, the button only appears once the
+		// doctor has actually completed the Discharge Summary - the clinical
+		// sign-off has to come first, Billing can't hand over a "discharge"
+		// bill before that's on record.
+		if (!frm.is_new() && frm.doc.registration_category === "IP") {
+			frappe.call({
+				method: "metta.sales.doctype.billing.billing.has_discharge_summary",
+				args: { patient_visit: frm.doc.patient },
+				callback(r) {
+					if (r.message) add_discharge_bill_button(frm);
+				},
+			});
+		}
+
+		// Quick-add widgets - only meaningful while the bill is still a draft
+		// (their own depends_on already hides them once submitted; this just
+		// skips wiring up event handlers on a widget nobody can see).
+		if (frm.doc.docstatus === 0) {
+			render_item_search(frm, {
+				field: "pharmacy_item_search_area",
+				table: "pharmacy_items",
+				css_prefix: "billing-pharmacy",
+				qty_label: __("Qty"),
+				show_avail_qty: true,
+			});
+			render_item_search(frm, {
+				field: "service_item_search_area",
+				table: "service_items",
+				css_prefix: "billing-service",
+				qty_label: __("Qty"),
+				show_avail_qty: false,
+			});
+		}
+	},
+	// Typing the OP ID auto-fills the IP ID the moment that OP visit has
+	// actually been admitted - staff don't need to already know the IP
+	// number to look it up. `patient` (hidden) is what actually drives
+	// everything else, and is set here to whichever one currently applies -
+	// the IP admission once it exists, otherwise the OP visit itself.
+	op_id(frm) {
+		if (!frm.doc.op_id) {
+			if (!frm.doc.ip_id) frm.set_value("patient", "");
+			return;
+		}
+		frappe.call({
+			method: "metta.sales.doctype.billing.billing.get_ip_id_for_op",
+			args: { op_id: frm.doc.op_id },
+			callback(r) {
+				if (r.message) {
+					frm.set_value("ip_id", r.message);
+					frm.set_value("patient", r.message);
+				} else {
+					frm.set_value("patient", frm.doc.op_id);
+				}
+			},
+		});
+	},
+	// The common case for IP billing - typing the IP number directly still
+	// surfaces the OP visit it came from, for reference.
+	ip_id(frm) {
+		if (!frm.doc.ip_id) {
+			frm.set_value("patient", frm.doc.op_id || "");
+			return;
+		}
+		frm.set_value("patient", frm.doc.ip_id);
+		frappe.call({
+			method: "metta.sales.doctype.billing.billing.get_op_id_for_ip",
+			args: { ip_id: frm.doc.ip_id },
+			callback(r) {
+				if (r.message) frm.set_value("op_id", r.message);
+			},
+		});
 	},
 	// Patient Visit doesn't carry the patient's actual name itself -
 	// only a link (uhin_id) to the demographics record that does, so this
@@ -80,6 +187,7 @@ frappe.ui.form.on("Billing", {
 			},
 		});
 		offer_pending_consultations(frm);
+		add_admission_charge_if_due(frm);
 		frappe.call({
 			method: "metta.sales.doctype.patient_advance.patient_advance.get_advance_balance",
 			args: { patient_visit: frm.doc.patient },
@@ -134,12 +242,23 @@ frappe.ui.form.on("Sales Bill Item", {
 		frappe.db.get_value(
 			"Item",
 			row.item,
-			["sale_uom", "standard_selling_rate", "gst_percent", "item_name"],
+			["sale_uom", "standard_selling_rate", "gst_percent", "item_name", "has_batch"],
 			(r) => {
 				frappe.model.set_value(cdt, cdn, "uom", r.sale_uom || "");
 				frappe.model.set_value(cdt, cdn, "rate", flt(r.standard_selling_rate));
 				frappe.model.set_value(cdt, cdn, "gst_percent", flt(r.gst_percent));
 				frappe.model.set_value(cdt, cdn, "item_name", r.item_name || "");
+				if (r.has_batch) {
+					// FEFO (earliest expiry first) - a starting point, not
+					// locked - staff can still pick a different batch here.
+					frappe.call({
+						method: "metta.sales.doctype.billing.billing.get_fefo_batch",
+						args: { item_code: row.item },
+						callback(res) {
+							if (res.message) frappe.model.set_value(cdt, cdn, "batch_no", res.message);
+						},
+					});
+				}
 			}
 		);
 	},
@@ -152,10 +271,16 @@ frappe.ui.form.on("Sales Bill Item", {
 	gst_percent(frm) {
 		calculate_totals(frm);
 	},
-	items_add(frm) {
+	pharmacy_items_add(frm) {
 		calculate_totals(frm);
 	},
-	items_remove(frm) {
+	pharmacy_items_remove(frm) {
+		calculate_totals(frm);
+	},
+	service_items_add(frm) {
+		calculate_totals(frm);
+	},
+	service_items_remove(frm) {
 		calculate_totals(frm);
 	},
 });
@@ -180,17 +305,21 @@ function calculate_totals(frm) {
 	let subtotal = 0;
 	let gst_total = 0;
 
-	(frm.doc.items || []).forEach((row) => {
+	// Rounded to currency precision at every step, same as the server -
+	// otherwise an unrounded float preview here can flash a value that
+	// differs from what actually gets saved at the 15th decimal place.
+	[...(frm.doc.pharmacy_items || []), ...(frm.doc.service_items || [])].forEach((row) => {
 		const amount = flt(row.amount);
 		const taxable_value = amount * (1 - signed_percent / 100);
-		const gst_amount = (taxable_value * flt(row.gst_percent)) / 100;
+		const gst_amount = flt((taxable_value * flt(row.gst_percent)) / 100, 2);
 		frappe.model.set_value(row.doctype, row.name, "gst_amount", gst_amount);
 		subtotal += amount;
 		gst_total += gst_amount;
 	});
+	subtotal = flt(subtotal, 2);
 
-	const discount_amount = (subtotal * signed_percent) / 100;
-	const net_amount = subtotal - discount_amount + gst_total;
+	const discount_amount = flt((subtotal * signed_percent) / 100, 2);
+	const net_amount = flt(subtotal - discount_amount + gst_total, 2);
 	frm.set_value("subtotal", subtotal);
 	frm.set_value("discount_amount", discount_amount);
 	frm.set_value("gst_amount", gst_total);
@@ -215,12 +344,85 @@ function calculate_totals(frm) {
 	}
 }
 
+function add_discharge_bill_button(frm) {
+	// A real, saved, printable Discharge Bill document now - not just a
+	// preview dialog - so there's an actual permanent record of exactly
+	// what was billed and handed to the patient at discharge. Opens the
+	// existing one for this admission if it's already been made, otherwise
+	// starts a new one pre-filled with this same IP ID.
+	frm.add_custom_button(__("Discharge Bill"), () => {
+		frappe.db.get_value(
+			"Discharge Bill",
+			{ ip_id: frm.doc.patient, docstatus: ["!=", 2] },
+			"name",
+			(r) => {
+				if (r && r.name) {
+					frappe.set_route("Form", "Discharge Bill", r.name);
+				} else {
+					frappe.new_doc("Discharge Bill", { ip_id: frm.doc.patient });
+				}
+			}
+		);
+	});
+}
+
 function add_advance_button(frm) {
-	const balance = frm._advance_balance && flt(frm._advance_balance.balance);
-	if (!balance || balance <= 0) return;
+	// The cached balance is only used to decide whether the button is worth
+	// showing at all - the actual amount applied on click is always
+	// re-fetched fresh, since another bill for this same patient could have
+	// been submitted (in another tab, or by someone else) since this form
+	// was first opened, making the cached figure stale and too high. Applying
+	// a stale, too-high amount would silently show "Amount Due: 0" here and
+	// then get rejected by the server's own balance check on Save.
+	const cached_balance = frm._advance_balance && flt(frm._advance_balance.balance);
+	if (!cached_balance || cached_balance <= 0) return;
 	frm.add_custom_button(__("Apply Advance"), () => {
-		const amount = Math.min(balance, flt(frm.doc.net_amount));
-		frm.set_value("advance_adjusted", amount);
+		frappe.call({
+			method: "metta.sales.doctype.patient_advance.patient_advance.get_advance_balance",
+			args: { patient_visit: frm.doc.patient },
+			callback(r) {
+				frm._advance_balance = r.message || null;
+				const balance = frm._advance_balance ? flt(frm._advance_balance.balance) : 0;
+				const amount = Math.min(balance, flt(frm.doc.net_amount));
+				frm.set_value("advance_adjusted", amount);
+			},
+		});
+	});
+}
+
+function ensure_bill_type_includes(frm, kind) {
+	// kind is "Pharmacy" or "Service" - widens Bill Type only as far as
+	// needed to reveal that section (Pharmacy+Service both present -> Mixed),
+	// never narrows a choice that already covers it.
+	const bt = frm.doc.bill_type;
+	if (bt === kind || bt === "Mixed") return;
+	frm.set_value("bill_type", bt ? "Mixed" : kind);
+}
+
+function add_admission_charge_if_due(frm) {
+	// Mirrors the legacy system - converting a patient to IP brings a flat
+	// admission charge onto the bill automatically the moment the IP visit
+	// is entered here. The server checks this same patient's other bills so
+	// it's never added twice for one admission.
+	frappe.call({
+		method: "metta.sales.doctype.billing.billing.get_admission_charge_row",
+		args: { patient: frm.doc.patient },
+		callback(r) {
+			if (!r.message) return;
+			// It's a charge, not a stock item - Service Items, not Pharmacy
+			// Items. Make sure Bill Type actually reveals that section, since
+			// this row is about to land in it regardless of what's picked.
+			ensure_bill_type_includes(frm, "Service");
+			// Reuse an existing blank row in that table if one's already
+			// sitting there empty, rather than adding a second row next to it.
+			const blank_row = (frm.doc.service_items || []).find((row) => !row.item);
+			const row = blank_row || frm.add_child("service_items");
+			Object.keys(r.message).forEach((fieldname) => {
+				frappe.model.set_value(row.doctype, row.name, fieldname, r.message[fieldname]);
+			});
+			frm.refresh_field("service_items");
+			calculate_amount(frm, row.doctype, row.name);
+		},
 	});
 }
 
@@ -270,6 +472,210 @@ function offer_pending_consultations(frm) {
 	});
 }
 
+function render_item_search(frm, opts) {
+	// Same search-and-add pattern as Purchase Order/Stock Indent's item
+	// widget - one instance of this per table (Pharmacy Items, Service
+	// Items), each scoped to only search/add its own item types.
+	const { field, table, css_prefix, qty_label, show_avail_qty } = opts;
+	const wrapper = frm.fields_dict[field].$wrapper;
+	wrapper.html(`
+		<div class="${css_prefix}-item-search-widget" style="border:1px solid var(--border-color, #d1d8dd); border-radius:6px; padding:12px; margin-bottom:10px;">
+			<div style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+				<div style="flex:2; min-width:220px; position:relative;">
+					<label class="control-label" style="display:block; font-size:12px; margin-bottom:2px;">${__(
+						"Item Name"
+					)}</label>
+					<input type="text" class="form-control ${css_prefix}-item-search" placeholder="${__(
+						"Search item..."
+					)}" autocomplete="off">
+					<div class="${css_prefix}-item-results" style="display:none; position:absolute; z-index:50; background:var(--fg-color,#fff); border:1px solid var(--border-color,#d1d8dd); width:100%; max-height:260px; overflow:auto; box-shadow:0 2px 6px rgba(0,0,0,0.15);"></div>
+				</div>
+				<div style="width:100px;">
+					<label class="control-label" style="display:block; font-size:12px; margin-bottom:2px;">${qty_label}</label>
+					<input type="text" inputmode="decimal" class="form-control ${css_prefix}-item-qty" value="1">
+				</div>
+				<div>
+					<button class="btn btn-primary btn-sm ${css_prefix}-item-add">${__("Add")}</button>
+				</div>
+			</div>
+			<div class="${css_prefix}-item-selected text-muted" style="margin-top:6px; font-size:12px;"></div>
+		</div>
+	`);
+
+	let selected = null;
+	let current_rows = [];
+	let highlighted = -1;
+	const $search = wrapper.find(`.${css_prefix}-item-search`);
+	const $results = wrapper.find(`.${css_prefix}-item-results`);
+	const $qty = wrapper.find(`.${css_prefix}-item-qty`);
+	const $selectedNote = wrapper.find(`.${css_prefix}-item-selected`);
+
+	const set_highlight = (idx) => {
+		highlighted = idx;
+		$results
+			.find(`.${css_prefix}-item-row`)
+			.css("background", "")
+			.each(function () {
+				if ($(this).data("idx") === highlighted) {
+					$(this).css("background", "var(--bg-light-gray, #f4f5f6)");
+					this.scrollIntoView({ block: "nearest" });
+				}
+			});
+	};
+
+	const select_row = (idx) => {
+		if (!current_rows[idx]) return;
+		selected = current_rows[idx];
+		$search.val(selected.name);
+		$selectedNote.text(__("Selected: {0} ({1})", [selected.name, selected.item_code]));
+		$results.hide();
+		// Straight into Qty next - picking the item is done with the keyboard
+		// alone (arrow keys + Enter), no mouse/touch needed at any point.
+		$qty.trigger("focus").trigger("select");
+	};
+
+	const render_results = (rows) => {
+		current_rows = rows || [];
+		if (!current_rows.length) {
+			$results.html(`<div class="text-muted" style="padding:8px;">${__("No matches")}</div>`).show();
+			return;
+		}
+		const avail_col = show_avail_qty ? `<th class="text-right">${__("Avail. Qty")}</th>` : "";
+		const header = `
+			<table class="table table-condensed" style="margin-bottom:0;">
+				<thead>
+					<tr>
+						<th>${__("Name")}</th>
+						<th class="text-right">${__("Rate")}</th>
+						${avail_col}
+					</tr>
+				</thead>
+				<tbody>
+					${current_rows
+						.map((r, i) => {
+							const avail_cell = show_avail_qty
+								? `<td class="text-right" style="${r.avail_qty === 0 ? "color:#dc3545;" : ""}">${r.avail_qty}</td>`
+								: "";
+							return `
+						<tr class="${css_prefix}-item-row" data-idx="${i}" style="cursor:pointer;">
+							<td>${frappe.utils.escape_html(r.name)}</td>
+							<td class="text-right">${flt(r.rate).toFixed(2)}</td>
+							${avail_cell}
+						</tr>`;
+						})
+						.join("")}
+				</tbody>
+			</table>`;
+		$results.html(header).show();
+
+		$results.find(`.${css_prefix}-item-row`).on("click", function () {
+			select_row($(this).data("idx"));
+		});
+
+		// First result pre-highlighted - Enter picks it immediately without
+		// needing an ArrowDown first, same as most search-as-you-type boxes.
+		set_highlight(0);
+	};
+
+	const do_search = frappe.utils.debounce(() => {
+		const term = $search.val();
+		if (!term) {
+			$results.hide();
+			return;
+		}
+		frappe.call({
+			method: "metta.sales.doctype.billing.billing.search_items_for_billing",
+			args: { search_term: term, table },
+			callback(r) {
+				render_results(r.message);
+			},
+		});
+	}, 300);
+
+	$search.on("input", () => {
+		selected = null;
+		$selectedNote.text("");
+		do_search();
+	});
+
+	// Full keyboard flow: type to search, Up/Down to move through the
+	// results, Enter to pick the highlighted one (or close on Escape) -
+	// mouse/touch is never required to pick an item.
+	$search.on("keydown", (e) => {
+		if (!$results.is(":visible") || !current_rows.length) return;
+		if (e.key === "ArrowDown") {
+			e.preventDefault();
+			set_highlight(Math.min(highlighted + 1, current_rows.length - 1));
+		} else if (e.key === "ArrowUp") {
+			e.preventDefault();
+			set_highlight(Math.max(highlighted - 1, 0));
+		} else if (e.key === "Enter") {
+			e.preventDefault();
+			select_row(highlighted);
+		} else if (e.key === "Escape") {
+			$results.hide();
+		}
+	});
+
+	const try_add_item = () => {
+		if (!selected) {
+			frappe.msgprint(__("Please search and select an item first."));
+			return;
+		}
+		const qty = flt($qty.val());
+		if (!qty || qty <= 0) {
+			frappe.msgprint(__("Please enter a Qty greater than 0."));
+			return;
+		}
+
+		frappe.call({
+			method: "metta.sales.doctype.billing.billing.get_billing_item_row",
+			args: { item_code: selected.item_code, qty },
+			callback(r) {
+				const data = r.message || {};
+
+				// Frappe auto-adds one blank starter row to the table - remove
+				// it before adding the first real item, so it doesn't linger
+				// as an empty row forever.
+				const existing_rows = frm.doc[table] || [];
+				if (existing_rows.length && existing_rows.every((row) => !row.item)) {
+					frm.clear_table(table);
+				}
+
+				frm.add_child(table, data);
+				frm.refresh_field(table);
+				calculate_totals(frm);
+
+				selected = null;
+				$search.val("");
+				$qty.val("1");
+				$selectedNote.text("");
+				$results.hide();
+				// Back to Item Name, ready for the next one - the whole
+				// add-a-line loop never needs the mouse.
+				$search.trigger("focus");
+			},
+		});
+	};
+
+	wrapper.find(`.${css_prefix}-item-add`).on("click", try_add_item);
+	// Enter in Qty submits the same as clicking Add - the last step of the
+	// keyboard-only flow (search -> arrow keys -> Enter -> type qty -> Enter).
+	$qty.on("keydown", (e) => {
+		if (e.key === "Enter") {
+			e.preventDefault();
+			try_add_item();
+		}
+	});
+
+	// Clicking elsewhere on the form closes the results dropdown.
+	$(document).on(`click.${css_prefix}-item-search`, (e) => {
+		if (!$(e.target).closest(`.${css_prefix}-item-search-widget`).length) {
+			$results.hide();
+		}
+	});
+}
+
 function load_consultation_items(frm, consultation) {
 	frappe.call({
 		method: "metta.sales.doctype.billing.billing.get_billing_items_for_consultation",
@@ -280,17 +686,19 @@ function load_consultation_items(frm, consultation) {
 			frm.set_value("doctor_consultation", consultation);
 			frm.set_value("prescribed_by", data.doctor);
 			frm.set_value("billing_category", data.billing_category);
-			frm.set_value("bill_type", data.bill_type);
-			// A brand-new Billing starts with one blank row the grid adds on
-			// its own - loading the prescribed items should replace that, not
-			// leave it sitting there as an extra row with no Item on it.
-			frm.doc.items = (frm.doc.items || []).filter((row) => row.item);
+			// A brand-new Billing starts with one blank row in each grid the
+			// grid adds on its own - loading the prescribed items should
+			// replace those, not leave them sitting there as extra rows with
+			// no Item on them.
+			frm.doc.pharmacy_items = (frm.doc.pharmacy_items || []).filter((row) => row.item);
+			frm.doc.service_items = (frm.doc.service_items || []).filter((row) => row.item);
 			// A full prefill (item, rate, uom, gst, amount) rather than just
 			// the item code - child-row fetch_from/change-handlers don't fire
 			// for values set this way, so everything Billing needs to see is
-			// filled in directly.
-			data.items.forEach((i) => {
-				const row = frm.add_child("items");
+			// filled in directly. Medicines go to Pharmacy Items, tests go to
+			// Service Items.
+			const fill_row = (table, i) => {
+				const row = frm.add_child(table);
 				row.item = i.item;
 				row.item_name = i.item_name;
 				row.qty = i.qty;
@@ -298,8 +706,13 @@ function load_consultation_items(frm, consultation) {
 				row.rate = i.rate;
 				row.gst_percent = i.gst_percent;
 				row.amount = i.amount;
-			});
-			frm.refresh_field("items");
+			};
+			data.pharmacy_items.forEach((i) => fill_row("pharmacy_items", i));
+			data.service_items.forEach((i) => fill_row("service_items", i));
+			if (data.pharmacy_items.length) ensure_bill_type_includes(frm, "Pharmacy");
+			if (data.service_items.length) ensure_bill_type_includes(frm, "Service");
+			frm.refresh_field("pharmacy_items");
+			frm.refresh_field("service_items");
 			// Only "Load Prescribed Items" itself is meant to go away once used -
 			// but clear_custom_buttons() removes every button, so Apply Advance
 			// (added earlier by the patient(frm) handler) has to be put back

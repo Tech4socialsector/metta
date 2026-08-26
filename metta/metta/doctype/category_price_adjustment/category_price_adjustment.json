@@ -20,11 +20,15 @@
   {
    "fieldname": "discount_percent",
    "fieldtype": "Float",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Discount Percent"
   },
   {
    "fieldname": "discount_status",
    "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Discount Status",
    "options": "\nActive\nInactive"
   }
@@ -32,7 +36,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-12 10:00:00.000000",
+ "modified": "2026-08-25 19:45:45.783720",
  "modified_by": "Administrator",
  "module": "metta",
  "name": "Category Price Adjustment",

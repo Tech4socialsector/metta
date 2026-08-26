@@ -2,15 +2,63 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Patient Visit", {
+	onload(frm) {
+		// Overrides the field's own "Now" default (see ist_time_now_str()'s
+		// own comment for why) - runs once, right when a brand-new entry is
+		// first opened, before Front Desk has had any chance to type into it.
+		if (frm.is_new()) {
+			frm.set_value("time", ist_time_now_str());
+		}
+	},
 	setup(frm) {
 		// The server blocks admitting into an inactive room regardless - this
 		// just keeps it from being offered as an option in the first place.
 		frm.set_query("room", () => ({ filters: { is_active: 1 } }));
+		// Doctor Name is always narrowed down to whichever Department is
+		// currently picked - with no Department set yet, every doctor is
+		// still offered rather than showing an empty list.
+		frm.set_query("doctor_name", () =>
+			frm.doc.department_name ? { filters: { department: frm.doc.department_name } } : {}
+		);
+	},
+	uhin_id(frm) {
+		suggest_registration_type(frm);
+	},
+	registration_category(frm) {
+		// Registration Type / Fee Amount are OP-only - clear immediately so a
+		// value auto-suggested before Category was switched to IP doesn't sit
+		// there hidden. IP's own admission charge is billed separately.
+		if (frm.doc.registration_category === "IP" && frm.doc.registration_type) {
+			frm.set_value("registration_type", "");
+			frm.set_value("fee_amount", 0);
+		}
+	},
+	time(frm) {
+		suggest_registration_type(frm);
 	},
 	phone(frm) {
 		if (!frm.doc.phone) return;
 		const digits = frm.doc.phone.replace(/\D/g, "").slice(0, 10);
 		if (digits !== frm.doc.phone) frm.set_value("phone", digits);
+	},
+	department_name(frm) {
+		// If Doctor Name was already set to someone outside the newly picked
+		// Department, it no longer applies - cleared rather than left
+		// silently mismatched with the Department shown right above it.
+		if (frm.doc.doctor_name) frm.set_value("doctor_name", "");
+		if (!frm.doc.department_name) return;
+		frappe.call({
+			method: "metta.metta.doctype.patient_visit.patient_visit.get_doctors_by_department",
+			args: { department: frm.doc.department_name },
+			callback(r) {
+				const doctors = r.message || [];
+				if (doctors.length === 1) {
+					// Only one doctor covers this Department - safe to fill in
+					// directly, same as Patient Registration's Pin Code -> Village.
+					frm.set_value("doctor_name", doctors[0]);
+				}
+			},
+		});
 	},
 	refresh(frm) {
 		if (frm.is_new()) {
@@ -34,6 +82,13 @@ frappe.ui.form.on("Patient Visit", {
 			frm.set_df_property("registration_category", "read_only", 1);
 		}
 
+		// Deciding to discharge a patient is a clinical call - only a Doctor
+		// (or an admin correcting a mistake) can actually change this, mirrors
+		// the same check enforced server-side in validate().
+		const can_change_admission_status =
+			frappe.user_roles.includes("Doctor") || frappe.user_roles.includes("System Manager");
+		frm.set_df_property("admission_status", "read_only", can_change_admission_status ? 0 : 1);
+
 		// Only meaningful once the registration is saved (frm.doc.name is a
 		// real document to render a receipt for).
 		if (!frm.is_new()) {
@@ -51,6 +106,7 @@ frappe.ui.form.on("Patient Visit", {
 							frappe.new_doc("Patient Visit", {
 								registration_category: "IP",
 								uhin_id: r.message.uhin_id,
+								department_name: r.message.department_name,
 								doctor_name: r.message.doctor_name,
 								converted_from_registration: r.message.converted_from_registration,
 								billing_category: r.message.billing_category,
@@ -298,10 +354,20 @@ frappe.ui.form.on("Patient Visit", {
 	discount_percent(frm) {
 		calculate_billing_totals(frm);
 	},
+	charity_amount(frm) {
+		calculate_billing_totals(frm);
+	},
 	payment_mode(frm) {
 		calculate_billing_totals(frm);
 	},
 	billing_category(frm) {
+		// Charity Amount only ever applies to a General patient - Staff/Staff
+		// Dependent already gets its charity automatically, so any leftover
+		// hand-typed amount from before switching away from General is
+		// cleared rather than silently carried over.
+		if (frm.doc.billing_category !== "General" && frm.doc.charity_amount) {
+			frm.set_value("charity_amount", 0);
+		}
 		if (!frm.doc.billing_category) {
 			frm._category_adjustment = null;
 			frm.set_value("discount_percent", 0);
@@ -322,6 +388,73 @@ frappe.ui.form.on("Patient Visit", {
 		});
 	},
 });
+
+// Regular OPD hours end at 5:30 PM - anyone arriving after that is, by the
+// hospital's own convention, an Emergency case regardless of whether it's
+// their first visit or a return one.
+const AFTER_HOURS_CUTOFF_MINUTES = 17 * 60 + 30;
+
+// Time is a plain Data field (not Frappe's built-in Time fieldtype) so it can
+// show 12-hour Indian clock time (e.g. "09:25:11 PM") - the Time fieldtype's
+// own picker widget only supports 24-hour format, with no AM/PM option.
+function parse_12h_time(time_str) {
+	const match = /^(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM)$/i.exec((time_str || "").trim());
+	if (!match) return null;
+	let hours = Number(match[1]) % 12;
+	if (match[4].toUpperCase() === "PM") hours += 12;
+	return { hours, minutes: Number(match[2]), seconds: Number(match[3]) };
+}
+
+function is_after_hours(time_str) {
+	const parsed = parse_12h_time(time_str);
+	if (!parsed) return false;
+	return parsed.hours * 60 + parsed.minutes >= AFTER_HOURS_CUTOFF_MINUTES;
+}
+
+function ist_time_now_str() {
+	// Explicit Asia/Kolkata, independent of the framework's own "Now"
+	// default - that one actually prefers whatever timezone happens to be
+	// set on the logged-in User's own profile over the site's, so a single
+	// misconfigured account would otherwise silently throw off the 5:30 PM
+	// cutoff. This hospital only ever operates on Indian time, so the Time
+	// field's default is pinned to it directly, with no such dependency.
+	const parts = new Intl.DateTimeFormat("en-US", {
+		timeZone: "Asia/Kolkata",
+		hour: "2-digit",
+		minute: "2-digit",
+		second: "2-digit",
+		hour12: true,
+	}).formatToParts(new Date());
+	const get = (type) => parts.find((p) => p.type === type).value;
+	const hour12 = get("hour").padStart(2, "0");
+	return `${hour12}:${get("minute")}:${get("second")} ${get("dayPeriod").toUpperCase()}`;
+}
+
+function suggest_registration_type(frm) {
+	// Only meaningful for a brand-new OP visit - Registration Type isn't even
+	// shown for IP, and an already-saved visit's fee category shouldn't
+	// silently change just because someone reopens the record.
+	if (!frm.doc.uhin_id || !frm.is_new() || frm.doc.registration_category === "IP") return;
+	// Once Emergency applies - because it's past 5:30 PM, or Front Desk
+	// picked it by hand - it's kept even if this runs again later with an
+	// earlier time typed in; a manual Emergency call is never silently
+	// downgraded back to General.
+	const already_emergency = (frm.doc.registration_type || "").startsWith("Emergency");
+	const is_emergency = already_emergency || is_after_hours(frm.doc.time);
+	frappe.call({
+		method: "metta.metta.doctype.patient_visit.patient_visit.has_prior_visit_of_type",
+		args: { uhin_id: frm.doc.uhin_id, emergency: is_emergency ? 1 : 0 },
+		callback(r) {
+			// New Reg vs Revisit is tracked separately per General/Emergency -
+			// a patient who's only ever come in during regular hours is still
+			// a first-time Emergency visit (New Reg) the first time they show
+			// up after 5:30 PM, not a Revisit.
+			const prefix = is_emergency ? "Emergency" : "General";
+			const suffix = r.message ? "Revisit" : "New Reg";
+			frm.set_value("registration_type", `${prefix} ${suffix}`);
+		},
+	});
+}
 
 function bed_tile_html(bed) {
 	// Each tile shows a bed icon (not just a plain colored box) - no icon
@@ -490,7 +623,11 @@ function calculate_billing_totals(frm) {
 	const raw_percent = ["Discount", "Increase"].includes(adjustment_type) ? flt(frm.doc.discount_percent) : 0;
 	const signed_percent = adjustment_type === "Increase" ? -raw_percent : raw_percent;
 
-	const discount_amount = (flt(frm.doc.fee_amount) * signed_percent) / 100;
+	// A hand-typed Charity Amount wins over the percentage-based discount -
+	// never both at once - capped at the fee itself so it can't go negative.
+	const discount_amount = flt(frm.doc.charity_amount) > 0
+		? Math.min(flt(frm.doc.charity_amount), flt(frm.doc.fee_amount))
+		: (flt(frm.doc.fee_amount) * signed_percent) / 100;
 	const net_amount = flt(frm.doc.fee_amount) - discount_amount;
 	frm.set_value("discount_amount", discount_amount);
 	frm.set_value("net_amount", net_amount);

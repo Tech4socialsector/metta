@@ -9,7 +9,7 @@ app_license = "mit"
 # --------
 
 fixtures = [
-	{"doctype": "Print Format", "filters": [["name", "=", "Patient Registration Receipt"]]},
+	{"doctype": "Print Format", "filters": [["name", "in", ["Patient Registration Receipt", "Discharge Bill"]]]},
 	{
 		"doctype": "Number Card",
 		"filters": [
@@ -201,6 +201,10 @@ role_home_page = {
 # before_install = "metta.install.before_install"
 # after_install = "metta.install.after_install"
 
+after_migrate = [
+	"metta.metta.doctype.patient_registration.patient_registration.ensure_default_billing_categories",
+]
+
 # Uninstallation
 # ------------
 
@@ -257,6 +261,7 @@ has_permission = {
 	"Diagnostic Test": "metta.metta.doctype.diagnostic_test.diagnostic_test.has_permission",
 	"Discharge Summary": "metta.metta.doctype.discharge_summary.discharge_summary.has_permission",
 	"Doctor Leave": "metta.metta.doctype.doctor_leave.doctor_leave.has_permission",
+	"Doctor Master": "metta.metta.doctype.doctor_master.doctor_master.has_permission",
 }
 
 # Document Events
@@ -277,6 +282,7 @@ has_permission = {
 scheduler_events = {
 	"daily": [
 		"metta.stock.tasks.send_expiry_alerts",
+		"metta.metta.doctype.patient_registration.patient_registration.age_out_staff_dependents",
 	],
 }
 

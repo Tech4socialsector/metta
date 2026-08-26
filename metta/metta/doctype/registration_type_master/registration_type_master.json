@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_rename": 1,
  "autoname": "prompt",
  "creation": "2026-07-15 18:32:07.565845",
  "doctype": "DocType",
@@ -17,7 +18,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-15 18:32:07.565845",
+ "modified": "2026-08-25 20:25:35.200095",
  "modified_by": "Administrator",
  "module": "metta",
  "name": "Registration type Master",

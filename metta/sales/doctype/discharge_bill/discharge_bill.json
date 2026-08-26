@@ -1,0 +1,215 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "DB-.YYYY.-.#####",
+ "creation": "2026-08-26 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "op_id",
+  "ip_id",
+  "patient_name",
+  "column_break_main",
+  "doctor",
+  "ward",
+  "admission_date",
+  "discharge_date",
+  "items_section",
+  "bill_items",
+  "totals_section",
+  "total_billed",
+  "advance_paid",
+  "column_break_totals",
+  "advance_adjusted",
+  "amount_collected",
+  "balance_due",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "op_id",
+   "fieldtype": "Link",
+   "label": "OP ID",
+   "options": "Patient Visit"
+  },
+  {
+   "description": "Auto-filled once the OP ID above has been admitted to IP - or type it directly if this is for an admission with no OP visit at all.",
+   "fieldname": "ip_id",
+   "fieldtype": "Link",
+   "label": "IP ID",
+   "options": "Patient Visit",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "ip_id.patient_name",
+   "fieldname": "patient_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Patient Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "ip_id.doctor_name",
+   "fieldname": "doctor",
+   "fieldtype": "Link",
+   "label": "Doctor",
+   "options": "Doctor Master",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "ip_id.ward",
+   "fieldname": "ward",
+   "fieldtype": "Link",
+   "label": "Ward",
+   "options": "Ward Master",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "ip_id.admission_date",
+   "fieldname": "admission_date",
+   "fieldtype": "Date",
+   "label": "Admission Date",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "ip_id.discharge_date",
+   "fieldname": "discharge_date",
+   "fieldtype": "Date",
+   "label": "Discharge Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "items_section",
+   "fieldtype": "Section Break",
+   "label": "Items (All Bills For This Admission)"
+  },
+  {
+   "description": "Rebuilt fresh every time this is saved, from every non-cancelled Billing raised for this admission - never hand-entered.",
+   "fieldname": "bill_items",
+   "fieldtype": "Table",
+   "label": "Bill Items",
+   "options": "Discharge Bill Item",
+   "read_only": 1
+  },
+  {
+   "fieldname": "totals_section",
+   "fieldtype": "Section Break",
+   "label": "Total"
+  },
+  {
+   "fieldname": "total_billed",
+   "fieldtype": "Currency",
+   "label": "Total Billed",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "advance_paid",
+   "fieldtype": "Currency",
+   "label": "Advance Paid",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_totals",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "advance_adjusted",
+   "fieldtype": "Currency",
+   "label": "Advance Adjusted",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amount_collected",
+   "fieldtype": "Currency",
+   "label": "Amount Collected",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "balance_due",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Balance Due",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Discharge Bill",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-08-26 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Sales",
+ "name": "Discharge Bill",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Billing Staff",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Doctor",
+   "share": 1
+  },
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Front Desk",
+   "share": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "patient_name"
+}
