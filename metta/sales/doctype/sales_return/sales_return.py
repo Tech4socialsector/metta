@@ -37,7 +37,35 @@ class SalesReturn(Document):
 			total += row.amount
 		self.total_value = total
 
+	def before_update_after_submit(self):
+		# Only a post-submit save can possibly be reverting an already-received
+		# return (nothing's been restocked yet before first submit) - checked
+		# here specifically because validate() is never called on this save
+		# path, only before_update_after_submit is.
+		if not self.has_value_changed("is_received"):
+			return
+		previous = frappe.db.get_value("Sales Return", self.name, "is_received")
+		if previous and not self.is_received:
+			frappe.throw(
+				_("\"Item Physically Received\" cannot be unchecked once it has been marked received."),
+				title=_("Not Allowed"),
+			)
+
 	def on_submit(self):
+		if self.is_received:
+			self.restock_items()
+		self.db_set("status", "Submitted", update_modified=False)
+
+	def on_update_after_submit(self):
+		# Covers the case where this was submitted while NOT yet received
+		# (logged over the phone, say) and someone now confirms the item has
+		# actually been handed back at the counter - stock only goes back in
+		# at that point, not when it was first logged.
+		if not self.has_value_changed("is_received") or not self.is_received:
+			return
+		self.restock_items()
+
+	def restock_items(self):
 		for row in self.items:
 			# Disposal-only reasons deliberately create no ledger entry - the
 			# quantity was already deducted from stock when originally
@@ -53,7 +81,6 @@ class SalesReturn(Document):
 				voucher_no=self.name,
 				qty_change=flt(row.qty_returned),
 			)
-		self.db_set("status", "Submitted", update_modified=False)
 
 	def on_cancel(self):
 		reverse_stock_ledger_entries("Sales Return", self.name)

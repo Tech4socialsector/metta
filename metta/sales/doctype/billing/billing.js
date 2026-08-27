@@ -94,10 +94,12 @@ frappe.ui.form.on("Billing", {
 				callback(r) {
 					frm._advance_balance = r.message || null;
 					add_advance_button(frm);
+					set_advance_balance_fields(frm);
 				},
 			});
 		} else {
 			add_advance_button(frm);
+			set_advance_balance_fields(frm);
 		}
 
 		// Only IP admissions have a running stay of Billing entries worth
@@ -183,6 +185,7 @@ frappe.ui.form.on("Billing", {
 		frm._advance_balance = null;
 		if (!frm.doc.patient) {
 			frm.set_value("customer_name", "");
+			set_advance_balance_fields(frm);
 			calculate_totals(frm);
 			return;
 		}
@@ -201,6 +204,7 @@ frappe.ui.form.on("Billing", {
 			callback(r) {
 				frm._advance_balance = r.message || null;
 				add_advance_button(frm);
+				set_advance_balance_fields(frm);
 				calculate_totals(frm);
 			},
 		});
@@ -488,12 +492,20 @@ function add_advance_button(frm) {
 			args: { patient_visit: frm.doc.patient },
 			callback(r) {
 				frm._advance_balance = r.message || null;
+				set_advance_balance_fields(frm);
 				const balance = frm._advance_balance ? flt(frm._advance_balance.balance) : 0;
 				const amount = Math.min(balance, flt(frm.doc.net_amount));
 				frm.set_value("advance_adjusted", amount);
 			},
 		});
 	});
+}
+
+function set_advance_balance_fields(frm) {
+	const balance = frm._advance_balance;
+	frm.set_value("advance_collected", balance ? flt(balance.total_collected) : 0);
+	frm.set_value("advance_used", balance ? flt(balance.total_adjusted) : 0);
+	frm.set_value("advance_available", balance ? flt(balance.balance) : 0);
 }
 
 function ensure_bill_type_includes(frm, kind) {

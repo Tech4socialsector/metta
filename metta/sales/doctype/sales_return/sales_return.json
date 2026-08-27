@@ -15,6 +15,7 @@
   "items",
   "total_value",
   "payment_mode",
+  "is_received",
   "status",
   "amended_from"
  ],
@@ -82,6 +83,14 @@
    "label": "Payment Mode",
    "options": "\nCash\nCredit",
    "reqd": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "1",
+   "fieldname": "is_received",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Item Physically Received"
   },
   {
    "fieldname": "status",

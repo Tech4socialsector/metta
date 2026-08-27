@@ -22,6 +22,7 @@
   "has_expiry",
   "shelf_life_months",
   "standard_purchase_rate",
+  "purchase_price_history",
   "rack_location",
   "uom_conversions",
   "reorder_levels",
@@ -142,6 +143,13 @@
    "fieldtype": "Currency",
    "hidden": 1,
    "label": "Standard Purchase Rate"
+  },
+  {
+   "fieldname": "purchase_price_history",
+   "fieldtype": "Table",
+   "label": "Purchase Price History",
+   "options": "Item Purchase Price History",
+   "read_only": 1
   },
   {
    "fieldname": "rack_location",

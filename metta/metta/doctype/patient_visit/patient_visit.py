@@ -27,6 +27,7 @@ class PatientVisit(Document):
 		self.validate_bed_availability()
 		self.validate_room_availability()
 		self.validate_discharge()
+		self.validate_mlc_case()
 		self.log_bed_transfer()
 		# Front-desk process requires checking Patient Registration first: link the
 		# existing record, or create one there if the patient is genuinely new.
@@ -163,6 +164,16 @@ class PatientVisit(Document):
 			_("Only a Doctor can change Admission Status."),
 			title=_("Not Authorised"),
 		)
+
+	def validate_mlc_case(self):
+		# MLC No is the hospital's legal record of having logged this as a
+		# medico-legal case at all - an MLC ticked without one is effectively
+		# an untracked MLC, which defeats the point of the flag.
+		if self.is_mlc_case and not self.mlc_no:
+			frappe.throw(
+				_("MLC No is required when this is marked as an MLC (Medico-Legal Case)."),
+				title=_("MLC No Required"),
+			)
 
 	def log_bed_transfer(self):
 		# Runs during validate() - the DB still holds the pre-save location at

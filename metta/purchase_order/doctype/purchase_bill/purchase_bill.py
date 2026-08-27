@@ -6,6 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import add_days, flt, now_datetime
 
+from metta.master.doctype.item.item import record_purchase_price_history
 from metta.stock.doctype.stock_ledger_entry.stock_ledger_entry import (
 	create_stock_ledger_entry,
 	reverse_stock_ledger_entries,
@@ -181,6 +182,17 @@ class PurchaseBill(Document):
 			if row.purchase_rate:
 				frappe.db.set_value(
 					"Item", row.item, "standard_purchase_rate", row.purchase_rate, update_modified=False
+				)
+				# One permanent history row per approved bill - unlike the
+				# single reference field above, this is never overwritten, so
+				# staff can see how this item's price has moved bill to bill.
+				record_purchase_price_history(
+					item_code=row.item,
+					rate=row.purchase_rate,
+					qty=row.qty,
+					date=self.supplier_invoice_date,
+					supplier=self.supplier,
+					purchase_bill=self.name,
 				)
 
 	@frappe.whitelist()

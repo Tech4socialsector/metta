@@ -28,7 +28,8 @@ def get_columns():
 		{"label": "User Name", "fieldname": "user_name", "fieldtype": "Data", "width": 160},
 		{"label": "Gross Amt", "fieldname": "gross_amt", "fieldtype": "Currency", "width": 110},
 		{"label": "Charity", "fieldname": "charity", "fieldtype": "Currency", "width": 100},
-		{"label": "Epay", "fieldname": "epay", "fieldtype": "Currency", "width": 100},
+		{"label": "Card", "fieldname": "card", "fieldtype": "Currency", "width": 100},
+		{"label": "Gpay", "fieldname": "gpay", "fieldtype": "Currency", "width": 100},
 		{"label": "Credit Bills", "fieldname": "credit_bills", "fieldtype": "Currency", "width": 110},
 		{"label": "Sales Ret", "fieldname": "sales_ret", "fieldtype": "Currency", "width": 100},
 		{"label": "Patient Debit", "fieldname": "patient_debit", "fieldtype": "Currency", "width": 110},
@@ -52,7 +53,8 @@ def get_data(filters):
 			-- collected that way; summing net_amount here would double-count
 			-- that same money under both Adv/IP and Cash/Epay/Credit Bills.
 			SUM(CASE WHEN payment_mode = 'Cash' THEN amount_collected ELSE 0 END) AS cash_amt,
-			SUM(CASE WHEN payment_mode IN ('UPI', 'Card') THEN amount_collected ELSE 0 END) AS epay,
+			SUM(CASE WHEN payment_mode = 'Card' THEN amount_collected ELSE 0 END) AS card,
+			SUM(CASE WHEN payment_mode = 'UPI' THEN amount_collected ELSE 0 END) AS gpay,
 			SUM(CASE WHEN payment_mode = 'Credit - Corporate' THEN amount_collected ELSE 0 END) AS credit_bills,
 			SUM(advance_adjusted) AS adv_ip
 		FROM `tabBilling`
@@ -96,7 +98,8 @@ def get_data(filters):
 	amount_fields = (
 		"gross_amt",
 		"charity",
-		"epay",
+		"card",
+		"gpay",
 		"credit_bills",
 		"sales_ret",
 		*UNTRACKED_COLUMNS,

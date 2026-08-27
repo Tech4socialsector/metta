@@ -5,6 +5,7 @@ import frappe
 from frappe import _
 from frappe.utils import flt
 
+from metta.metta.doctype.patient_registration.patient_registration import GENERAL_CATEGORY
 from metta.sales.report.collection_report.collection_report import execute as get_collection_report_data
 
 
@@ -17,13 +18,13 @@ def get_data(from_date, to_date):
 	return {
 		"user_wise_details": user_wise_details,
 		"advances": get_advances(from_date, to_date),
+		"user_wise_charity": get_user_wise_charity(from_date, to_date),
 		"item_type_collection": get_item_type_collection(from_date, to_date),
 		"sales_return_cash": get_sales_return_by_mode(from_date, to_date, "Cash"),
 		"sales_return_credit": get_sales_return_by_mode(from_date, to_date, "Credit"),
 		"charity": get_charity(from_date, to_date),
 		"ip_adjusted": get_ip_adjusted(from_date, to_date),
 		"credit_bills": get_credit_bills(from_date, to_date),
-		"epayment": get_epayment(from_date, to_date),
 		"tax_bills": get_tax_details(from_date, to_date),
 		"tax_returns": get_tax_details_returns(from_date, to_date),
 	}
@@ -72,7 +73,7 @@ def get_sales_return_by_mode(from_date, to_date, payment_mode):
 		INNER JOIN `tabSales Return` sr ON sr.name = sri.parent
 		INNER JOIN `tabItem` i ON i.name = sri.item
 		LEFT JOIN `tabPatient Visit` pv ON pv.name = sr.patient
-		WHERE sr.docstatus = 1 AND sr.payment_mode = %(payment_mode)s
+		WHERE sr.docstatus = 1 AND sr.payment_mode = %(payment_mode)s AND sr.is_received = 1
 			AND sr.return_date_time BETWEEN %(from_date)s AND %(to_date)s
 		""",
 		{
@@ -108,8 +109,41 @@ def get_charity(from_date, to_date):
 		as_dict=True,
 	)
 
+	# General charity isn't a category-wide discount_percent (General sits at
+	# 0%, by design - the hospital doesn't discount everyone) - it's a manual,
+	# patient-specific amount Front Desk types in at registration/admission
+	# for someone who genuinely can't pay at all. That lives on Patient
+	# Visit's own charity_amount -> discount_amount, not on Billing at all,
+	# so it has to be pulled in from there as a second source.
+	general_rows = frappe.db.sql(
+		"""
+		SELECT patient_name, uid, payment_mode, registration_category, discount_amount AS amount
+		FROM `tabPatient Visit`
+		WHERE billing_category = %(general)s AND discount_amount > 0
+			AND date BETWEEN %(from_date)s AND %(to_date)s
+		""",
+		{"general": GENERAL_CATEGORY, "from_date": from_date, "to_date": to_date},
+		as_dict=True,
+	)
+	rows += [
+		frappe._dict(
+			{
+				"category": GENERAL_CATEGORY,
+				"patient_name": r.patient_name,
+				"uid": r.uid,
+				"payment_mode": r.payment_mode,
+				"registration_category": r.registration_category,
+				"amount": r.amount,
+			}
+		)
+		for r in general_rows
+	]
+
 	summary = _op_ip_rows(
-		[{"label": r.category or _("Not Set"), "registration_category": r.registration_category, "amount": r.amount} for r in rows],
+		[
+			{"label": _charity_display_label(r.category), "registration_category": r.registration_category, "amount": r.amount}
+			for r in rows
+		],
 		"label",
 	)
 
@@ -122,10 +156,17 @@ def get_charity(from_date, to_date):
 			order.append(category)
 		# "(B) ANITA RAWAT (43583) - CASH" in the reference report - the
 		# Billing this discount actually happened on, its patient, and how
-		# they paid.
+		# they paid. UID/Payment Mode can genuinely be blank on an older
+		# record - each part is only added when it actually has a value, so
+		# a blank one never leaves an empty "()" or a dangling "- " behind.
+		label = f"(B) {r.patient_name or _('Unknown')}"
+		if r.uid:
+			label += f" ({r.uid})"
+		if r.payment_mode:
+			label += f" - {r.payment_mode}"
 		details[category].append(
 			{
-				"label": f"(B) {r.patient_name or _('Unknown')} ({r.uid or ''}) - {r.payment_mode or ''}",
+				"label": label,
 				"registration_category": r.registration_category,
 				"amount": r.amount,
 			}
@@ -133,8 +174,96 @@ def get_charity(from_date, to_date):
 
 	return {
 		"summary": summary,
-		"details": [{"category": c, **_op_ip_rows(details[c], "label")} for c in order],
+		"details": [{"category": _charity_display_label(c), **_op_ip_rows(details[c], "label")} for c in order],
 	}
+
+
+def _charity_display_label(category):
+	# The reference report names its charity groups "STAFF CHARITY" / "GENERAL
+	# CHARITY" / "STAFF DEPENDENT CHARITY" - this app's own Category Price
+	# Adjustment master is just named "Staff" / "General" / "Staff Dependent"
+	# (renaming those would break the exact-string checks elsewhere in the
+	# app, e.g. Patient Visit's Staff-only fields), so " Charity" is appended
+	# here purely for display. A category that's already a full, specific
+	# name (e.g. "Woodstock School (Students)") is left as-is.
+	category = category or _("Not Set")
+	if category.endswith(")"):
+		return category
+	return f"{category} Charity"
+
+
+def get_user_wise_charity(from_date, to_date):
+	# A pivot, unlike every other section here - one row per staff user, one
+	# column per charity category (dynamic, whichever categories actually had
+	# a discount in this period) - matches the reference report's own
+	# "GENERAL | STAFF | ..." column layout, which (unlike Charity - Summary)
+	# uses the bare category name as the column header, not "X Charity".
+	frappe.has_permission("Billing", "read", throw=True)
+	rows = frappe.db.sql(
+		"""
+		SELECT owner, billing_category AS category, SUM(discount_amount) AS amount
+		FROM `tabBilling`
+		WHERE docstatus = 1 AND discount_amount > 0
+			AND sale_datetime BETWEEN %(from_date)s AND %(to_date)s
+		GROUP BY owner, billing_category
+		""",
+		{"from_date": f"{from_date} 00:00:00", "to_date": f"{to_date} 23:59:59"},
+		as_dict=True,
+	)
+
+	# General charity lives on Patient Visit, not Billing (see get_charity) -
+	# same second source pulled in here, attributed to whoever collected the
+	# fee (collected_by) the same way Billing attributes to "owner".
+	general_rows = frappe.db.sql(
+		"""
+		SELECT collected_by AS owner, SUM(discount_amount) AS amount
+		FROM `tabPatient Visit`
+		WHERE billing_category = %(general)s AND discount_amount > 0
+			AND date BETWEEN %(from_date)s AND %(to_date)s
+		GROUP BY collected_by
+		""",
+		{"general": GENERAL_CATEGORY, "from_date": from_date, "to_date": to_date},
+		as_dict=True,
+	)
+	rows += [frappe._dict({"owner": r.owner, "category": GENERAL_CATEGORY, "amount": r.amount}) for r in general_rows]
+
+	if not rows:
+		return {"categories": [], "rows": []}
+
+	categories = []
+	by_user = {}
+	for r in rows:
+		category = r.category or _("Not Set")
+		if category not in categories:
+			categories.append(category)
+		entry = by_user.setdefault(r.owner, {})
+		entry[category] = flt(r.amount)
+
+	full_names = _get_user_full_names(by_user.keys())
+	totals = dict.fromkeys(categories, 0)
+	result = []
+	for owner, entry in by_user.items():
+		row = {"user_name": full_names.get(owner, owner)}
+		for category in categories:
+			amount = entry.get(category, 0)
+			row[category] = amount
+			totals[category] += amount
+		result.append(row)
+	result.sort(key=lambda r: r["user_name"] or "")
+
+	total_row = {"user_name": _("Total")}
+	total_row.update(totals)
+	result.append(total_row)
+
+	return {"categories": categories, "rows": result}
+
+
+def _get_user_full_names(owners):
+	owners = [o for o in owners if o]
+	if not owners:
+		return {}
+	rows = frappe.get_all("User", filters={"name": ["in", owners]}, fields=["name", "full_name"])
+	return {row.name: row.full_name or row.name for row in rows}
 
 
 def get_ip_adjusted(from_date, to_date):
@@ -177,28 +306,10 @@ def get_credit_bills(from_date, to_date):
 	return _op_ip_rows(rows, "label")
 
 
-def get_epayment(from_date, to_date):
-	frappe.has_permission("Billing", "read", throw=True)
-	rows = frappe.db.sql(
-		"""
-		SELECT payment_mode AS label, registration_category AS registration_category, amount_collected AS amount
-		FROM `tabBilling`
-		WHERE docstatus = 1 AND payment_mode IN ('UPI', 'Card')
-			AND sale_datetime BETWEEN %(from_date)s AND %(to_date)s
-		""",
-		{"from_date": f"{from_date} 00:00:00", "to_date": f"{to_date} 23:59:59"},
-		as_dict=True,
-	)
-	# "BILLS - MASTER CARD" in the reference report - UPI/Card is the closest
-	# this data model tracks (no card-network breakdown).
-	for r in rows:
-		r["label"] = f"BILLS - {r['label']}"
-	return _op_ip_rows(rows, "label")
-
-
 def get_tax_details(from_date, to_date):
-	# Grouped by Item Type + GST% - the closest this data model has to the
-	# reference report's "(P) PHARMACY - 12.00%" department+rate grouping.
+	# Grouped by Item Type + GST%, combined into one "(P) PHARMACY - 12.00%"
+	# style Particulars label - matches the reference report's own single
+	# combined column exactly, instead of a separate GST % column.
 	frappe.has_permission("Billing", "read", throw=True)
 	rows = frappe.db.sql(
 		"""
@@ -216,6 +327,8 @@ def get_tax_details(from_date, to_date):
 		{"from_date": f"{from_date} 00:00:00", "to_date": f"{to_date} 23:59:59"},
 		as_dict=True,
 	)
+	for r in rows:
+		r["label"] = f"{r.item_type} - {flt(r.gst_percent):.2f}%"
 	total_amount = sum(flt(r.amount) for r in rows)
 	total_tax = sum(flt(r.tax_amount) for r in rows)
 	return {"rows": rows, "total": {"amount": total_amount, "tax_amount": total_tax}}
@@ -238,7 +351,7 @@ def get_tax_details_returns(from_date, to_date):
 		INNER JOIN `tabSales Return` sr ON sr.name = sri.parent
 		INNER JOIN `tabItem` i ON i.name = sri.item
 		LEFT JOIN `tabPatient Visit` pv ON pv.name = sr.patient
-		WHERE sr.docstatus = 1 AND i.gst_percent > 0
+		WHERE sr.docstatus = 1 AND i.gst_percent > 0 AND sr.is_received = 1
 			AND sr.return_date_time BETWEEN %(from_date)s AND %(to_date)s
 		""",
 		{"from_date": f"{from_date} 00:00:00", "to_date": f"{to_date} 23:59:59"},
@@ -250,7 +363,13 @@ def get_tax_details_returns(from_date, to_date):
 	for r in rows:
 		key = (r.item_type, r.gst_percent)
 		if key not in grouped:
-			grouped[key] = {"item_type": r.item_type, "gst_percent": r.gst_percent, "amount": 0, "tax_amount": 0, "op_amount": 0, "ip_amount": 0}
+			grouped[key] = {
+				"label": f"{r.item_type} - {flt(r.gst_percent):.2f}%",
+				"amount": 0,
+				"tax_amount": 0,
+				"op_amount": 0,
+				"ip_amount": 0,
+			}
 			order.append(key)
 		grouped[key]["amount"] += flt(r.amount)
 		grouped[key]["tax_amount"] += flt(r.tax_amount)
@@ -270,53 +389,55 @@ def get_tax_details_returns(from_date, to_date):
 
 
 def get_item_type_collection(from_date, to_date):
+	# Matches the reference report's own "PARTICULARS (PRODUCT/SERVICE) / OP
+	# AMOUNT / IP AMOUNT" shape - same _op_ip_rows split every other section
+	# uses, rather than a Bills-count/%-of-total breakdown this app added on
+	# its own.
 	frappe.has_permission("Billing", "read", throw=True)
 
 	rows = frappe.db.sql(
 		"""
-		SELECT sbi.item_type, SUM(sbi.amount) AS amount, COUNT(DISTINCT sbi.parent) AS bill_count
+		SELECT
+			CASE WHEN sbi.item_type IN ('Medicine', 'Consumable') THEN 'PRODUCT' ELSE 'SERVICE' END AS label,
+			b.registration_category AS registration_category,
+			sbi.amount AS amount
 		FROM `tabSales Bill Item` sbi
 		INNER JOIN `tabBilling` b ON b.name = sbi.parent
 		WHERE b.docstatus = 1 AND b.sale_datetime BETWEEN %(from_date)s AND %(to_date)s
-		GROUP BY sbi.item_type
-		ORDER BY amount DESC
 		""",
 		{"from_date": f"{from_date} 00:00:00", "to_date": f"{to_date} 23:59:59"},
 		as_dict=True,
 	)
-
-	return {"rows": rows, "total": sum(flt(row.amount) for row in rows)}
+	return _op_ip_rows(rows, "label")
 
 
 def get_advances(from_date, to_date):
+	# Matches the reference report's own "PARTICULARS / OP AMOUNT / IP AMOUNT"
+	# shape - same _op_ip_rows split every other section uses, rather than
+	# this app's own richer Patient Advance record (Payment Mode, Received By,
+	# Remarks) laid out as its own separate column set.
 	frappe.has_permission("Patient Advance", "read", throw=True)
 
 	advances = frappe.db.sql(
 		"""
-		SELECT name, patient_visit, patient_name, amount, payment_mode,
-			received_by, received_on, remarks
-		FROM `tabPatient Advance`
-		WHERE received_on BETWEEN %(from_date)s AND %(to_date)s
-		ORDER BY received_on
+		SELECT pa.patient_name AS patient_name, pv.uid AS uid,
+			pv.registration_category AS registration_category, pa.amount AS amount
+		FROM `tabPatient Advance` pa
+		LEFT JOIN `tabPatient Visit` pv ON pv.name = pa.patient_visit
+		WHERE pa.received_on BETWEEN %(from_date)s AND %(to_date)s
+		ORDER BY pa.received_on
 		""",
 		{"from_date": f"{from_date} 00:00:00", "to_date": f"{to_date} 23:59:59"},
 		as_dict=True,
 	)
 
-	full_names = _get_full_names({row.received_by for row in advances if row.received_by})
+	labeled = []
 	for row in advances:
-		# patient_name is a fetch_from that can be blank on an older record
-		# whose Patient Visit has no demographics (uhin_id) linked yet - fall
-		# back to the Visit ID so the row is never blank.
-		row["patient_label"] = row.patient_name or row.patient_visit
-		row["received_by_name"] = full_names.get(row.received_by, row.received_by)
+		# "SAMIKSHA (24562)" in the reference report - patient name plus UID,
+		# UID left out if this older record never had one fetched.
+		label = row.patient_name or _("Unknown")
+		if row.uid:
+			label += f" ({row.uid})"
+		labeled.append({"label": label, "registration_category": row.registration_category, "amount": row.amount})
 
-	return {"rows": advances, "total": sum(flt(row.amount) for row in advances)}
-
-
-def _get_full_names(users):
-	users = [u for u in users if u]
-	if not users:
-		return {}
-	rows = frappe.get_all("User", filters={"name": ["in", users]}, fields=["name", "full_name"])
-	return {row.name: row.full_name or row.name for row in rows}
+	return _op_ip_rows(labeled, "label")
