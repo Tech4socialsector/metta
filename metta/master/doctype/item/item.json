@@ -86,6 +86,7 @@
    "description": "MRP for Medicine/Consumable, or the standard charge for a Service.",
    "fieldname": "standard_selling_rate",
    "fieldtype": "Currency",
+   "hidden": 1,
    "label": "Standard Selling Rate"
   },
   {
@@ -139,6 +140,7 @@
   {
    "fieldname": "standard_purchase_rate",
    "fieldtype": "Currency",
+   "hidden": 1,
    "label": "Standard Purchase Rate"
   },
   {
@@ -149,6 +151,7 @@
   {
    "fieldname": "uom_conversions",
    "fieldtype": "Table",
+   "hidden": 1,
    "label": "UOM Conversions",
    "options": "Item UOM Conversion"
   },
@@ -179,6 +182,7 @@
    "fetch_from": "hsn_code.gst_percent",
    "fieldname": "gst_percent",
    "fieldtype": "Percent",
+   "hidden": 1,
    "label": "GST %"
   },
   {
@@ -274,7 +278,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-11 18:00:00.000000",
+ "modified": "2026-08-24 18:18:18.802143",
  "modified_by": "Administrator",
  "module": "Master",
  "name": "Item",

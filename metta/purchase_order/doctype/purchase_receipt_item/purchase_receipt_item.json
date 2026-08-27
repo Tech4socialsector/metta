@@ -12,6 +12,8 @@
   "manufacturing_date",
   "expiry_date",
   "qty_ordered",
+  "packing",
+  "no_of_unit",
   "qty_received",
   "unit_of_measure",
   "conversion_factor",
@@ -58,18 +60,34 @@
   },
   {
    "fieldname": "qty_ordered",
-   "fieldtype": "Float",
+   "fieldtype": "Int",
    "in_list_view": 1,
    "label": "Qty Ordered",
    "read_only": 1
   },
   {
+   "description": "Tablets/units per strip or pack.",
+   "fieldname": "packing",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Packing",
+   "reqd": 1
+  },
+  {
+   "description": "Number of strips/packs actually received.",
+   "fieldname": "no_of_unit",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "No of Unit",
+   "reqd": 1
+  },
+  {
    "fieldname": "qty_received",
-   "fieldtype": "Float",
+   "fieldtype": "Int",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Qty Received",
-   "reqd": 1
+   "read_only": 1
   },
   {
    "fieldname": "unit_of_measure",
@@ -78,16 +96,16 @@
    "read_only": 1
   },
   {
+   "description": "No longer used to calculate Stock Qty (Qty Received is already the true total) - kept only so older integrations/Purchase Return can still read it.",
    "fieldname": "conversion_factor",
    "fieldtype": "Float",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
+   "hidden": 1,
    "label": "Conversion Factor",
-   "reqd": 1
+   "read_only": 1
   },
   {
    "fieldname": "stock_qty",
-   "fieldtype": "Float",
+   "fieldtype": "Int",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Stock Qty",

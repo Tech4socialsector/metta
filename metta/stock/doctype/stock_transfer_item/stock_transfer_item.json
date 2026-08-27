@@ -55,21 +55,21 @@
   },
   {
    "fieldname": "qty_requested",
-   "fieldtype": "Float",
+   "fieldtype": "Int",
    "in_list_view": 1,
    "label": "Qty Requested",
    "read_only": 1
   },
   {
    "fieldname": "available_qty",
-   "fieldtype": "Float",
+   "fieldtype": "Int",
    "in_list_view": 1,
    "label": "Available Qty",
    "read_only": 1
   },
   {
    "fieldname": "qty_dispatched",
-   "fieldtype": "Float",
+   "fieldtype": "Int",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Qty Dispatched",
@@ -78,7 +78,7 @@
   {
    "allow_on_submit": 1,
    "fieldname": "qty_confirmed",
-   "fieldtype": "Float",
+   "fieldtype": "Int",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Qty Confirmed"

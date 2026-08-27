@@ -216,7 +216,7 @@
    "fieldname": "relationship_to_the_patient",
    "fieldtype": "Select",
    "label": "Relationship to the Patient ",
-   "options": "Husband\nMother\nFather"
+   "options": "\nHusband\nMother\nFather"
   }
  ],
  "icon": "fa fa-user",

@@ -32,7 +32,7 @@
    "default": "1",
    "description": "How many units to dispense - what Pharmacy actually hands over.",
    "fieldname": "qty",
-   "fieldtype": "Float",
+   "fieldtype": "Int",
    "in_list_view": 1,
    "label": "Quantity",
    "reqd": 1

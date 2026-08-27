@@ -33,7 +33,7 @@
   },
   {
    "fieldname": "qty_requested",
-   "fieldtype": "Float",
+   "fieldtype": "Int",
    "in_list_view": 1,
    "label": "Qty Requested",
    "reqd": 1
@@ -48,26 +48,26 @@
   },
   {
    "fieldname": "stock_at_requesting_store",
-   "fieldtype": "Float",
+   "fieldtype": "Int",
    "label": "Stock at Requesting Store",
    "read_only": 1
   },
   {
    "fieldname": "usable_stock_at_central",
-   "fieldtype": "Float",
+   "fieldtype": "Int",
    "label": "Usable Stock at Central",
    "read_only": 1
   },
   {
    "fieldname": "qty_issued",
-   "fieldtype": "Float",
+   "fieldtype": "Int",
    "in_list_view": 1,
    "label": "Qty Issued",
    "read_only": 1
   },
   {
    "fieldname": "qty_pending",
-   "fieldtype": "Float",
+   "fieldtype": "Int",
    "in_list_view": 1,
    "label": "Qty Pending",
    "read_only": 1

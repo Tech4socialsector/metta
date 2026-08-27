@@ -7,11 +7,37 @@
  "field_order": [
   "item",
   "item_name",
+  "batch_no",
+  "packing",
+  "no_of_unit",
+  "free",
   "qty",
-  "rate",
+  "purchase_rate",
   "amount",
+  "purchase_tax_section",
+  "discount",
   "gst_percent",
-  "gst_amount"
+  "gst_amount",
+  "cgst_rate",
+  "cgst_amount",
+  "column_break_purchase_tax",
+  "sgst_rate",
+  "sgst_amount",
+  "igst_rate",
+  "igst_amount",
+  "purchase_cost",
+  "last_purchase_cost",
+  "total_amount",
+  "selling_price_section",
+  "mrp",
+  "packing_mrp",
+  "single_tablet_price",
+  "column_break_selling",
+  "selling_gst_percent",
+  "selling_gst_amount",
+  "selling_cgst_amount",
+  "selling_sgst_amount",
+  "final_selling_price"
  ],
  "fields": [
   {
@@ -30,25 +56,69 @@
    "read_only": 1
   },
   {
+   "description": "Fetched from the Purchase Receipt - this is exactly which batch this row's price applies to, so approval can push it onto the right Batch record.",
+   "fieldname": "batch_no",
+   "fieldtype": "Data",
+   "label": "Batch No",
+   "read_only": 1
+  },
+  {
+   "description": "Tablets/units per strip or pack - fetched from the Purchase Receipt.",
+   "fieldname": "packing",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Packing"
+  },
+  {
+   "description": "Number of strips/packs received - fetched from the Purchase Receipt.",
+   "fieldname": "no_of_unit",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "No of Unit"
+  },
+  {
+   "default": "0",
+   "description": "Strips/packs the supplier gave free - reduces the billable Qty, not the qty received into stock.",
+   "fieldname": "free",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Free"
+  },
+  {
+   "description": "Packing x No of Unit - total tablets/units received.",
    "fieldname": "qty",
-   "fieldtype": "Float",
+   "fieldtype": "Int",
    "in_list_view": 1,
    "label": "Qty",
-   "reqd": 1
+   "read_only": 1
   },
   {
-   "fieldname": "rate",
+   "description": "Rate per single tablet/unit, as billed on the supplier invoice - not per strip.",
+   "fieldname": "purchase_rate",
    "fieldtype": "Currency",
    "in_list_view": 1,
-   "label": "Rate",
-   "reqd": 1
+   "label": "P Rate"
   },
   {
+   "description": "Qty x P Rate, minus any free tablets/units - the taxable value before GST.",
    "fieldname": "amount",
    "fieldtype": "Currency",
    "in_list_view": 1,
    "label": "Amount",
    "read_only": 1
+  },
+  {
+   "fieldname": "purchase_tax_section",
+   "fieldtype": "Section Break",
+   "label": "Purchase Tax"
+  },
+  {
+   "default": "0",
+   "description": "Flat rupee amount off this row, entered by the store person. Doesn't reduce GST - GST is calculated on the full Amount, same as the supplier invoice.",
+   "fieldname": "discount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Discount"
   },
   {
    "fetch_from": "item.gst_percent",
@@ -61,13 +131,149 @@
    "fieldtype": "Currency",
    "label": "GST Amount",
    "read_only": 1
+  },
+  {
+   "description": "Half of GST %.",
+   "fieldname": "cgst_rate",
+   "fieldtype": "Percent",
+   "label": "CGST Rate",
+   "read_only": 1
+  },
+  {
+   "description": "Half of GST Amount.",
+   "fieldname": "cgst_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "CGST Amount",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_purchase_tax",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Half of GST %.",
+   "fieldname": "sgst_rate",
+   "fieldtype": "Percent",
+   "label": "SGST Rate",
+   "read_only": 1
+  },
+  {
+   "description": "Half of GST Amount.",
+   "fieldname": "sgst_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "SGST Amount",
+   "read_only": 1
+  },
+  {
+   "description": "Kept for inter-state purchases - not wired up yet, add later when needed.",
+   "fieldname": "igst_rate",
+   "fieldtype": "Percent",
+   "label": "IGST Rate",
+   "read_only": 1
+  },
+  {
+   "description": "Kept for inter-state purchases - not wired up yet, add later when needed.",
+   "fieldname": "igst_amount",
+   "fieldtype": "Currency",
+   "label": "IGST Amount",
+   "read_only": 1
+  },
+  {
+   "description": "P Rate x (1 + GST% / 100), net of Discount - the true landed cost per tablet/unit, including tax.",
+   "fieldname": "purchase_cost",
+   "fieldtype": "Currency",
+   "label": "Purchase Cost (incl. GST)",
+   "read_only": 1
+  },
+  {
+   "description": "What this item was billed at last time - fetched from the Item, for comparison only.",
+   "fetch_from": "item.standard_purchase_rate",
+   "fieldname": "last_purchase_cost",
+   "fieldtype": "Currency",
+   "label": "P.Cost (Last Purchase Cost)",
+   "read_only": 1
+  },
+  {
+   "description": "Amount + CGST Amount + SGST Amount + IGST Amount - this row's total before the bill-level Discount is applied.",
+   "fieldname": "total_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Total Amount",
+   "read_only": 1
+  },
+  {
+   "fieldname": "selling_price_section",
+   "fieldtype": "Section Break",
+   "label": "Selling Price"
+  },
+  {
+   "description": "Manufacturer's Max Retail Price, per tablet/unit.",
+   "fieldname": "mrp",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "MRP"
+  },
+  {
+   "description": "MRP x Packing - for cross-checking against the price printed on the strip/box.",
+   "fieldname": "packing_mrp",
+   "fieldtype": "Currency",
+   "label": "Packing MRP",
+   "read_only": 1
+  },
+  {
+   "description": "The base selling price used for billing, before Selling GST - equal to MRP.",
+   "fieldname": "single_tablet_price",
+   "fieldtype": "Currency",
+   "label": "Single Tablet Price",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_selling",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Always equal to GST % above - entered once, applies to both purchase and selling tax.",
+   "fieldname": "selling_gst_percent",
+   "fieldtype": "Percent",
+   "label": "Selling GST %",
+   "read_only": 1
+  },
+  {
+   "fieldname": "selling_gst_amount",
+   "fieldtype": "Currency",
+   "label": "Selling GST Amount",
+   "read_only": 1
+  },
+  {
+   "description": "Half of Selling GST Amount.",
+   "fieldname": "selling_cgst_amount",
+   "fieldtype": "Currency",
+   "label": "Selling CGST Amount",
+   "read_only": 1
+  },
+  {
+   "description": "Half of Selling GST Amount.",
+   "fieldname": "selling_sgst_amount",
+   "fieldtype": "Currency",
+   "label": "Selling SGST Amount",
+   "read_only": 1
+  },
+  {
+   "description": "Single Tablet Price + Selling GST Amount - what the hospital charges the patient per tablet/unit.",
+   "fieldname": "final_selling_price",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Final Selling Price",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-07-17 21:00:00.000000",
+ "modified": "2026-08-26 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Purchase Order",
  "name": "Purchase Bill Item",

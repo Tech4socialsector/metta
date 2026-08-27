@@ -125,6 +125,91 @@ def validate_sufficient_stock(item, warehouse, qty_needed):
 		)
 
 
+def get_available_batches(item, warehouse):
+	# Stock Balance is item+warehouse-wide, not batch-specific - a batch's
+	# real remaining qty only exists as the sum of its own signed ledger
+	# movements, same approach the Batch-wise Stock Listing report already
+	# uses. Ordered nearest-expiry-first (FEFO) - standard pharmacy practice,
+	# issues stock that would expire soonest before newer stock.
+	return frappe.db.sql(
+		"""
+		SELECT q.batch_no AS batch, b.expiry_date, q.available_qty, b.selling_rate
+		FROM (
+			SELECT sle.batch_no, SUM(sle.qty_change) AS available_qty
+			FROM `tabStock Ledger Entry` sle
+			WHERE sle.item = %(item)s AND sle.warehouse = %(warehouse)s
+				AND sle.batch_no IS NOT NULL AND sle.batch_no != ''
+			GROUP BY sle.batch_no
+		) q
+		INNER JOIN `tabBatch` b ON b.name = q.batch_no AND b.item = %(item)s
+		WHERE q.available_qty > 0 AND b.disabled != 1
+		ORDER BY b.expiry_date ASC
+		""",
+		{"item": item, "warehouse": warehouse},
+		as_dict=True,
+	)
+
+
+@frappe.whitelist()
+def allocate_batches_for_qty(item, warehouse, qty_needed):
+	# Walks available batches oldest-expiry-first, taking as much as each one
+	# has until qty_needed is covered - this is what lets billing staff just
+	# type an item and a quantity without ever having to know or pick a batch
+	# themselves; if it takes more than one batch to cover the amount, this
+	# returns one allocation entry per batch involved.
+	frappe.has_permission("Batch", "read", throw=True)
+	qty_needed = flt(qty_needed)
+	batches = get_available_batches(item, warehouse)
+
+	allocations = []
+	remaining = qty_needed
+	for batch in batches:
+		if remaining <= 0:
+			break
+		take = min(remaining, flt(batch.available_qty))
+		allocations.append(
+			{
+				"batch": batch.batch,
+				"qty": take,
+				"rate": flt(batch.selling_rate),
+				"expiry_date": batch.expiry_date,
+			}
+		)
+		remaining -= take
+
+	if remaining > 0:
+		total_available = qty_needed - remaining
+		frappe.throw(
+			frappe._(
+				"Not enough stock of {0} in {1} across any batch: available {2}, needed {3}."
+			).format(item, warehouse, total_available, qty_needed)
+		)
+
+	return allocations
+
+
+def validate_sufficient_batch_stock(item, warehouse, batch_no, qty_needed):
+	# validate_sufficient_stock() only guards the item+warehouse total, which
+	# isn't enough once billing charges different rates per batch - this
+	# stops a specific batch's stock from going negative even while other
+	# batches of the same item still have plenty left.
+	available = flt(
+		frappe.db.sql(
+			"""
+			SELECT SUM(qty_change) FROM `tabStock Ledger Entry`
+			WHERE item = %(item)s AND warehouse = %(warehouse)s AND batch_no = %(batch_no)s
+			""",
+			{"item": item, "warehouse": warehouse, "batch_no": batch_no},
+		)[0][0]
+	)
+	if flt(qty_needed) > available:
+		frappe.throw(
+			frappe._(
+				"Not enough stock of Batch {0} in {1}: available {2}, needed {3}."
+			).format(batch_no, warehouse, available, qty_needed)
+		)
+
+
 def reverse_stock_ledger_entries(voucher_type, voucher_no):
 	# The doctype is "no manual entry, no delete" - on cancel we don't erase
 	# the original entries, we create mirrored negative ones. This keeps the

@@ -8,14 +8,19 @@ frappe.ui.form.on("Purchase Bill", {
 		}));
 	},
 	refresh(frm) {
+		if (frm.is_new() && !frm.doc.entered_by) {
+			frm.set_value("entered_by", frappe.session.user);
+		}
 		calculate_totals(frm);
 		show_get_items_button(frm);
 		show_create_payment_entry_button(frm);
+		show_approve_reject_buttons(frm);
+		show_cancel_approval_button(frm);
 	},
 	purchase_receipt(frm) {
 		frm.refresh();
 	},
-	other_tax_amount(frm) {
+	tax_on_free(frm) {
 		calculate_totals(frm);
 	},
 });
@@ -31,13 +36,25 @@ frappe.ui.form.on("Purchase Bill Item", {
 			frappe.model.set_value(cdt, cdn, "item_name", r.item_name || "");
 		});
 	},
-	qty(frm, cdt, cdn) {
+	packing(frm, cdt, cdn) {
 		calculate_amount(frm, cdt, cdn);
 	},
-	rate(frm, cdt, cdn) {
+	no_of_unit(frm, cdt, cdn) {
+		calculate_amount(frm, cdt, cdn);
+	},
+	free(frm, cdt, cdn) {
+		calculate_amount(frm, cdt, cdn);
+	},
+	purchase_rate(frm, cdt, cdn) {
+		calculate_amount(frm, cdt, cdn);
+	},
+	discount(frm, cdt, cdn) {
 		calculate_amount(frm, cdt, cdn);
 	},
 	gst_percent(frm, cdt, cdn) {
+		calculate_amount(frm, cdt, cdn);
+	},
+	mrp(frm, cdt, cdn) {
 		calculate_amount(frm, cdt, cdn);
 	},
 	items_add(frm) {
@@ -72,12 +89,63 @@ function show_get_items_button(frm) {
 				frm.refresh_field("items");
 				calculate_totals(frm);
 				frappe.show_alert({
-					message: __("{0} item(s) pulled in with Qty and Rate already filled in.", [rows.length]),
+					message: __(
+						"{0} item(s) pulled in - enter Free, P Rate, Discount and MRP for each.",
+						[rows.length]
+					),
 					indicator: "green",
 				});
 			},
 		});
 	}).addClass("btn-primary");
+}
+
+function show_approve_reject_buttons(frm) {
+	if (frm.doc.docstatus !== 1 || frm.doc.status !== "Pending Approval") return;
+
+	// The real gate is server-side (validate_can_approve) - this just avoids
+	// showing a button that would only error out for someone without the
+	// role, like Account Staff who created the bill.
+	const can_approve = frappe.user_roles.includes("Purchase Approver") || frappe.user_roles.includes("System Manager");
+	if (!can_approve) return;
+
+	frm.add_custom_button(__("Approve"), () => {
+		frm.call("approve_bill").then(() => frm.reload_doc());
+	}).addClass("btn-primary");
+	frm.add_custom_button(__("Reject"), () => {
+		frappe.prompt(
+			[
+				{
+					fieldname: "reason",
+					label: __("Rejection Reason"),
+					fieldtype: "Small Text",
+					reqd: 1,
+				},
+			],
+			(values) => {
+				frm.call("reject_bill", { reason: values.reason }).then(() => frm.reload_doc());
+			},
+			__("Reject Purchase Bill")
+		);
+	});
+}
+
+function show_cancel_approval_button(frm) {
+	if (frm.doc.docstatus !== 1 || frm.doc.status !== "Approved") return;
+
+	const can_approve = frappe.user_roles.includes("Purchase Approver") || frappe.user_roles.includes("System Manager");
+	if (!can_approve) return;
+
+	// Undoes just the approval (reverses the stock it added, back to Pending
+	// Approval) - the Purchase Bill document itself stays submitted and
+	// linked everywhere it already is. Use the document's own Cancel instead
+	// if the whole bill needs to be voided, not just the approval.
+	frm.add_custom_button(__("Cancel Approval"), () => {
+		frappe.confirm(
+			__("This reverses the stock that was added and puts the bill back to Pending Approval. Continue?"),
+			() => frm.call("cancel_approval").then(() => frm.reload_doc())
+		);
+	});
 }
 
 function show_create_payment_entry_button(frm) {
@@ -97,20 +165,74 @@ function show_create_payment_entry_button(frm) {
 
 function calculate_amount(frm, cdt, cdn) {
 	const row = locals[cdt][cdn];
-	const amount = flt(row.qty) * flt(row.rate);
+
+	const qty = flt(row.packing) * flt(row.no_of_unit);
+	frappe.model.set_value(cdt, cdn, "qty", qty);
+
+	// P Rate is entered per single tablet/unit directly (not per strip) -
+	// Free strips are converted to tablets so they can be netted out of Qty
+	// in the same units.
+	const free_qty = flt(row.free) * flt(row.packing);
+	const billable_qty = qty - free_qty;
+	const amount = billable_qty * flt(row.purchase_rate);
+
+	// GST is calculated on Amount net of Discount, same as the supplier
+	// invoice - Amount itself still shows the full gross value (matches the
+	// invoice's own Taxable Amount column), but the tax is worked out on
+	// what's actually being paid for it.
+	const taxable_value = amount - flt(row.discount);
+	const gst_amount = (taxable_value * flt(row.gst_percent)) / 100;
+	const cgst_amount = gst_amount / 2;
+	const sgst_amount = gst_amount / 2;
+	const igst_amount = flt(row.igst_amount); // not wired up yet - inter-state, add later
+
+	// Landed cost per tablet/unit, net of discount, including GST.
+	const discount_per_unit = qty ? flt(row.discount) / qty : 0;
+	const net_rate = flt(row.purchase_rate) - discount_per_unit;
+	const purchase_cost = net_rate * (1 + flt(row.gst_percent) / 100);
+
+	frappe.model.set_value(cdt, cdn, "purchase_cost", purchase_cost);
 	frappe.model.set_value(cdt, cdn, "amount", amount);
-	frappe.model.set_value(cdt, cdn, "gst_amount", (amount * flt(row.gst_percent)) / 100);
+	frappe.model.set_value(cdt, cdn, "gst_amount", gst_amount);
+	frappe.model.set_value(cdt, cdn, "cgst_rate", flt(row.gst_percent) / 2);
+	frappe.model.set_value(cdt, cdn, "cgst_amount", cgst_amount);
+	frappe.model.set_value(cdt, cdn, "sgst_rate", flt(row.gst_percent) / 2);
+	frappe.model.set_value(cdt, cdn, "sgst_amount", sgst_amount);
+	frappe.model.set_value(cdt, cdn, "total_amount", taxable_value + cgst_amount + sgst_amount + igst_amount);
+
+	// Selling side - what the hospital will charge the patient per
+	// tablet/unit, previewed here so Selling Rate never has to be typed a
+	// second time on the Item itself (pushed there on approval). Selling
+	// GST % always mirrors GST % above - entered once, never typed twice.
+	frappe.model.set_value(cdt, cdn, "selling_gst_percent", flt(row.gst_percent));
+	const packing_mrp = flt(row.mrp) * flt(row.packing);
+	const single_tablet_price = flt(row.mrp);
+	const selling_gst_amount = (single_tablet_price * flt(row.gst_percent)) / 100;
+	frappe.model.set_value(cdt, cdn, "packing_mrp", packing_mrp);
+	frappe.model.set_value(cdt, cdn, "single_tablet_price", single_tablet_price);
+	frappe.model.set_value(cdt, cdn, "selling_gst_amount", selling_gst_amount);
+	frappe.model.set_value(cdt, cdn, "selling_cgst_amount", selling_gst_amount / 2);
+	frappe.model.set_value(cdt, cdn, "selling_sgst_amount", selling_gst_amount / 2);
+	frappe.model.set_value(cdt, cdn, "final_selling_price", single_tablet_price + selling_gst_amount);
+
 	calculate_totals(frm);
 }
 
 function calculate_totals(frm) {
 	let subtotal = 0;
+	let discount_total = 0;
 	let gst_total = 0;
 	(frm.doc.items || []).forEach((row) => {
 		subtotal += flt(row.amount);
+		discount_total += flt(row.discount);
 		gst_total += flt(row.gst_amount);
 	});
 	frm.set_value("subtotal", subtotal);
+	frm.set_value("discount", discount_total);
 	frm.set_value("gst_amount", gst_total);
-	frm.set_value("total_amount", subtotal + gst_total + flt(frm.doc.other_tax_amount));
+
+	const net_before_round = subtotal - discount_total + flt(frm.doc.tax_on_free) + gst_total;
+	const round_off = Math.round(net_before_round) - net_before_round;
+	frm.set_value("round_off", round_off);
+	frm.set_value("total_amount", net_before_round + round_off);
 }

@@ -9,6 +9,8 @@
   "item",
   "item_name",
   "available_qty",
+  "packing",
+  "no_of_unit",
   "qty_ordered",
   "unit_of_measure",
   "rate",
@@ -35,18 +37,34 @@
   },
   {
    "fieldname": "available_qty",
-   "fieldtype": "Float",
+   "fieldtype": "Int",
    "in_list_view": 1,
    "label": "Available Qty (Store)",
    "read_only": 1
   },
   {
+   "description": "Tablets/units per strip or pack.",
+   "fieldname": "packing",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Packing",
+   "reqd": 1
+  },
+  {
+   "description": "Number of strips/packs being ordered.",
+   "fieldname": "no_of_unit",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "No of Unit",
+   "reqd": 1
+  },
+  {
    "fieldname": "qty_ordered",
-   "fieldtype": "Float",
+   "fieldtype": "Int",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Qty Ordered",
-   "reqd": 1
+   "read_only": 1
   },
   {
    "fetch_from": "item.purchase_uom",
@@ -58,24 +76,23 @@
    "read_only": 1
   },
   {
+   "description": "Pricing doesn't happen at the Purchase Order stage - the actual rate gets entered later, on the Purchase Bill.",
    "fieldname": "rate",
    "fieldtype": "Currency",
    "hidden": 1,
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Rate"
+   "label": "Rate",
+   "read_only": 1
   },
   {
    "fieldname": "amount",
    "fieldtype": "Currency",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
+   "hidden": 1,
    "label": "Amount",
    "read_only": 1
   },
   {
    "fieldname": "qty_received",
-   "fieldtype": "Float",
+   "fieldtype": "Int",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Qty Received",

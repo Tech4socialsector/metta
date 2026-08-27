@@ -11,7 +11,9 @@ from frappe.utils import escape_html
 from frappe.utils.pdf import get_pdf
 
 HOSPITAL_NAME = "LANDOUR COMMUNITY HOSPITAL"
-HOSPITAL_ADDRESS = ["MUSSOORIE - 248179", "DEHRADUN, UTTARAKHAND"]
+HOSPITAL_SUBTITLE = "(A unit of Emmanuel Hospital Association, New Delhi)"
+HOSPITAL_ADDRESS = ["MUSSOORIE - 248179, DEHRADUN, UTTARAKHAND"]
+HOSPITAL_CONTACT = "Ph: 01352632053, 2632666, 8449444493, E-mail: mussoorie@eha-health.org"
 
 HEADER_COLOR = "#1b4f8c"
 
@@ -91,8 +93,10 @@ def build_xlsx(title, sections, subtitle=None):
 	workbook = xlsxwriter.Workbook(output, {"in_memory": True})
 	sheet = workbook.add_worksheet((title or "Report")[:31])
 
-	name_fmt = workbook.add_format({"bold": True, "font_size": 14, "font_color": "#0b4a86"})
-	address_fmt = workbook.add_format({"font_size": 9, "font_color": "#444444"})
+	name_fmt = workbook.add_format({"bold": True, "font_size": 14, "font_color": "#000000"})
+	subtitle_hdr_fmt = workbook.add_format({"italic": True, "font_size": 9, "font_color": "#000000"})
+	address_fmt = workbook.add_format({"bold": True, "font_size": 9, "font_color": "#000000"})
+	contact_fmt = workbook.add_format({"bold": True, "font_size": 8, "font_color": "#000000"})
 	title_fmt = workbook.add_format({"bold": True, "font_size": 12, "align": "center", "valign": "vcenter"})
 	subtitle_fmt = workbook.add_format({"font_size": 9, "italic": True, "align": "center", "font_color": "#555555"})
 	section_fmt = workbook.add_format({"bold": True, "font_size": 11, "font_color": "#0b4a86"})
@@ -110,9 +114,13 @@ def build_xlsx(title, sections, subtitle=None):
 	row = 0
 	sheet.merge_range(row, 0, row, last_col, HOSPITAL_NAME, name_fmt)
 	row += 1
+	sheet.merge_range(row, 0, row, last_col, HOSPITAL_SUBTITLE, subtitle_hdr_fmt)
+	row += 1
 	for line in HOSPITAL_ADDRESS:
 		sheet.merge_range(row, 0, row, last_col, line, address_fmt)
 		row += 1
+	sheet.merge_range(row, 0, row, last_col, HOSPITAL_CONTACT, contact_fmt)
+	row += 1
 
 	# Logo sits to the right of the hospital name/address block, top-right of
 	# the whole sheet - anchored on the same first row the hospital name is on.
@@ -213,14 +221,17 @@ def build_pdf(title, sections, subtitle=None, page_size="A4", orientation="Portr
 	.header {{
 		width: 100%;
 		border-collapse: collapse;
-		border-bottom: 2px solid {HEADER_COLOR};
+		border-bottom: 2px solid #000000;
 		padding-bottom: 8px;
 		margin-bottom: 10px;
 	}}
-	.header td {{ padding: 0; vertical-align: top; border: none; }}
-	.hospital-name {{ font-size: 16px; font-weight: 700; color: #0b4a86; }}
-	.hospital-address {{ font-size: 10px; color: #444444; margin-top: 2px; }}
-	.logo-cell {{ text-align: right; }}
+	.header td {{ padding: 0; vertical-align: middle; border: none; }}
+	.hospital-name {{ font-size: 18px; font-weight: 700; color: #000000; }}
+	.hospital-subtitle {{ font-size: 11px; font-style: italic; color: #000000; }}
+	.hospital-address {{ font-size: 11px; font-weight: 700; color: #000000; margin-top: 3px; }}
+	.hospital-contact {{ font-size: 10px; font-weight: 700; color: #000000; }}
+	.header-text-cell {{ text-align: center; }}
+	.logo-cell {{ text-align: left; width: 90px; }}
 	.logo {{ height: 60px; }}
 	.report-title {{
 		text-align: center;
@@ -275,11 +286,13 @@ def build_pdf(title, sections, subtitle=None, page_size="A4", orientation="Portr
 <body>
 	<table class="header">
 		<tr>
-			<td>
-				<div class="hospital-name">{escape_html(HOSPITAL_NAME)}</div>
-				<div class="hospital-address">{address_html}</div>
-			</td>
 			<td class="logo-cell"><img class="logo" src="{_logo_data_uri(240)}"></td>
+			<td class="header-text-cell">
+				<div class="hospital-name">{escape_html(HOSPITAL_NAME)}</div>
+				<div class="hospital-subtitle">{escape_html(HOSPITAL_SUBTITLE)}</div>
+				<div class="hospital-address">{address_html}</div>
+				<div class="hospital-contact">{escape_html(HOSPITAL_CONTACT)}</div>
+			</td>
 		</tr>
 	</table>
 	<div class="report-title">{escape_html(str(title))}</div>

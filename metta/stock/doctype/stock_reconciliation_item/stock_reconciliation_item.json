@@ -38,6 +38,7 @@
    "reqd": 1
   },
   {
+   "description": "Mirrors Stock Balance's Actual Qty, which can be fractional (via Conversion Factor on Purchase Return/Billing) - kept as a decimal so this never silently disagrees with Physical Qty - System Qty = Difference.",
    "fieldname": "system_qty",
    "fieldtype": "Float",
    "label": "System Qty",
@@ -45,7 +46,7 @@
   },
   {
    "fieldname": "physical_qty",
-   "fieldtype": "Float",
+   "fieldtype": "Int",
    "in_list_view": 1,
    "label": "Physical Qty",
    "reqd": 1

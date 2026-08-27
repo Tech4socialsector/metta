@@ -47,21 +47,21 @@
   },
   {
    "fieldname": "qty_delivered",
-   "fieldtype": "Float",
+   "fieldtype": "Int",
    "in_list_view": 1,
    "label": "Qty Delivered",
    "reqd": 1
   },
   {
    "fieldname": "qty_accepted",
-   "fieldtype": "Float",
+   "fieldtype": "Int",
    "in_list_view": 1,
    "label": "Qty Accepted",
    "reqd": 1
   },
   {
    "fieldname": "qty_rejected",
-   "fieldtype": "Float",
+   "fieldtype": "Int",
    "in_list_view": 1,
    "label": "Qty Rejected"
   },

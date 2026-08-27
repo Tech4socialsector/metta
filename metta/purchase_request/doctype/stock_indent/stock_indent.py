@@ -32,13 +32,13 @@ class StockIndent(Document):
 
 	def validate_required_by(self):
 		# Required By marks when the requesting ward actually needs this
-		# stock - a date that's already passed (or is today) isn't a real
-		# future deadline. The client blocks this the moment it's picked, but
-		# that's only a convenience - this is the check an API call or import
-		# can't bypass.
-		if self.required_by and getdate(self.required_by) <= getdate(today()):
+		# stock - a date that's already passed isn't a real deadline, but
+		# today is valid (an urgent same-day request). The client blocks this
+		# the moment it's picked, but that's only a convenience - this is the
+		# check an API call or import can't bypass.
+		if self.required_by and getdate(self.required_by) < getdate(today()):
 			frappe.throw(
-				_("Required By must be a date after today."),
+				_("Required By cannot be a date in the past."),
 				title=_("Invalid Required By Date"),
 			)
 

@@ -12,6 +12,8 @@
   "expiry_date",
   "supplier",
   "purchase_receipt",
+  "purchase_rate",
+  "selling_rate",
   "disabled"
  ],
  "fields": [
@@ -57,6 +59,20 @@
    "fieldtype": "Link",
    "label": "Source Purchase Receipt",
    "options": "Purchase Receipt"
+  },
+  {
+   "description": "Landed cost per tablet/unit for this specific batch, including GST - set when this batch's Purchase Bill is approved.",
+   "fieldname": "purchase_rate",
+   "fieldtype": "Currency",
+   "label": "Purchase Rate",
+   "read_only": 1
+  },
+  {
+   "description": "Pre-GST selling price per tablet/unit for this specific batch - set when this batch's Purchase Bill is approved. Billing charges the patient based on this, not a fixed Item-level price, since cost varies batch to batch.",
+   "fieldname": "selling_rate",
+   "fieldtype": "Currency",
+   "label": "Selling Rate",
+   "read_only": 1
   },
   {
    "fieldname": "disabled",

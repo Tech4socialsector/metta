@@ -13,6 +13,13 @@ frappe.ui.form.on("Billing", {
 		frm.set_query("item", "service_items", () => ({
 			filters: { item_type: "Service" },
 		}));
+		// Never let a row's batch belong to a different item - the field was
+		// completely unrestricted before, which is how a mismatched batch
+		// could accidentally get typed in.
+		frm.set_query("batch_no", "pharmacy_items", (doc, cdt, cdn) => {
+			const row = locals[cdt][cdn];
+			return { filters: { item: row.item } };
+		});
 		// Custom queries so the dropdown shows the patient's name as a small
 		// line under each ID - needed since Patient Visit's title (patient
 		// name) would otherwise be the only thing shown while searching,
@@ -226,6 +233,17 @@ frappe.ui.form.on("Billing", {
 			},
 		});
 	},
+	warehouse(frm) {
+		// Items typed in before Warehouse was picked couldn't be batch-
+		// allocated yet (no warehouse to check stock in) - resolve them now.
+		// Only Pharmacy Items are ever batch-tracked - Service Items never
+		// carry a batch_no at all.
+		(frm.doc.pharmacy_items || []).forEach((row) => {
+			if (row.item && row.qty && !row.batch_no) {
+				maybe_allocate_batches(frm, row.doctype, row.name);
+			}
+		});
+	},
 });
 
 frappe.ui.form.on("Sales Bill Item", {
@@ -234,6 +252,7 @@ frappe.ui.form.on("Sales Bill Item", {
 	// Receipt, so UOM, Rate and GST % are fetched explicitly here instead.
 	item(frm, cdt, cdn) {
 		const row = locals[cdt][cdn];
+		frappe.model.set_value(cdt, cdn, "batch_no", "");
 		if (!row.item) {
 			frappe.model.set_value(cdt, cdn, "uom", "");
 			frappe.model.set_value(cdt, cdn, "item_name", "");
@@ -242,31 +261,43 @@ frappe.ui.form.on("Sales Bill Item", {
 		frappe.db.get_value(
 			"Item",
 			row.item,
-			["sale_uom", "standard_selling_rate", "gst_percent", "item_name", "has_batch"],
+			["sale_uom", "standard_selling_rate", "gst_percent", "item_name", "item_type", "has_batch"],
 			(r) => {
 				frappe.model.set_value(cdt, cdn, "uom", r.sale_uom || "");
-				frappe.model.set_value(cdt, cdn, "rate", flt(r.standard_selling_rate));
 				frappe.model.set_value(cdt, cdn, "gst_percent", flt(r.gst_percent));
 				frappe.model.set_value(cdt, cdn, "item_name", r.item_name || "");
+				frappe.model.set_value(cdt, cdn, "item_type", r.item_type || "");
 				if (r.has_batch) {
-					// FEFO (earliest expiry first) - a starting point, not
-					// locked - staff can still pick a different batch here.
-					frappe.call({
-						method: "metta.sales.doctype.billing.billing.get_fefo_batch",
-						args: { item_code: row.item },
-						callback(res) {
-							if (res.message) frappe.model.set_value(cdt, cdn, "batch_no", res.message);
-						},
+					// Batch-specific pricing - rate is resolved once Qty is
+					// also known and a batch (or split of batches) can be
+					// worked out, not a fixed per-item number. Awaited so
+					// maybe_allocate_batches' own "already resolved" guard
+					// definitely sees batch_no cleared, not a stale value.
+					frappe.model.set_value(cdt, cdn, "rate", 0).then(() => {
+						maybe_allocate_batches(frm, cdt, cdn);
 					});
+				} else {
+					// Services/Assets aren't batch-tracked - unchanged.
+					frappe.model.set_value(cdt, cdn, "rate", flt(r.standard_selling_rate));
 				}
 			}
 		);
 	},
 	qty(frm, cdt, cdn) {
 		calculate_amount(frm, cdt, cdn);
+		maybe_allocate_batches(frm, cdt, cdn);
 	},
 	rate(frm, cdt, cdn) {
 		calculate_amount(frm, cdt, cdn);
+	},
+	batch_no(frm, cdt, cdn) {
+		// Covers a manual override - staff clearing an auto-picked batch and
+		// choosing a different one themselves.
+		const row = locals[cdt][cdn];
+		if (!row.batch_no) return;
+		frappe.db.get_value("Batch", row.batch_no, "selling_rate", (r) => {
+			frappe.model.set_value(cdt, cdn, "rate", flt(r.selling_rate));
+		});
 	},
 	gst_percent(frm) {
 		calculate_totals(frm);
@@ -284,6 +315,81 @@ frappe.ui.form.on("Sales Bill Item", {
 		calculate_totals(frm);
 	},
 });
+
+function maybe_allocate_batches(frm, cdt, cdn) {
+	const row = locals[cdt][cdn];
+	if (!row.item || !row.qty || flt(row.qty) <= 0) return;
+	if (row.batch_no) return; // already resolved - a later Qty edit is a deliberate manual change, not a re-split
+
+	// Warehouse is only auto-set server-side on Save (set_pharmacy_warehouse()) -
+	// on a brand-new unsaved bill frm.doc.warehouse is still blank, so the
+	// same "one active Pharmacy warehouse" lookup is done here too, rather
+	// than silently skipping allocation until after the first Save.
+	const warehouse_ready = frm.doc.warehouse
+		? Promise.resolve(frm.doc.warehouse)
+		: frappe.db
+				.get_list("Warehouse", {
+					filters: { warehouse_type: "Pharmacy", is_active: 1 },
+					fields: ["name"],
+					limit: 1,
+				})
+				.then((rows) => (rows && rows[0] ? rows[0].name : null));
+
+	warehouse_ready.then((warehouse) => {
+		if (!warehouse) return; // no active Pharmacy warehouse set up - nothing to allocate against yet
+		allocate_batches_for_row(frm, cdt, cdn, warehouse);
+	});
+}
+
+function allocate_batches_for_row(frm, cdt, cdn, warehouse) {
+	const row = locals[cdt][cdn];
+	if (row.batch_no) return; // resolved by the time the warehouse lookup came back
+
+	frappe.call({
+		method: "metta.stock.doctype.stock_ledger_entry.stock_ledger_entry.allocate_batches_for_qty",
+		args: { item: row.item, warehouse, qty_needed: row.qty },
+		callback(r) {
+			const allocations = r.message || [];
+			if (!allocations.length) return;
+
+			// First allocation lands on this same row.
+			const first = allocations[0];
+			frappe.model.set_value(cdt, cdn, "batch_no", first.batch);
+			frappe.model.set_value(cdt, cdn, "qty", first.qty);
+			frappe.model.set_value(cdt, cdn, "rate", first.rate);
+
+			// Anything left over becomes its own row(s) for the same item -
+			// staff never has to work this split out themselves.
+			if (allocations.length > 1) {
+				const current_row = locals[cdt][cdn];
+				allocations.slice(1).forEach((alloc) => {
+					const new_row = frm.add_child(current_row.parentfield, {
+						item: current_row.item,
+						item_name: current_row.item_name,
+						item_type: current_row.item_type,
+						uom: current_row.uom,
+						gst_percent: current_row.gst_percent,
+						batch_no: alloc.batch,
+						qty: alloc.qty,
+						rate: alloc.rate,
+					});
+					calculate_amount(frm, new_row.doctype, new_row.name);
+				});
+				frm.refresh_field(current_row.parentfield);
+				const summary = allocations.map((a) => `${a.qty} @ ${format_currency(a.rate)} (${a.batch})`).join(", ");
+				frappe.show_alert({
+					message: __("{0} split across {1} batches - {2}", [
+						current_row.item,
+						allocations.length,
+						summary,
+					]),
+					indicator: "blue",
+				});
+			}
+			calculate_amount(frm, cdt, cdn);
+		},
+	});
+}
 
 function calculate_amount(frm, cdt, cdn) {
 	const row = locals[cdt][cdn];
@@ -642,9 +748,22 @@ function render_item_search(frm, opts) {
 					frm.clear_table(table);
 				}
 
-				frm.add_child(table, data);
+				const new_row = frm.add_child(table, data);
 				frm.refresh_field(table);
 				calculate_totals(frm);
+
+				// Medicine/Consumable pricing is batch-specific and can span
+				// more than one batch - re-resolve via full allocation rather
+				// than trusting the single-batch guess get_billing_item_row
+				// already filled in, same logic the plain grid uses.
+				if (data.item_type === "Medicine" || data.item_type === "Consumable") {
+					// set_value is async - maybe_allocate_batches' own guard
+					// (skip if batch_no is already set) would otherwise see
+					// the stale pre-fetched value and bail out immediately.
+					frappe.model.set_value(new_row.doctype, new_row.name, "batch_no", "").then(() => {
+						maybe_allocate_batches(frm, new_row.doctype, new_row.name);
+					});
+				}
 
 				selected = null;
 				$search.val("");

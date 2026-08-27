@@ -79,13 +79,14 @@ frappe.ui.form.on("Sales Return Item", {
 			frappe.model.set_value(cdt, cdn, "rate", 0);
 			return;
 		}
-		frappe.db.get_value("Item", row.item, ["item_name", "standard_selling_rate"], (r) => {
+		frappe.db.get_value("Item", row.item, "item_name", (r) => {
 			frappe.model.set_value(cdt, cdn, "item_name", r.item_name || "");
-			frappe.model.set_value(cdt, cdn, "rate", flt(r.standard_selling_rate));
 		});
 		// If this Item already has a Batch on record, pre-fill it as a
 		// convenience - still just a starting point, not a lock; change it
 		// if this return is actually a different batch than what's on record.
+		// Rate follows whichever batch ends up set (below), since price is
+		// per-batch, not a fixed Item-level number.
 		frappe.call({
 			method:
 				"metta.purchase_order.doctype.purchase_receipt.purchase_receipt.get_latest_batch_for_item",
@@ -95,6 +96,16 @@ frappe.ui.form.on("Sales Return Item", {
 				if (!batch) return;
 				frappe.model.set_value(cdt, cdn, "batch", batch.name || "");
 			},
+		});
+	},
+	batch(frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		if (!row.batch) {
+			frappe.model.set_value(cdt, cdn, "rate", 0);
+			return;
+		}
+		frappe.db.get_value("Batch", row.batch, "selling_rate", (r) => {
+			frappe.model.set_value(cdt, cdn, "rate", flt(r.selling_rate));
 		});
 	},
 	qty_returned(frm, cdt, cdn) {

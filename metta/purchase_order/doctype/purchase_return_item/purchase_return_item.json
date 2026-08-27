@@ -46,7 +46,7 @@
   },
   {
    "fieldname": "qty_returned",
-   "fieldtype": "Float",
+   "fieldtype": "Int",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Qty Returned",

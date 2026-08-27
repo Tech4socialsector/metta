@@ -68,7 +68,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Voucher Type",
-   "options": "Purchase Receipt\nPurchase Return\nStock Transfer\nBilling\nSales Return\nMaterial Issue\nStock Adjustment\nStock Reconciliation",
+   "options": "Purchase Receipt\nPurchase Bill\nPurchase Return\nStock Transfer\nBilling\nSales Return\nMaterial Issue\nStock Adjustment\nStock Reconciliation",
    "reqd": 1
   },
   {

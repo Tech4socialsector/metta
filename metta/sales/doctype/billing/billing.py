@@ -10,6 +10,7 @@ from metta.sales.doctype.patient_advance.patient_advance import get_advance_bala
 from metta.stock.doctype.stock_ledger_entry.stock_ledger_entry import (
 	create_stock_ledger_entry,
 	reverse_stock_ledger_entries,
+	validate_sufficient_batch_stock,
 	validate_sufficient_stock,
 )
 
@@ -209,6 +210,12 @@ class Billing(Document):
 			row.stock_qty = flt(row.qty) * flt(row.conversion_factor or 1)
 			row.db_set("stock_qty", row.stock_qty, update_modified=False)
 			validate_sufficient_stock(row.item, self.warehouse, row.stock_qty)
+			# The item+warehouse total above isn't enough on its own once
+			# different batches carry different prices - this stops a specific
+			# batch from going negative even while other batches of the same
+			# item still have stock left.
+			if row.batch_no:
+				validate_sufficient_batch_stock(row.item, self.warehouse, row.batch_no, row.stock_qty)
 			create_stock_ledger_entry(
 				item=row.item,
 				warehouse=self.warehouse,
@@ -306,12 +313,21 @@ def get_fefo_batch(item_code):
 
 def _billing_row(item_code, item_name, qty):
 	item_details = frappe.db.get_value(
-		"Item", item_code, ["sale_uom", "standard_selling_rate", "gst_percent", "has_batch"], as_dict=True
+		"Item",
+		item_code,
+		["sale_uom", "standard_selling_rate", "gst_percent", "has_batch", "item_type"],
+		as_dict=True,
 	) or frappe._dict()
-	rate = flt(item_details.standard_selling_rate)
+	# Medicine/Consumable pricing lives on the Batch, not the Item - rate is
+	# resolved client-side once a warehouse is known and batches can be
+	# allocated (see billing.js). Service/Asset items aren't batch-tracked,
+	# so Standard Selling Rate still applies directly, same as before.
+	is_batched = item_details.item_type in ("Medicine", "Consumable")
+	rate = 0 if is_batched else flt(item_details.standard_selling_rate)
 	return {
 		"item": item_code,
 		"item_name": item_name,
+		"item_type": item_details.item_type,
 		"qty": flt(qty),
 		"uom": item_details.sale_uom or "",
 		"rate": rate,

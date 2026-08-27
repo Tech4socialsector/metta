@@ -1,0 +1,18 @@
+[
+ {
+  "align": "Left",
+  "content": "<div style=\"display: flex; align-items: center; justify-content: center; gap: 20px; border-bottom: 2px solid #000000; padding-bottom: 10px; margin-bottom: 6px;\">\n\t<img src=\"/assets/metta/images/lch.svg\" style=\"height: 80px;\">\n\t<div style=\"text-align: center;\">\n\t\t<div style=\"font-size: 22px; font-weight: 700; font-family: Arial, Helvetica, sans-serif;\">LANDOUR COMMUNITY HOSPITAL</div>\n\t\t<div style=\"font-size: 13px; font-style: italic; font-family: Arial, Helvetica, sans-serif;\">(A unit of Emmanuel Hospital Association, New Delhi)</div>\n\t\t<div style=\"font-size: 14px; font-weight: 700; font-family: Arial, Helvetica, sans-serif; margin-top: 4px;\">MUSSOORIE - 248179, DEHRADUN, UTTARAKHAND</div>\n\t\t<div style=\"font-size: 13px; font-weight: 700; font-family: Arial, Helvetica, sans-serif;\">Ph: 01352632053, 2632666, 8449444493, E-mail: mussoorie@eha-health.org</div>\n\t</div>\n</div>",
+  "disabled": 0,
+  "doctype": "Letter Head",
+  "footer": null,
+  "footer_align": "Left",
+  "footer_source": "HTML",
+  "image_height": 0.0,
+  "image_width": 0.0,
+  "is_default": 1,
+  "letter_head_name": "Landour Community Hospital",
+  "modified": "2026-08-24 00:00:00.000000",
+  "name": "Landour Community Hospital",
+  "source": "HTML"
+ }
+]

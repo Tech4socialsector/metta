@@ -10,12 +10,13 @@ frappe.ui.form.on("Purchase Order", {
 		}));
 	},
 	onload(frm) {
-		// Best-effort UX: grey out today and earlier in the calendar widget
-		// itself. Not guaranteed to re-apply on every render, so the
-		// expected_delivery change handler below is what actually enforces this.
+		// Best-effort UX: grey out dates before today in the calendar widget
+		// itself (today is a valid Expected Delivery - a same-day delivery).
+		// Not guaranteed to re-apply on every render, so the expected_delivery
+		// change handler below is what actually enforces this.
 		if (frm.fields_dict.expected_delivery) {
 			frm.fields_dict.expected_delivery.df.min_date = frappe.datetime.str_to_obj(
-				frappe.datetime.add_days(frappe.datetime.get_today(), 1)
+				frappe.datetime.get_today()
 			);
 		}
 	},
@@ -23,11 +24,11 @@ frappe.ui.form.on("Purchase Order", {
 		// The real gate is validate_expected_delivery() on the server - this
 		// is just an instant popup instead of making the user wait for Save to fail.
 		if (!frm.doc.expected_delivery) return;
-		if (frappe.datetime.get_diff(frm.doc.expected_delivery, frappe.datetime.get_today()) <= 0) {
+		if (frappe.datetime.get_diff(frm.doc.expected_delivery, frappe.datetime.get_today()) < 0) {
 			frappe.msgprint({
 				title: __("Invalid Expected Delivery Date"),
 				indicator: "red",
-				message: __("Expected Delivery must be a date after today. Please pick a later date."),
+				message: __("Expected Delivery cannot be a date in the past. Please pick today or a later date."),
 			});
 			frm.set_value("expected_delivery", "");
 		}
@@ -128,18 +129,26 @@ frappe.ui.form.on("Purchase Order Item", {
 			frappe.model.set_value(cdt, cdn, "unit_of_measure", "");
 			frappe.model.set_value(cdt, cdn, "item_name", "");
 			frappe.model.set_value(cdt, cdn, "available_qty", 0);
+			frappe.model.set_value(cdt, cdn, "packing", 0);
 			return;
 		}
-		frappe.db.get_value(
-			"Item",
-			row.item,
-			["purchase_uom", "standard_purchase_rate", "item_name"],
-			(r) => {
-				frappe.model.set_value(cdt, cdn, "unit_of_measure", r.purchase_uom || "");
-				frappe.model.set_value(cdt, cdn, "rate", flt(r.standard_purchase_rate));
-				frappe.model.set_value(cdt, cdn, "item_name", r.item_name || "");
-			}
-		);
+		frappe.db.get_value("Item", row.item, "item_name", (r) => {
+			frappe.model.set_value(cdt, cdn, "item_name", r.item_name || "");
+		});
+		// Unit of Measure and a suggested Packing come from the same lookup
+		// already used by the search-and-add widget above, so picking an item
+		// directly in the grid stays consistent with it. Rate is deliberately
+		// not fetched here anymore - no pricing happens at this stage, that
+		// only gets entered later on the Purchase Bill.
+		frappe.call({
+			method: "metta.purchase_order.doctype.purchase_order.purchase_order.get_item_defaults_for_order",
+			args: { item: row.item },
+			callback(r) {
+				const defaults = r.message || {};
+				frappe.model.set_value(cdt, cdn, "unit_of_measure", defaults.unit_of_measure || "");
+				frappe.model.set_value(cdt, cdn, "packing", cint(defaults.packing));
+			},
+		});
 		// Store's balance specifically - can't be a plain fetch_from since it
 		// depends on a fixed warehouse, not a field on Item itself.
 		frappe.call({
@@ -150,11 +159,11 @@ frappe.ui.form.on("Purchase Order Item", {
 			},
 		});
 	},
-	qty_ordered(frm, cdt, cdn) {
-		calculate_amount(frm, cdt, cdn);
+	packing(frm, cdt, cdn) {
+		calculate_qty_ordered(frm, cdt, cdn);
 	},
-	rate(frm, cdt, cdn) {
-		calculate_amount(frm, cdt, cdn);
+	no_of_unit(frm, cdt, cdn) {
+		calculate_qty_ordered(frm, cdt, cdn);
 	},
 	items_add(frm) {
 		calculate_total(frm);
@@ -163,6 +172,12 @@ frappe.ui.form.on("Purchase Order Item", {
 		calculate_total(frm);
 	},
 });
+
+function calculate_qty_ordered(frm, cdt, cdn) {
+	const row = locals[cdt][cdn];
+	frappe.model.set_value(cdt, cdn, "qty_ordered", flt(row.packing) * flt(row.no_of_unit));
+	calculate_amount(frm, cdt, cdn);
+}
 
 function calculate_amount(frm, cdt, cdn) {
 	const row = locals[cdt][cdn];
@@ -189,11 +204,17 @@ function render_item_search(frm) {
 					)}" autocomplete="off">
 					<div class="po-item-results" style="display:none; position:absolute; z-index:50; background:var(--fg-color,#fff); border:1px solid var(--border-color,#d1d8dd); width:100%; max-height:260px; overflow:auto; box-shadow:0 2px 6px rgba(0,0,0,0.15);"></div>
 				</div>
+				<div style="width:100px;">
+					<label class="control-label" style="display:block; font-size:12px; margin-bottom:2px;">${__(
+						"Packing"
+					)}</label>
+					<input type="number" class="form-control po-item-packing" min="0" step="1">
+				</div>
 				<div style="width:120px;">
 					<label class="control-label" style="display:block; font-size:12px; margin-bottom:2px;">${__(
-						"Qty Ordered"
+						"No of Unit"
 					)}</label>
-					<input type="number" class="form-control po-item-qty" min="0">
+					<input type="number" class="form-control po-item-qty" min="0" step="1">
 				</div>
 				<div>
 					<button class="btn btn-primary btn-sm po-item-add">${__("Add")}</button>
@@ -206,6 +227,7 @@ function render_item_search(frm) {
 	let selected = null;
 	const $search = wrapper.find(".po-item-search");
 	const $results = wrapper.find(".po-item-results");
+	const $packing = wrapper.find(".po-item-packing");
 	const $qty = wrapper.find(".po-item-qty");
 	const $selectedNote = wrapper.find(".po-item-selected");
 
@@ -246,6 +268,17 @@ function render_item_search(frm) {
 			$search.val(selected.name);
 			$selectedNote.text(__("Selected: {0} ({1})", [selected.name, selected.item_code]));
 			$results.hide();
+
+			// Pre-fill Packing with the item's known default (from Item UOM
+			// Conversion) so staff usually just confirm it rather than typing
+			// it from scratch - still fully editable before Add is clicked.
+			frappe.call({
+				method: "metta.purchase_order.doctype.purchase_order.purchase_order.get_item_defaults_for_order",
+				args: { item: selected.item_code },
+				callback(r) {
+					$packing.val(cint((r.message || {}).packing) || "");
+				},
+			});
 		});
 	};
 
@@ -267,6 +300,7 @@ function render_item_search(frm) {
 	$search.on("input", () => {
 		selected = null;
 		$selectedNote.text("");
+		$packing.val("");
 		do_search();
 	});
 
@@ -275,9 +309,14 @@ function render_item_search(frm) {
 			frappe.msgprint(__("Please search and select an item first."));
 			return;
 		}
-		const qty = flt($qty.val());
-		if (!qty || qty <= 0) {
-			frappe.msgprint(__("Please enter a Qty Ordered greater than 0."));
+		const packing_input = cint($packing.val());
+		if (!packing_input || packing_input <= 0) {
+			frappe.msgprint(__("Please enter a Packing greater than 0."));
+			return;
+		}
+		const no_of_unit = cint($qty.val());
+		if (!no_of_unit || no_of_unit <= 0) {
+			frappe.msgprint(__("Please enter a No of Unit greater than 0."));
 			return;
 		}
 
@@ -286,7 +325,11 @@ function render_item_search(frm) {
 			args: { item: selected.item_code },
 			callback(r) {
 				const defaults = r.message || {};
-				const rate = flt(defaults.rate);
+				// Whatever's actually in the Packing box wins - it was already
+				// pre-filled with the suggested default on selection, but
+				// staff may have corrected it for this specific order.
+				const packing = packing_input;
+				const qty_ordered = packing * no_of_unit;
 
 				// Frappe auto-adds one blank starter row to a new document's
 				// required Table field - remove it before adding the first
@@ -296,20 +339,23 @@ function render_item_search(frm) {
 					frm.clear_table("items");
 				}
 
+				// No Rate/Amount here - pricing isn't entered at PO stage, only
+				// later on the Purchase Bill.
 				frm.add_child("items", {
 					item: selected.item_code,
 					item_name: selected.name,
 					available_qty: selected.avail_qty,
-					qty_ordered: qty,
+					packing: packing,
+					no_of_unit: no_of_unit,
+					qty_ordered: qty_ordered,
 					unit_of_measure: defaults.unit_of_measure || "",
-					rate: rate,
-					amount: qty * rate,
 				});
 				frm.refresh_field("items");
 				calculate_total(frm);
 
 				selected = null;
 				$search.val("");
+				$packing.val("");
 				$qty.val("");
 				$selectedNote.text("");
 				$results.hide();

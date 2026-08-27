@@ -96,15 +96,15 @@ def get_existing_return_for_quality_inspection(quality_inspection):
 @frappe.whitelist()
 def get_rate_for_item(against_purchase_receipt, item):
 	# The Rate being credited back is what was actually paid for it - that
-	# lives on the original Purchase Order, not the Purchase Receipt itself
-	# (which only ever records physical qty/batch, never a price).
+	# lives on the Purchase Bill now (Purchase Order no longer carries a real
+	# rate, and Purchase Receipt never did, only physical qty/batch/expiry).
 	frappe.has_permission("Purchase Return", "read", throw=True)
 	if not (against_purchase_receipt and item):
 		return 0
-	purchase_order = frappe.db.get_value("Purchase Receipt", against_purchase_receipt, "purchase_order")
-	if not purchase_order:
+	purchase_bill = frappe.db.get_value("Purchase Receipt", against_purchase_receipt, "linked_purchase_bill")
+	if not purchase_bill:
 		return 0
-	return frappe.db.get_value("Purchase Order Item", {"parent": purchase_order, "item": item}, "rate") or 0
+	return frappe.db.get_value("Purchase Bill Item", {"parent": purchase_bill, "item": item}, "rate") or 0
 
 
 @frappe.whitelist()

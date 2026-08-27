@@ -19,19 +19,23 @@ class PurchaseOrder(Document):
 		# is saved via the API or the client script didn't run.
 		total = 0
 		for row in self.items:
+			# Qty Ordered is never typed by hand - it's always Packing (tablets
+			# per strip) x No of Unit (strips ordered), so the total is always
+			# a real number staff never has to calculate themselves.
+			row.qty_ordered = flt(row.packing) * flt(row.no_of_unit)
 			row.amount = flt(row.qty_ordered) * flt(row.rate)
 			total += row.amount
 		self.total_amount = total
 		self.validate_expected_delivery()
 
 	def validate_expected_delivery(self):
-		# A delivery date that's already passed (or is today) isn't a real
-		# future commitment from the supplier. The client blocks this the
-		# moment it's picked, but that's only a convenience - this is the
-		# check an API call or import can't bypass.
-		if self.expected_delivery and getdate(self.expected_delivery) <= getdate(today()):
+		# A delivery date that's already passed isn't a real commitment from
+		# the supplier - but today is valid (a same-day delivery). The client
+		# blocks this the moment it's picked, but that's only a convenience -
+		# this is the check an API call or import can't bypass.
+		if self.expected_delivery and getdate(self.expected_delivery) < getdate(today()):
 			frappe.throw(
-				_("Expected Delivery must be a date after today."),
+				_("Expected Delivery cannot be a date in the past."),
 				title=_("Invalid Expected Delivery Date"),
 			)
 
@@ -113,13 +117,18 @@ def refresh_receiving_status(purchase_order_name):
 
 @frappe.whitelist()
 def get_available_qty(item):
-	# Store is the central stock point everything is ordered into - checked
-	# here specifically (not summed across every warehouse) so the number
-	# reflects what's actually usable to fulfil new demand from.
+	# Central Store is the central stock point everything is ordered into -
+	# checked here specifically by warehouse_type (not a hardcoded warehouse
+	# name, and not summed across every warehouse) so the number reflects
+	# what's actually usable to fulfil new demand from, and doesn't silently
+	# break if the warehouse is ever renamed.
 	frappe.has_permission("Purchase Order", "read", throw=True)
 	if not item:
 		return 0
-	return flt(frappe.db.get_value("Stock Balance", {"item": item, "warehouse": "Store"}, "actual_qty")) or 0
+	central_store = frappe.db.get_value("Warehouse", {"warehouse_type": "Central Store"}, "name")
+	if not central_store:
+		return 0
+	return flt(frappe.db.get_value("Stock Balance", {"item": item, "warehouse": central_store}, "actual_qty")) or 0
 
 
 @frappe.whitelist()
@@ -128,14 +137,31 @@ def get_item_defaults_for_order(item):
 	if not item:
 		return {}
 	data = frappe.db.get_value("Item", item, ["purchase_uom", "standard_purchase_rate"], as_dict=True) or {}
-	return {"unit_of_measure": data.get("purchase_uom") or "", "rate": flt(data.get("standard_purchase_rate"))}
+	purchase_uom = data.get("purchase_uom") or ""
+	# Packing (tablets/units per strip) already exists per-item in the master
+	# via Item UOM Conversion - suggested here as a default so staff aren't
+	# retyping something already on file, but it stays editable since the
+	# actual pack size can occasionally differ between deliveries.
+	packing = 0
+	if purchase_uom:
+		packing = flt(
+			frappe.db.get_value(
+				"Item UOM Conversion", {"parent": item, "uom": purchase_uom}, "conversion_factor"
+			)
+		)
+	return {
+		"unit_of_measure": purchase_uom,
+		"rate": flt(data.get("standard_purchase_rate")),
+		"packing": packing,
+	}
 
 
 @frappe.whitelist()
 def search_items_for_order(search_term=""):
 	# Same search-and-add pattern as Stock Indent's item widget, but Avail Qty
-	# here is Store's balance specifically - the point is to catch, right at
-	# the moment of ordering, whether Store already has enough on hand.
+	# here is Central Store's balance specifically - the point is to catch,
+	# right at the moment of ordering, whether Central Store already has
+	# enough on hand.
 	frappe.has_permission("Purchase Order", "read", throw=True)
 	filters = {"item_type": ["in", ["Medicine", "Consumable", "Asset"]]}
 	if search_term:
@@ -148,10 +174,15 @@ def search_items_for_order(search_term=""):
 		limit=20,
 	)
 
+	central_store = frappe.db.get_value("Warehouse", {"warehouse_type": "Central Store"}, "name")
+
 	result = []
 	for it in items:
 		avail_qty = (
-			frappe.db.get_value("Stock Balance", {"item": it.item_code, "warehouse": "Store"}, "actual_qty") or 0
+			(central_store and frappe.db.get_value(
+				"Stock Balance", {"item": it.item_code, "warehouse": central_store}, "actual_qty"
+			))
+			or 0
 		)
 		result.append(
 			{

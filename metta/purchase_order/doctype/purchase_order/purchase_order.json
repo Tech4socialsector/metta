@@ -94,8 +94,10 @@
    "reqd": 1
   },
   {
+   "description": "No pricing happens at Purchase Order stage - kept for older orders that already have a value, not shown for new ones.",
    "fieldname": "total_amount",
    "fieldtype": "Currency",
+   "hidden": 1,
    "label": "Total Amount",
    "read_only": 1
   },

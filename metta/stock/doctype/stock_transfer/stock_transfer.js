@@ -60,29 +60,30 @@ frappe.ui.form.on("Stock Transfer", {
 			});
 		}
 
-		if (frm.doc.docstatus === 1 && frm.doc.against_indent && !frm.doc.shortfall_notice_sent) {
-			frappe.call({
-				method: "metta.stock.doctype.stock_transfer.stock_transfer.has_pending_shortfall",
-				args: { stock_transfer: frm.doc.name },
-				callback(r) {
-					if (!r.message) return;
-					frm.add_custom_button(__("Notify Requesting Warehouse"), () => {
-						frappe.confirm(
-							__(
-								"This will email whoever raised Indent {0}, listing what's still pending. Continue?",
-								[frm.doc.against_indent]
-							),
-							() => {
-								frm.call("notify_requesting_warehouse").then(() => {
-									frm.reload_doc();
-									frappe.show_alert({ message: __("Shortfall notice sent."), indicator: "green" });
-								});
-							}
-						);
-					});
-				},
-			});
-		}
+		// Temporarily hidden - re-enable by restoring this block.
+		// if (frm.doc.docstatus === 1 && frm.doc.against_indent && !frm.doc.shortfall_notice_sent) {
+		// 	frappe.call({
+		// 		method: "metta.stock.doctype.stock_transfer.stock_transfer.has_pending_shortfall",
+		// 		args: { stock_transfer: frm.doc.name },
+		// 		callback(r) {
+		// 			if (!r.message) return;
+		// 			frm.add_custom_button(__("Notify Requesting Warehouse"), () => {
+		// 				frappe.confirm(
+		// 					__(
+		// 						"This will email whoever raised Indent {0}, listing what's still pending. Continue?",
+		// 						[frm.doc.against_indent]
+		// 					),
+		// 					() => {
+		// 						frm.call("notify_requesting_warehouse").then(() => {
+		// 							frm.reload_doc();
+		// 							frappe.show_alert({ message: __("Shortfall notice sent."), indicator: "green" });
+		// 						});
+		// 					}
+		// 				);
+		// 			});
+		// 		},
+		// 	});
+		// }
 
 		// Temporarily hidden - re-enable by restoring this block.
 		// if (frm.doc.has_discrepancy && frm.doc.discrepancy_status === "Pending Review") {

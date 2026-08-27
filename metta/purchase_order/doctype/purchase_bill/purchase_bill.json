@@ -11,10 +11,17 @@
   "supplier_invoice_no",
   "supplier_invoice_date",
   "purchase_receipt",
+  "entered_by",
+  "status",
+  "approved_by",
+  "approved_date_time",
   "items",
+  "rejection_reason",
   "subtotal",
+  "discount",
   "gst_amount",
-  "other_tax_amount",
+  "tax_on_free",
+  "round_off",
   "total_amount",
   "payment_terms_days",
   "due_date",
@@ -51,6 +58,35 @@
    "options": "Purchase Receipt"
   },
   {
+   "description": "Whoever is logged in when this bill is created - set automatically, never typed.",
+   "fieldname": "entered_by",
+   "fieldtype": "Link",
+   "label": "Entered By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "\nPending Approval\nApproved\nRejected",
+   "read_only": 1
+  },
+  {
+   "fieldname": "approved_by",
+   "fieldtype": "Link",
+   "label": "Approved By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "approved_date_time",
+   "fieldtype": "Datetime",
+   "label": "Approved Date Time",
+   "read_only": 1
+  },
+  {
    "fieldname": "items",
    "fieldtype": "Table",
    "label": "Items",
@@ -58,9 +94,23 @@
    "reqd": 1
   },
   {
+   "depends_on": "eval:doc.status=='Rejected'",
+   "fieldname": "rejection_reason",
+   "fieldtype": "Small Text",
+   "label": "Rejection Reason",
+   "read_only": 1
+  },
+  {
    "fieldname": "subtotal",
    "fieldtype": "Currency",
    "label": "Subtotal",
+   "read_only": 1
+  },
+  {
+   "description": "Summed from every row's Discount.",
+   "fieldname": "discount",
+   "fieldtype": "Currency",
+   "label": "Discount",
    "read_only": 1
   },
   {
@@ -70,14 +120,21 @@
    "read_only": 1
   },
   {
-   "fieldname": "other_tax_amount",
+   "fieldname": "tax_on_free",
    "fieldtype": "Currency",
-   "label": "Other Tax Amount"
+   "label": "Tax on Free"
+  },
+  {
+   "description": "Rounds Net Amount to the nearest rupee.",
+   "fieldname": "round_off",
+   "fieldtype": "Currency",
+   "label": "Round Off",
+   "read_only": 1
   },
   {
    "fieldname": "total_amount",
    "fieldtype": "Currency",
-   "label": "Total Payable",
+   "label": "Net Amount",
    "read_only": 1
   },
   {

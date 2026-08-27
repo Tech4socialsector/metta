@@ -14,6 +14,19 @@ frappe.ui.form.on("Purchase Receipt", {
 			filters: { warehouse_type: "Central Store" },
 		}));
 	},
+	onload(frm) {
+		// Every supplier delivery lands at Central Store - looked up dynamically
+		// rather than hardcoding the name, same as the Available Qty lookup, in
+		// case it's ever renamed. Only for a fresh, unsaved document - never
+		// override a value that's already there.
+		if (frm.is_new() && !frm.doc.receiving_warehouse) {
+			frappe.db.get_value("Warehouse", { warehouse_type: "Central Store" }, "name").then((r) => {
+				if (r.message && r.message.name) {
+					frm.set_value("receiving_warehouse", r.message.name);
+				}
+			});
+		}
+	},
 	refresh(frm) {
 		show_get_items_button(frm);
 		show_create_document_button(frm);
@@ -57,7 +70,7 @@ function show_get_items_button(frm) {
 				rows.forEach((row) => frm.add_child("items", row));
 				frm.refresh_field("items");
 				frappe.show_alert({
-					message: __("{0} item(s) pulled in - fill in Batch No, Expiry Date and confirm Qty Received.", [
+					message: __("{0} item(s) pulled in - fill in Batch No, Expiry Date and confirm Packing/No of Unit.", [
 						rows.length,
 					]),
 					indicator: "green",
@@ -203,6 +216,16 @@ frappe.ui.form.on("Purchase Receipt Item", {
 			frappe.model.set_value(cdt, cdn, "unit_of_measure", r.purchase_uom || "");
 			frappe.model.set_value(cdt, cdn, "item_name", r.item_name || "");
 		});
+		// Same Packing lookup Purchase Order uses (Item UOM Conversion) - a
+		// suggested default only, staff can still correct it if this specific
+		// delivery's actual pack size is different.
+		frappe.call({
+			method: "metta.purchase_order.doctype.purchase_order.purchase_order.get_item_defaults_for_order",
+			args: { item: row.item },
+			callback(r) {
+				frappe.model.set_value(cdt, cdn, "packing", cint((r.message || {}).packing));
+			},
+		});
 		// If this Item already has a Batch on record, pre-fill it as a
 		// convenience - still just a starting point, not a lock; change it
 		// for a genuinely new delivery with its own new batch number.
@@ -233,7 +256,18 @@ frappe.ui.form.on("Purchase Receipt Item", {
 	batch_no(frm, cdt, cdn) {
 		find_and_fill_quality_inspection(frm, cdt, cdn);
 	},
+	packing(frm, cdt, cdn) {
+		calculate_qty_received(frm, cdt, cdn);
+	},
+	no_of_unit(frm, cdt, cdn) {
+		calculate_qty_received(frm, cdt, cdn);
+	},
 });
+
+function calculate_qty_received(frm, cdt, cdn) {
+	const row = locals[cdt][cdn];
+	frappe.model.set_value(cdt, cdn, "qty_received", flt(row.packing) * flt(row.no_of_unit));
+}
 
 function find_and_fill_quality_inspection(frm, cdt, cdn) {
 	const row = locals[cdt][cdn];

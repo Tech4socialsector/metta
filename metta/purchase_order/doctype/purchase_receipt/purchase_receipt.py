@@ -8,15 +8,21 @@ from frappe.utils import flt
 
 from metta.purchase_order.doctype.purchase_order.purchase_order import refresh_receiving_status
 from metta.purchase_order.doctype.purchase_return.purchase_return import update_status_on_replacement_receipt
-from metta.stock.doctype.stock_ledger_entry.stock_ledger_entry import (
-	create_stock_ledger_entry,
-	reverse_stock_ledger_entries,
-)
 
 
 class PurchaseReceipt(Document):
 	def validate(self):
 		self.validate_receiving_warehouse()
+		for row in self.items:
+			# Qty Received is never typed by hand - it's always Packing
+			# (tablets per strip) x No of Unit (strips received), same as
+			# Purchase Order's own Qty Ordered, so both sides stay in matching
+			# units and "how much is still pending" tracking stays correct.
+			row.qty_received = flt(row.packing) * flt(row.no_of_unit)
+			# conversion_factor isn't used for Stock Qty anymore (Qty Received
+			# is already the real total) - kept in sync with Packing purely so
+			# Purchase Return's existing lookup still gets a sensible number.
+			row.conversion_factor = flt(row.packing) or 1
 
 	def validate_receiving_warehouse(self):
 		# A supplier delivery always lands at Central Store first - sub-stores
@@ -33,20 +39,17 @@ class PurchaseReceipt(Document):
 			)
 
 	def on_submit(self):
+		# Stock is deliberately NOT added here anymore - a Purchase Receipt only
+		# records what physically arrived (qty, batch, expiry). Stock is only
+		# added once the matching Purchase Bill is approved by a second person,
+		# so a mistake in what gets billed can be caught before it becomes real,
+		# usable inventory. See Purchase Bill.approve_bill().
 		for row in self.items:
-			batch_name = self.get_or_create_batch(row)
-			row.stock_qty = flt(row.qty_received) * flt(row.conversion_factor or 1)
+			self.get_or_create_batch(row)
+			# Qty Received is already the true total (Packing x No of Unit),
+			# so Stock Qty is just that - no separate conversion step needed.
+			row.stock_qty = flt(row.qty_received)
 			row.db_set("stock_qty", row.stock_qty, update_modified=False)
-
-			create_stock_ledger_entry(
-				item=row.item,
-				warehouse=self.receiving_warehouse,
-				batch_no=batch_name,
-				posting_datetime=self.receipt_date_time,
-				voucher_type="Purchase Receipt",
-				voucher_no=self.name,
-				qty_change=row.stock_qty,
-			)
 
 			self.update_purchase_order_qty_received(row)
 		if self.purchase_order:
@@ -55,7 +58,7 @@ class PurchaseReceipt(Document):
 			update_status_on_replacement_receipt(self.replacement_for, received=True)
 
 	def on_cancel(self):
-		reverse_stock_ledger_entries("Purchase Receipt", self.name)
+		# No stock ledger entries to reverse here - see on_submit().
 		for row in self.items:
 			self.update_purchase_order_qty_received(row, reverse=True)
 		if self.purchase_order:
@@ -112,22 +115,28 @@ def get_pending_items(purchase_order):
 		pending_qty = flt(po_row.qty_ordered) - flt(po_row.qty_received)
 		if pending_qty <= 0:
 			continue
-		conversion_factor = (
-			frappe.db.get_value(
-				"Item UOM Conversion",
-				{"parent": po_row.item, "uom": po_row.unit_of_measure},
-				"conversion_factor",
-			)
-			or 1
-		)
+		# Same Packing (physical pack size) as what was ordered is the sane
+		# default - No of Unit is then derived so Packing x No of Unit lands
+		# back on exactly what's still outstanding, letting staff just confirm
+		# rather than re-figure the split from scratch. If an earlier partial
+		# receipt used a different Packing than the order (supplier delivered
+		# a different pack size), pending_qty may not split evenly into whole
+		# strips of the order's own Packing - Packing/No of Unit are Int
+		# fields, so falling back to individual units (Packing=1) here keeps
+		# the pending amount exact instead of a fractional strip count
+		# silently truncating away real stock on save.
+		packing = flt(po_row.packing) or 1
+		if pending_qty % packing != 0:
+			packing = 1
 		rows.append(
 			{
 				"item": po_row.item,
 				"item_name": frappe.db.get_value("Item", po_row.item, "item_name") or "",
 				"unit_of_measure": po_row.unit_of_measure,
 				"qty_ordered": po_row.qty_ordered,
+				"packing": packing,
+				"no_of_unit": pending_qty / packing,
 				"qty_received": pending_qty,
-				"conversion_factor": conversion_factor,
 			}
 		)
 	return rows
