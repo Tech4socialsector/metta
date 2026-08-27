@@ -5,10 +5,10 @@
  "doctype": "Page",
  "modified": "2026-08-27 00:00:00",
  "modified_by": "Administrator",
- "module": "Stock",
- "name": "material-analysis",
+ "module": "Purchase Order",
+ "name": "purchase-return-summary",
  "owner": "Administrator",
- "page_name": "material-analysis",
+ "page_name": "purchase-return-summary",
  "roles": [
   {
    "role": "System Manager"
@@ -17,14 +17,14 @@
    "role": "Store Staff"
   },
   {
-   "role": "Pharmacy Staff"
+   "role": "Purchase Approver"
   },
   {
-   "role": "Warehouse Staffs"
+   "role": "Account Staff"
   }
  ],
  "script": null,
  "standard": "Yes",
  "style": null,
- "title": "Material Analysis"
+ "title": "Purchase Return Summary"
 }

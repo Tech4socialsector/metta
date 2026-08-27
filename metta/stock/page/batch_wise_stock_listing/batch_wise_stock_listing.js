@@ -49,15 +49,34 @@ class BatchWiseStockListing {
 		this.as_on_date.set_value(frappe.datetime.get_today());
 		this.warehouse = field({ fieldname: "warehouse", label: __("Warehouse (Outlet)"), fieldtype: "Link", options: "Warehouse" });
 		this.item = field({ fieldname: "item", label: __("Item"), fieldtype: "Link", options: "Item" });
-		this.batch_no = field({ fieldname: "batch_no", label: __("Batch No."), fieldtype: "Link", options: "Batch" });
+		this.batch_no = field({
+			fieldname: "batch_no",
+			label: __("Batch No."),
+			fieldtype: "Link",
+			options: "Batch",
+			onchange: () => this.show_batch_supplier(),
+		});
+		this.batch_supplier_note = $("<div class=\"text-muted\" style=\"font-size:12px;margin-top:4px;\"></div>").insertAfter(this.batch_no.$wrapper);
+		this.supplier = field({ fieldname: "supplier", label: __("Supplier"), fieldtype: "Link", options: "Supplier" });
 		this.item_type = field({ fieldname: "item_type", label: __("Item Type"), fieldtype: "Select", options: BWSL_ITEM_TYPES.join("\n") });
 		this.status = field({ fieldname: "status", label: __("Expiry Status"), fieldtype: "Select", options: BWSL_STATUSES.join("\n") });
 		this.status.set_value("All");
 		$("<button class=\"btn btn-primary btn-sm\" style=\"white-space:nowrap\">" + __("Generate") + "</button>").appendTo($("<div style=\"flex:0 0 auto\"></div>").appendTo(row)).on("click", () => this.generate());
 	}
 
+	show_batch_supplier() {
+		const batch_no = this.batch_no.get_value();
+		if (!batch_no) {
+			this.batch_supplier_note.text("");
+			return;
+		}
+		frappe.db.get_value("Batch", batch_no, "supplier", (r) => {
+			this.batch_supplier_note.text(r && r.supplier ? `${__("Supplier")}: ${r.supplier}` : __("No supplier on record for this batch."));
+		});
+	}
+
 	generate() {
-		frappe.call({ method: "metta.stock.page.batch_wise_stock_listing.batch_wise_stock_listing.get_data", args: { as_on_date:this.as_on_date.get_value(), warehouse:this.warehouse.get_value(), item:this.item.get_value(), item_type:this.item_type.get_value(), batch_no:this.batch_no.get_value(), status:this.status.get_value() }, freeze:true, callback: (r) => this.render(r.message || []) });
+		frappe.call({ method: "metta.stock.page.batch_wise_stock_listing.batch_wise_stock_listing.get_data", args: { as_on_date:this.as_on_date.get_value(), warehouse:this.warehouse.get_value(), item:this.item.get_value(), item_type:this.item_type.get_value(), batch_no:this.batch_no.get_value(), status:this.status.get_value(), supplier:this.supplier.get_value() }, freeze:true, callback: (r) => this.render(r.message || []) });
 	}
 
 	render(rows) {
@@ -68,8 +87,8 @@ class BatchWiseStockListing {
 		const value = rows.reduce((sum, r) => sum + flt(r.stock_value), 0);
 		this.cards_area.html(`<div class="bwsl-card"><div class="bwsl-label">${__("Active Batches")}</div><div class="bwsl-value">${rows.length}</div></div><div class="bwsl-card"><div class="bwsl-label">${__("Available Stock Qty")}</div><div class="bwsl-value">${qty}</div></div><div class="bwsl-card warning"><div class="bwsl-label">${__("Expiring in 30 Days")}</div><div class="bwsl-value">${expiring.length}</div></div><div class="bwsl-card danger"><div class="bwsl-label">${__("Expired Batches")}</div><div class="bwsl-value">${expired.length}</div></div><div class="bwsl-card"><div class="bwsl-label">${__("Stock Value")}</div><div class="bwsl-value">${format_currency(value)}</div></div>`);
 		if (!rows.length) { this.table_area.html(`<p class="text-muted">${__("No available batches found for this filter.")}</p>`); return; }
-		const columns = ["Item","Item Name","Item Type","Warehouse","Batch No.","Mfg. Date","Expiry Date","Days Left","Available Qty","UOM","Shelf","Stock Value","Status"];
-		const body = rows.map(r => `<tr class="${r.status === "Expired" ? "bwsl-expired" : ""}"><td>${frappe.utils.escape_html(r.item || "")}</td><td>${frappe.utils.escape_html(r.item_name || "")}</td><td>${frappe.utils.escape_html(r.item_type || "")}</td><td>${frappe.utils.escape_html(r.warehouse || "")}</td><td>${frappe.utils.escape_html(r.batch_no || "")}</td><td class="text-center">${bwsl_date(r.manufacturing_date)}</td><td class="text-center">${bwsl_date(r.expiry_date)}</td><td class="text-center">${r.days_to_expiry ?? ""}</td><td class="text-center">${flt(r.available_qty)}</td><td class="text-center">${frappe.utils.escape_html(r.stock_uom || "")}</td><td>${frappe.utils.escape_html(r.rack_location || "")}</td><td class="text-center">${format_currency(r.stock_value)}</td><td><span class="indicator-pill ${BWSL_INDICATORS[r.status] || "gray"}"><span>${__(r.status)}</span></span></td></tr>`).join("");
+		const columns = ["Item","Item Name","Item Type","Warehouse","Batch No.","Mfg. Date","Expiry Date","Days Left","Available Qty","Shelf","Stock Value","Status"];
+		const body = rows.map(r => `<tr class="${r.status === "Expired" ? "bwsl-expired" : ""}"><td>${frappe.utils.escape_html(r.item || "")}</td><td>${frappe.utils.escape_html(r.item_name || "")}</td><td>${frappe.utils.escape_html(r.item_type || "")}</td><td>${frappe.utils.escape_html(r.warehouse || "")}</td><td>${frappe.utils.escape_html(r.batch_no || "")}</td><td class="text-center">${bwsl_date(r.manufacturing_date)}</td><td class="text-center">${bwsl_date(r.expiry_date)}</td><td class="text-center">${r.days_to_expiry ?? ""}</td><td class="text-center">${flt(r.available_qty)}</td><td>${frappe.utils.escape_html(r.rack_location || "")}</td><td class="text-center">${format_currency(r.stock_value)}</td><td><span class="indicator-pill ${BWSL_INDICATORS[r.status] || "gray"}"><span>${__(r.status)}</span></span></td></tr>`).join("");
 		this.table_area.html(`<table class="table table-hover"><thead><tr>${columns.map(c => `<th>${__(c)}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table>`);
 	}
 

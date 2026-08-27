@@ -15,7 +15,7 @@ STATUS_SAFE = "Safe"
 
 
 @frappe.whitelist()
-def get_data(as_on_date=None, warehouse=None, item=None, item_type=None, batch_no=None, status=None):
+def get_data(as_on_date=None, warehouse=None, item=None, item_type=None, batch_no=None, status=None, supplier=None):
 	"""Return on-hand stock by item, warehouse, and batch as at the requested date."""
 	frappe.has_permission("Batch", "read", throw=True)
 	frappe.has_permission("Stock Ledger Entry", "read", throw=True)
@@ -38,6 +38,9 @@ def get_data(as_on_date=None, warehouse=None, item=None, item_type=None, batch_n
 	if batch_no:
 		conditions.append("sle.batch_no = %(batch_no)s")
 		values["batch_no"] = batch_no
+	if supplier:
+		conditions.append("b.supplier = %(supplier)s")
+		values["supplier"] = supplier
 	where = " AND ".join(conditions)
 	# qty_after_transaction is item/warehouse-wide, rather than batch-wide.
 	# Summing signed ledger movements is therefore the authoritative batch balance.
@@ -60,7 +63,7 @@ def get_data(as_on_date=None, warehouse=None, item=None, item_type=None, batch_n
 			WHERE sle.posting_datetime <= %(as_on_datetime)s
 		)
 		SELECT q.item, i.item_name, i.item_type, i.stock_uom, i.rack_location, q.warehouse,
-			q.batch_no, b.manufacturing_date, b.expiry_date,
+			q.batch_no, b.manufacturing_date, b.expiry_date, b.supplier,
 			q.available_qty, COALESCE(lr.valuation_rate, 0) AS valuation_rate,
 			DATEDIFF(b.expiry_date, %(as_on_date)s) AS days_to_expiry
 		FROM batch_quantities q

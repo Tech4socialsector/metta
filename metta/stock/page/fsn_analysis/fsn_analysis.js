@@ -1,17 +1,25 @@
-frappe.pages["stock-sale-report"].on_page_load = function (wrapper) {
+frappe.pages["fsn-analysis"].on_page_load = function (wrapper) {
 	const page = frappe.ui.make_app_page({
 		parent: wrapper,
-		title: __("Stock Sale Report"),
+		title: __("FSN Analysis"),
 		single_column: true,
 	});
 
-	new StockSaleReport(page);
+	new MaterialAnalysis(page);
 };
 
 const ITEM_TYPE_OPTIONS = ["", "Medicine", "Service", "Consumable", "Asset"];
-const BILL_TYPE_OPTIONS = ["", "Pharmacy", "Service", "Mixed"];
+
+const MOVEMENT_STATUS_INDICATOR = {
+	"Fast-Moving": "green",
+	"Slow-Moving": "orange",
+	"Non-Moving": "red",
+};
 
 function format_ddmmyy(date_str) {
+	// Fixed dd/mm/yy display regardless of the logged-in user's System
+	// Settings date format, since that setting isn't consistent from user
+	// to user and this page needs to always read the same way.
 	if (!date_str) return "";
 	const d = new Date(date_str);
 	if (isNaN(d)) return "";
@@ -21,31 +29,39 @@ function format_ddmmyy(date_str) {
 	return `${dd}/${mm}/${yy}`;
 }
 
-class StockSaleReport {
+class MaterialAnalysis {
 	constructor(page) {
 		this.page = page;
 		this.inject_styles();
-		this.page.body.addClass("ssr-page");
+		this.page.body.addClass("ma-page");
 		this.make_section_title();
 		this.make_filters();
 		this.make_quick_range_buttons();
 		this.make_results_area();
 		metta.report_export.add_buttons(this.page, () => this.get_export_data());
-		// Dates are left blank on purpose - staff pick the range themselves
-		// (or use the quick-range buttons) rather than the page assuming a
-		// default and running a query before anyone asked for one.
+		// Defaults to the last 30 days rather than staying blank - a
+		// movement-frequency report is meaningless with no range at all
+		// (every item would show "0 active days" for lack of anything to
+		// measure), so it needs a real window to be useful right away.
+		const today = frappe.datetime.get_today();
+		const month_ago = frappe.datetime.add_days(today, -30);
+		this.from_date_field.set_value(month_ago).then(() => {
+			this.to_date_field.set_value(today).then(() => {
+				this.generate();
+			});
+		});
 	}
 
 	inject_styles() {
-		if (document.getElementById("ssr-styles")) return;
-		$(`<style id="ssr-styles">
-			.ssr-page .ssr-section-title {
+		if (document.getElementById("ma-styles")) return;
+		$(`<style id="ma-styles">
+			.ma-page .ma-section-title {
 				font-weight: 700;
 				font-size: 13px;
 				letter-spacing: 0.05em;
 				margin-bottom: 4px;
 			}
-			.ssr-page .ssr-section-subtitle {
+			.ma-page .ma-section-subtitle {
 				color: #1a63c9;
 				font-weight: 600;
 				font-size: 15px;
@@ -53,44 +69,59 @@ class StockSaleReport {
 				border-bottom: 2px solid #1a63c9;
 				margin-bottom: 18px;
 			}
-			.ssr-page .ssr-cards {
+			.ma-page .ma-cards {
 				display: flex;
 				gap: 12px;
 				flex-wrap: wrap;
 				margin-bottom: 16px;
 			}
-			.ssr-page .ssr-card {
+			.ma-page .ma-card {
 				flex: 1 1 180px;
 				border: 1px solid #bcdcf7;
 				border-radius: 8px;
 				padding: 12px 16px;
 				background: #eaf3fc;
 			}
-			.ssr-page .ssr-card .ssr-card-label {
+			.ma-page .ma-card.fast {
+				border-color: #bfe6c8;
+				background: #eafcf1;
+			}
+			.ma-page .ma-card.slow {
+				border-color: #f5ddb8;
+				background: #fdf4e7;
+			}
+			.ma-page .ma-card.non-moving {
+				border-color: #f5c2b8;
+				background: #fdece7;
+			}
+			.ma-page .ma-card .ma-card-label {
 				font-size: 11px;
 				text-transform: uppercase;
 				letter-spacing: 0.04em;
 				color: #0b4a86;
 				font-weight: 600;
 			}
-			.ssr-page .ssr-card .ssr-card-value {
+			.ma-page .ma-card.fast .ma-card-label { color: #1f7a3f; }
+			.ma-page .ma-card.slow .ma-card-label { color: #a3701f; }
+			.ma-page .ma-card.non-moving .ma-card-label { color: #a3341f; }
+			.ma-page .ma-card .ma-card-value {
 				font-size: 22px;
 				font-weight: 700;
 				color: #0b4a86;
 				font-variant-numeric: tabular-nums;
 			}
-			.ssr-page table.ssr-table tr.ssr-low-stock td {
-				background: #fdece7;
-			}
-			.ssr-page .table-wrapper {
+			.ma-page .ma-card.fast .ma-card-value { color: #1f7a3f; }
+			.ma-page .ma-card.slow .ma-card-value { color: #a3701f; }
+			.ma-page .ma-card.non-moving .ma-card-value { color: #a3341f; }
+			.ma-page .table-wrapper {
 				border: 1px solid var(--border-color);
 				border-radius: 8px;
 				overflow: hidden;
 			}
-			.ssr-page table.ssr-table {
+			.ma-page table.ma-table {
 				margin-bottom: 0;
 			}
-			.ssr-page table.ssr-table thead th {
+			.ma-page table.ma-table thead th {
 				background: #1b4f8c;
 				color: #fff;
 				text-transform: uppercase;
@@ -100,32 +131,29 @@ class StockSaleReport {
 				padding: 10px 14px;
 				white-space: nowrap;
 			}
-			.ssr-page table.ssr-table td {
+			.ma-page table.ma-table td {
 				padding: 8px 14px;
 				vertical-align: middle;
 				font-size: 13px;
 				border-color: var(--border-color);
 			}
-			.ssr-page table.ssr-table td.text-center {
+			.ma-page table.ma-table td.text-center {
 				text-align: center;
 				font-variant-numeric: tabular-nums;
 			}
-			.ssr-page table.ssr-table tbody tr:nth-child(even) {
+			.ma-page table.ma-table tbody tr:nth-child(even) {
 				background: var(--subtle-fg, rgba(140, 140, 140, 0.04));
 			}
-			.ssr-page table.ssr-table tr.ssr-total td {
-				background: #eaf3fc;
-				color: #0b4a86;
-				font-weight: 700;
-				border-top: 2px solid #1b4f8c;
+			.ma-page table.ma-table tr.ma-non-moving-row td {
+				background: #fdece7;
 			}
 		</style>`).appendTo("head");
 	}
 
 	make_section_title() {
 		$(`
-			<div class="ssr-section-title">SALES &amp; STOCK</div>
-			<div class="ssr-section-subtitle">Stock Sale Report</div>
+			<div class="ma-section-title">STOCK</div>
+			<div class="ma-section-subtitle">FSN Analysis</div>
 		`).appendTo(this.page.body);
 	}
 
@@ -157,7 +185,7 @@ class StockSaleReport {
 		});
 		this.warehouse_field = field({
 			fieldname: "warehouse",
-			label: __("Warehouse (Outlet)"),
+			label: __("Warehouse"),
 			fieldtype: "Link",
 			options: "Warehouse",
 		});
@@ -167,12 +195,6 @@ class StockSaleReport {
 			label: __("Item Type"),
 			fieldtype: "Select",
 			options: ITEM_TYPE_OPTIONS.join("\n"),
-		});
-		this.bill_type_field = field({
-			fieldname: "bill_type",
-			label: __("Bill Type"),
-			fieldtype: "Select",
-			options: BILL_TYPE_OPTIONS.join("\n"),
 		});
 
 		const button_wrap = $(`<div></div>`).appendTo(filter_row);
@@ -188,9 +210,14 @@ class StockSaleReport {
 				.appendTo(wrap)
 				.on("click", () => fn().then(() => this.generate()));
 
-		btn(__("Today"), () => this.set_range(frappe.datetime.get_today(), frappe.datetime.get_today()));
 		btn(__("This Week"), () => this.set_range(frappe.datetime.week_start(), frappe.datetime.week_end()));
 		btn(__("This Month"), () => this.set_range(frappe.datetime.month_start(), frappe.datetime.month_end()));
+		btn(__("Last 30 Days"), () =>
+			this.set_range(frappe.datetime.add_days(frappe.datetime.get_today(), -30), frappe.datetime.get_today())
+		);
+		btn(__("Last 90 Days"), () =>
+			this.set_range(frappe.datetime.add_days(frappe.datetime.get_today(), -90), frappe.datetime.get_today())
+		);
 	}
 
 	set_range(from_date, to_date) {
@@ -201,9 +228,8 @@ class StockSaleReport {
 	}
 
 	make_results_area() {
-		this.cards_area = $(`<div class="ssr-cards"></div>`).appendTo(this.page.body);
+		this.cards_area = $(`<div class="ma-cards"></div>`).appendTo(this.page.body);
 		this.table_area = $(`<div class="table-wrapper" style="overflow-x: auto;"></div>`).appendTo(this.page.body);
-		this.table_area.html(`<p class="text-muted">${__("Set a From Date and To Date, then click Generate.")}</p>`);
 	}
 
 	generate() {
@@ -215,14 +241,13 @@ class StockSaleReport {
 		}
 
 		frappe.call({
-			method: "metta.stock.page.stock_sale_report.stock_sale_report.get_data",
+			method: "metta.stock.page.fsn_analysis.fsn_analysis.get_data",
 			args: {
 				from_date,
 				to_date,
 				warehouse: this.warehouse_field.get_value(),
 				item: this.item_field.get_value(),
 				item_type: this.item_type_field.get_value(),
-				bill_type: this.bill_type_field.get_value(),
 			},
 			freeze: true,
 			callback: (r) => this.render(r.message || []),
@@ -232,32 +257,31 @@ class StockSaleReport {
 	render(rows) {
 		this.all_rows = rows;
 
-		const total_bills = rows.reduce((sum, r) => sum + (r.bill_count || 0), 0);
-		const sales_value = rows.reduce((sum, r) => sum + flt(r.sales_value), 0);
-		const stock_value = rows.reduce((sum, r) => sum + flt(r.stock_value), 0);
-		const low_stock_count = rows.filter((r) => r.is_low_stock).length;
+		const fast_count = rows.filter((r) => r.movement_status === "Fast-Moving").length;
+		const slow_count = rows.filter((r) => r.movement_status === "Slow-Moving").length;
+		const non_moving_count = rows.filter((r) => r.movement_status === "Non-Moving").length;
 
 		this.cards_area.html(`
-			<div class="ssr-card">
-				<div class="ssr-card-label">${__("Items Listed")}</div>
-				<div class="ssr-card-value">${rows.length}</div>
+			<div class="ma-card">
+				<div class="ma-card-label">${__("Total Items")}</div>
+				<div class="ma-card-value">${rows.length}</div>
 			</div>
-			<div class="ssr-card">
-				<div class="ssr-card-label">${__("Sales Value")}</div>
-				<div class="ssr-card-value">${format_currency(sales_value)}</div>
+			<div class="ma-card fast">
+				<div class="ma-card-label">${__("Fast-Moving")}</div>
+				<div class="ma-card-value">${fast_count}</div>
 			</div>
-			<div class="ssr-card">
-				<div class="ssr-card-label">${__("Current Stock Value")}</div>
-				<div class="ssr-card-value">${format_currency(stock_value)}</div>
+			<div class="ma-card slow">
+				<div class="ma-card-label">${__("Slow-Moving")}</div>
+				<div class="ma-card-value">${slow_count}</div>
 			</div>
-			<div class="ssr-card">
-				<div class="ssr-card-label">${__("Below Reorder Level")}</div>
-				<div class="ssr-card-value">${low_stock_count}</div>
+			<div class="ma-card non-moving">
+				<div class="ma-card-label">${__("Non-Moving")}</div>
+				<div class="ma-card-value">${non_moving_count}</div>
 			</div>
 		`);
 
 		if (!rows.length) {
-			this.table_area.html(`<p class="text-muted">${__("No sales or stock found for this range.")}</p>`);
+			this.table_area.html(`<p class="text-muted">${__("No stock movement found for this range.")}</p>`);
 			return;
 		}
 
@@ -266,56 +290,44 @@ class StockSaleReport {
 			"Item Name",
 			"Item Type",
 			"Warehouse",
-			"Bills",
-			"Qty Sold",
-			"Current Stock",
-			"Sales Value",
-			"GST Collected",
-			"Days of Stock Left",
+			"Opening Qty",
+			"Inward Qty",
+			"Outward Qty",
+			"Closing Qty",
+			"Closing Value",
+			"Active Days",
+			"Last Outward",
+			"Movement Status",
 		]
 			.map((h) => `<th>${__(h)}</th>`)
 			.join("");
 
-		const days_cell = (row) => {
-			if (row.days_of_stock === null || row.days_of_stock === undefined) {
-				return `<span class="text-muted">${__("Not selling")}</span>`;
-			}
-			return Math.round(row.days_of_stock);
-		};
-
 		const body = rows
-			.map(
-				(row) => `
-				<tr class="${row.is_low_stock ? "ssr-low-stock" : ""}">
+			.map((row) => {
+				const indicator = MOVEMENT_STATUS_INDICATOR[row.movement_status] || "gray";
+				const row_class = row.movement_status === "Non-Moving" ? "ma-non-moving-row" : "";
+				return `
+				<tr class="${row_class}">
 					<td>${frappe.utils.escape_html(row.item || "")}</td>
 					<td>${frappe.utils.escape_html(row.item_name || "")}</td>
 					<td>${frappe.utils.escape_html(row.item_type || "")}</td>
 					<td>${frappe.utils.escape_html(row.warehouse || "")}</td>
-					<td class="text-center">${row.bill_count}</td>
-					<td class="text-center">${flt(row.qty_sold)}</td>
-					<td class="text-center">${flt(row.current_stock)}</td>
-					<td class="text-center">${format_currency(row.sales_value)}</td>
-					<td class="text-center">${format_currency(row.gst_collected)}</td>
-					<td class="text-center">${days_cell(row)}</td>
-				</tr>`
-			)
+					<td class="text-center">${flt(row.opening_qty)}</td>
+					<td class="text-center">${flt(row.inward_qty)}</td>
+					<td class="text-center">${flt(row.outward_qty)}</td>
+					<td class="text-center">${flt(row.closing_qty)}</td>
+					<td class="text-center">${format_currency(row.closing_value)}</td>
+					<td class="text-center">${row.active_days}/${row.total_days} ${__("days")}</td>
+					<td class="text-center">${format_ddmmyy(row.last_outward_datetime)}</td>
+					<td><span class="indicator-pill ${indicator}"><span>${__(row.movement_status)}</span></span></td>
+				</tr>`;
+			})
 			.join("");
 
-		const total_row = `
-			<tr class="ssr-total">
-				<td colspan="4">${__("Total")}</td>
-				<td class="text-center">${total_bills}</td>
-				<td class="text-center">${rows.reduce((s, r) => s + flt(r.qty_sold), 0)}</td>
-				<td class="text-center">${rows.reduce((s, r) => s + flt(r.current_stock), 0)}</td>
-				<td class="text-center">${format_currency(sales_value)}</td>
-				<td class="text-center">${format_currency(rows.reduce((s, r) => s + flt(r.gst_collected), 0))}</td>
-				<td></td>
-			</tr>`;
-
 		this.table_area.html(`
-			<table class="table table-hover ssr-table">
+			<table class="table table-hover ma-table">
 				<thead><tr>${header}</tr></thead>
-				<tbody>${body}${total_row}</tbody>
+				<tbody>${body}</tbody>
 			</table>
 		`);
 	}
@@ -329,13 +341,14 @@ class StockSaleReport {
 			"Item Name",
 			"Item Type",
 			"Warehouse",
-			"Bills",
-			"Qty Sold",
-			"Current Stock",
-			"Sales Value",
-			"GST Collected",
-			"Days of Stock Left",
-			"Below Reorder Level",
+			"Opening Qty",
+			"Inward Qty",
+			"Outward Qty",
+			"Closing Qty",
+			"Closing Value",
+			"Active Days",
+			"Last Outward",
+			"Movement Status",
 		].map((c) => __(c));
 
 		const data = rows.map((row) => [
@@ -343,33 +356,14 @@ class StockSaleReport {
 			row.item_name || "",
 			row.item_type || "",
 			row.warehouse || "",
-			row.bill_count,
-			flt(row.qty_sold),
-			flt(row.current_stock),
-			format_currency(row.sales_value),
-			format_currency(row.gst_collected),
-			row.days_of_stock === null || row.days_of_stock === undefined ? __("Not selling") : Math.round(row.days_of_stock),
-			row.is_low_stock ? __("Yes") : "",
-		]);
-
-		const total_qty_sold = rows.reduce((s, r) => s + flt(r.qty_sold), 0);
-		const total_sales = rows.reduce((s, r) => s + flt(r.sales_value), 0);
-		const total_gst = rows.reduce((s, r) => s + flt(r.gst_collected), 0);
-		const total_stock = rows.reduce((s, r) => s + flt(r.current_stock), 0);
-		const total_bills = rows.reduce((s, r) => s + (r.bill_count || 0), 0);
-
-		data.push([
-			__("Total"),
-			"",
-			"",
-			"",
-			total_bills,
-			total_qty_sold,
-			total_stock,
-			format_currency(total_sales),
-			format_currency(total_gst),
-			"",
-			"",
+			flt(row.opening_qty),
+			flt(row.inward_qty),
+			flt(row.outward_qty),
+			flt(row.closing_qty),
+			format_currency(row.closing_value),
+			`${row.active_days}/${row.total_days}`,
+			format_ddmmyy(row.last_outward_datetime),
+			__(row.movement_status),
 		]);
 
 		const filter_bits = [
@@ -378,14 +372,13 @@ class StockSaleReport {
 		];
 		if (this.warehouse_field.get_value()) filter_bits.push(`${__("Warehouse")}: ${this.warehouse_field.get_value()}`);
 		if (this.item_type_field.get_value()) filter_bits.push(`${__("Item Type")}: ${this.item_type_field.get_value()}`);
-		if (this.bill_type_field.get_value()) filter_bits.push(`${__("Bill Type")}: ${this.bill_type_field.get_value()}`);
 
 		return {
-			title: __("Stock Sale Report"),
+			title: __("FSN Analysis"),
 			subtitle: filter_bits.join("   |   "),
 			columns,
 			rows: data,
-			filename: "Stock_Sale_Report",
+			filename: "Material_Analysis",
 		};
 	}
 }

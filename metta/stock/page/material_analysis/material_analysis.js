@@ -8,18 +8,22 @@ frappe.pages["material-analysis"].on_page_load = function (wrapper) {
 	new MaterialAnalysis(page);
 };
 
-const ITEM_TYPE_OPTIONS = ["", "Medicine", "Service", "Consumable", "Asset"];
+// Draft is left out on purpose - Stock Position only ever tracks indents
+// that have moved past Draft (nothing's been requested/approved yet
+// otherwise), so offering it here would always return zero rows.
+const INDENT_STATUS_OPTIONS = ["", "Submitted", "Partially Issued", "Issued", "Cancelled"];
 
-const MOVEMENT_STATUS_INDICATOR = {
-	"Fast-Moving": "green",
-	"Slow-Moving": "orange",
-	"Non-Moving": "red",
+const INDENT_STATUS_INDICATOR = {
+	Draft: "gray",
+	Submitted: "blue",
+	"Partially Issued": "orange",
+	Issued: "green",
+	Cancelled: "red",
 };
 
 function format_ddmmyy(date_str) {
 	// Fixed dd/mm/yy display regardless of the logged-in user's System
-	// Settings date format, since that setting isn't consistent from user
-	// to user and this page needs to always read the same way.
+	// Settings date format, same convention every other report page here uses.
 	if (!date_str) return "";
 	const d = new Date(date_str);
 	if (isNaN(d)) return "";
@@ -33,35 +37,35 @@ class MaterialAnalysis {
 	constructor(page) {
 		this.page = page;
 		this.inject_styles();
-		this.page.body.addClass("ma-page");
+		this.page.body.addClass("matan-page");
 		this.make_section_title();
-		this.make_filters();
-		this.make_quick_range_buttons();
-		this.make_results_area();
+		this.make_tabs();
+		this.make_material_query_tab();
+		this.make_item_movement_tab();
+		this.make_stock_position_tab();
 		metta.report_export.add_buttons(this.page, () => this.get_export_data());
-		// Defaults to the last 30 days rather than staying blank - a
-		// movement-frequency report is meaningless with no range at all
-		// (every item would show "0 active days" for lack of anything to
-		// measure), so it needs a real window to be useful right away.
-		const today = frappe.datetime.get_today();
-		const month_ago = frappe.datetime.add_days(today, -30);
-		this.from_date_field.set_value(month_ago).then(() => {
-			this.to_date_field.set_value(today).then(() => {
-				this.generate();
-			});
-		});
+		this.switch_tab("item_movement");
+	}
+
+	// The Export button lives once on the page toolbar (that's all
+	// metta.report_export.add_buttons supports) and exports whichever tab is
+	// currently active, not all three at once.
+	get_export_data() {
+		if (this.active_tab === "item_movement") return this.get_item_movement_export_data();
+		if (this.active_tab === "stock_position") return this.get_stock_position_export_data();
+		return null;
 	}
 
 	inject_styles() {
-		if (document.getElementById("ma-styles")) return;
-		$(`<style id="ma-styles">
-			.ma-page .ma-section-title {
+		if (document.getElementById("matan-styles")) return;
+		$(`<style id="matan-styles">
+			.matan-page .matan-section-title {
 				font-weight: 700;
 				font-size: 13px;
 				letter-spacing: 0.05em;
 				margin-bottom: 4px;
 			}
-			.ma-page .ma-section-subtitle {
+			.matan-page .matan-section-subtitle {
 				color: #1a63c9;
 				font-weight: 600;
 				font-size: 15px;
@@ -69,59 +73,67 @@ class MaterialAnalysis {
 				border-bottom: 2px solid #1a63c9;
 				margin-bottom: 18px;
 			}
-			.ma-page .ma-cards {
+			.matan-page .matan-tabs {
+				display: flex;
+				gap: 6px;
+				margin-bottom: 18px;
+				border-bottom: 1px solid var(--border-color);
+			}
+			.matan-page .matan-tab-btn {
+				border: none;
+				background: none;
+				padding: 8px 16px;
+				font-size: 13px;
+				font-weight: 600;
+				color: var(--text-muted);
+				cursor: pointer;
+				border-bottom: 2px solid transparent;
+			}
+			.matan-page .matan-tab-btn.active {
+				color: #1a63c9;
+				border-bottom: 2px solid #1a63c9;
+			}
+			.matan-page .matan-tab-body {
+				display: none;
+			}
+			.matan-page .matan-tab-body.active {
+				display: block;
+			}
+			.matan-page .matan-cards {
 				display: flex;
 				gap: 12px;
 				flex-wrap: wrap;
 				margin-bottom: 16px;
 			}
-			.ma-page .ma-card {
+			.matan-page .matan-card {
 				flex: 1 1 180px;
 				border: 1px solid #bcdcf7;
 				border-radius: 8px;
 				padding: 12px 16px;
 				background: #eaf3fc;
 			}
-			.ma-page .ma-card.fast {
-				border-color: #bfe6c8;
-				background: #eafcf1;
-			}
-			.ma-page .ma-card.slow {
-				border-color: #f5ddb8;
-				background: #fdf4e7;
-			}
-			.ma-page .ma-card.non-moving {
-				border-color: #f5c2b8;
-				background: #fdece7;
-			}
-			.ma-page .ma-card .ma-card-label {
+			.matan-page .matan-card .matan-card-label {
 				font-size: 11px;
 				text-transform: uppercase;
 				letter-spacing: 0.04em;
 				color: #0b4a86;
 				font-weight: 600;
 			}
-			.ma-page .ma-card.fast .ma-card-label { color: #1f7a3f; }
-			.ma-page .ma-card.slow .ma-card-label { color: #a3701f; }
-			.ma-page .ma-card.non-moving .ma-card-label { color: #a3341f; }
-			.ma-page .ma-card .ma-card-value {
+			.matan-page .matan-card .matan-card-value {
 				font-size: 22px;
 				font-weight: 700;
 				color: #0b4a86;
 				font-variant-numeric: tabular-nums;
 			}
-			.ma-page .ma-card.fast .ma-card-value { color: #1f7a3f; }
-			.ma-page .ma-card.slow .ma-card-value { color: #a3701f; }
-			.ma-page .ma-card.non-moving .ma-card-value { color: #a3341f; }
-			.ma-page .table-wrapper {
+			.matan-page .table-wrapper {
 				border: 1px solid var(--border-color);
 				border-radius: 8px;
 				overflow: hidden;
 			}
-			.ma-page table.ma-table {
+			.matan-page table.matan-table {
 				margin-bottom: 0;
 			}
-			.ma-page table.ma-table thead th {
+			.matan-page table.matan-table thead th {
 				background: #1b4f8c;
 				color: #fff;
 				text-transform: uppercase;
@@ -131,255 +143,489 @@ class MaterialAnalysis {
 				padding: 10px 14px;
 				white-space: nowrap;
 			}
-			.ma-page table.ma-table td {
+			.matan-page table.matan-table td {
 				padding: 8px 14px;
 				vertical-align: middle;
 				font-size: 13px;
 				border-color: var(--border-color);
 			}
-			.ma-page table.ma-table td.text-center {
+			.matan-page table.matan-table td.text-center {
 				text-align: center;
 				font-variant-numeric: tabular-nums;
 			}
-			.ma-page table.ma-table tbody tr:nth-child(even) {
+			.matan-page table.matan-table tbody tr:nth-child(even) {
 				background: var(--subtle-fg, rgba(140, 140, 140, 0.04));
 			}
-			.ma-page table.ma-table tr.ma-non-moving-row td {
+			.matan-page table.matan-table tr.matan-total td {
+				background: #eaf3fc;
+				color: #0b4a86;
+				font-weight: 700;
+				border-top: 2px solid #1b4f8c;
+			}
+			.matan-page .matan-not-moving {
+				display: inline-block;
+				margin-left: 6px;
+				font-size: 10px;
+				text-transform: uppercase;
+				letter-spacing: 0.03em;
+				color: #a3341f;
 				background: #fdece7;
+				border: 1px solid #f5c2b8;
+				border-radius: 10px;
+				padding: 1px 8px;
 			}
 		</style>`).appendTo("head");
 	}
 
 	make_section_title() {
 		$(`
-			<div class="ma-section-title">STOCK</div>
-			<div class="ma-section-subtitle">Material Analysis</div>
+			<div class="matan-section-title">STOCK REPORTS</div>
+			<div class="matan-section-subtitle">Material Analysis</div>
 		`).appendTo(this.page.body);
 	}
 
-	make_filters() {
+	make_tabs() {
+		this.tabs_wrap = $(`<div class="matan-tabs"></div>`).appendTo(this.page.body);
+		this.tab_buttons = {};
+
+		const tab_defs = [
+			["material_query", __("Material Query")],
+			["item_movement", __("Item Movement Registration")],
+			["stock_position", __("Stock Position")],
+		];
+
+		tab_defs.forEach(([key, label]) => {
+			const btn = $(`<button class="matan-tab-btn">${label}</button>`)
+				.appendTo(this.tabs_wrap)
+				.on("click", () => this.switch_tab(key));
+			this.tab_buttons[key] = btn;
+		});
+
+		this.tab_bodies = {
+			material_query: $(`<div class="matan-tab-body"></div>`).appendTo(this.page.body),
+			item_movement: $(`<div class="matan-tab-body"></div>`).appendTo(this.page.body),
+			stock_position: $(`<div class="matan-tab-body"></div>`).appendTo(this.page.body),
+		};
+	}
+
+	switch_tab(key) {
+		this.active_tab = key;
+		Object.keys(this.tab_bodies).forEach((k) => {
+			this.tab_bodies[k].toggleClass("active", k === key);
+			this.tab_buttons[k].toggleClass("active", k === key);
+		});
+	}
+
+	make_field(parent_row, opts) {
+		const wrap = $(`<div style="min-width: 180px;"></div>`).appendTo(parent_row);
+		return frappe.ui.form.make_control({
+			parent: wrap,
+			df: { ...opts, fieldtype: opts.fieldtype || "Data" },
+			render_input: true,
+		});
+	}
+
+	make_quick_range_buttons(wrap, on_pick) {
+		const row = $(`<div style="margin-bottom: 15px;"></div>`).appendTo(wrap);
+		const btn = (label, fn) =>
+			$(`<button class="btn btn-default btn-xs" style="margin-right: 6px;">${label}</button>`)
+				.appendTo(row)
+				.on("click", () => on_pick(fn()));
+
+		btn(__("Today"), () => [frappe.datetime.get_today(), frappe.datetime.get_today()]);
+		btn(__("This Week"), () => [frappe.datetime.week_start(), frappe.datetime.week_end()]);
+		btn(__("This Month"), () => [frappe.datetime.month_start(), frappe.datetime.month_end()]);
+	}
+
+	// --- Material Query (placeholder, fields to be defined later) ---
+
+	make_material_query_tab() {
+		const body = this.tab_bodies.material_query;
+		$(`<p class="text-muted">${__(
+			"Material Query is not set up yet. Let me know the fields you want here and I'll build it."
+		)}</p>`).appendTo(body);
+	}
+
+	// --- Item Movement Registration ---
+
+	make_item_movement_tab() {
+		const body = this.tab_bodies.item_movement;
 		const filter_row = $(
 			`<div class="flex" style="gap: 12px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 15px;"></div>`
-		).appendTo(this.page.body);
+		).appendTo(body);
 
-		const field = (opts) => {
-			const wrap = $(`<div style="min-width: 180px;"></div>`).appendTo(filter_row);
-			return frappe.ui.form.make_control({
-				parent: wrap,
-				df: { ...opts, fieldtype: opts.fieldtype || "Data" },
-				render_input: true,
-			});
-		};
-
-		this.from_date_field = field({
+		this.im_from_date = this.make_field(filter_row, {
 			fieldname: "from_date",
 			label: __("From Date (dd/mm/yyyy)"),
 			fieldtype: "Date",
 			reqd: 1,
 		});
-		this.to_date_field = field({
+		this.im_to_date = this.make_field(filter_row, {
 			fieldname: "to_date",
 			label: __("To Date (dd/mm/yyyy)"),
 			fieldtype: "Date",
 			reqd: 1,
 		});
-		this.warehouse_field = field({
+		this.im_warehouse = this.make_field(filter_row, {
 			fieldname: "warehouse",
-			label: __("Warehouse"),
+			label: __("Warehouse (Outlet)"),
 			fieldtype: "Link",
 			options: "Warehouse",
 		});
-		this.item_field = field({ fieldname: "item", label: __("Item"), fieldtype: "Link", options: "Item" });
-		this.item_type_field = field({
-			fieldname: "item_type",
-			label: __("Item Type"),
-			fieldtype: "Select",
-			options: ITEM_TYPE_OPTIONS.join("\n"),
-		});
+		this.im_item = this.make_field(filter_row, { fieldname: "item", label: __("Item"), fieldtype: "Link", options: "Item" });
 
 		const button_wrap = $(`<div></div>`).appendTo(filter_row);
 		$(`<button class="btn btn-primary btn-sm">${__("Generate")}</button>`)
 			.appendTo(button_wrap)
-			.on("click", () => this.generate());
+			.on("click", () => this.generate_item_movement());
+
+		this.make_quick_range_buttons(body, ([from_date, to_date]) => {
+			// set_value() is async (it goes through frappe.run_serially) -
+			// calling Generate synchronously right after would read the
+			// fields' old (still empty) value and wrongly show the "set both
+			// dates" warning, even though the input already looks filled in.
+			Promise.all([this.im_from_date.set_value(from_date), this.im_to_date.set_value(to_date)]).then(() =>
+				this.generate_item_movement()
+			);
+		});
+
+		this.im_cards_area = $(`<div class="matan-cards"></div>`).appendTo(body);
+		this.im_table_area = $(`<div class="table-wrapper" style="overflow-x: auto;"></div>`).appendTo(body);
+		this.im_table_area.html(`<p class="text-muted">${__("Set a From Date and To Date, then click Generate.")}</p>`);
 	}
 
-	make_quick_range_buttons() {
-		const wrap = $(`<div style="margin-bottom: 15px;"></div>`).appendTo(this.page.body);
-		const btn = (label, fn) =>
-			$(`<button class="btn btn-default btn-xs" style="margin-right: 6px;">${label}</button>`)
-				.appendTo(wrap)
-				.on("click", () => {
-					fn();
-					this.generate();
-				});
-
-		btn(__("This Week"), () => this.set_range(frappe.datetime.week_start(), frappe.datetime.week_end()));
-		btn(__("This Month"), () => this.set_range(frappe.datetime.month_start(), frappe.datetime.month_end()));
-		btn(__("Last 30 Days"), () =>
-			this.set_range(frappe.datetime.add_days(frappe.datetime.get_today(), -30), frappe.datetime.get_today())
-		);
-		btn(__("Last 90 Days"), () =>
-			this.set_range(frappe.datetime.add_days(frappe.datetime.get_today(), -90), frappe.datetime.get_today())
-		);
-	}
-
-	set_range(from_date, to_date) {
-		this.from_date_field.set_value(from_date);
-		this.to_date_field.set_value(to_date);
-	}
-
-	make_results_area() {
-		this.cards_area = $(`<div class="ma-cards"></div>`).appendTo(this.page.body);
-		this.table_area = $(`<div class="table-wrapper" style="overflow-x: auto;"></div>`).appendTo(this.page.body);
-	}
-
-	generate() {
-		const from_date = this.from_date_field.get_value();
-		const to_date = this.to_date_field.get_value();
+	generate_item_movement() {
+		const from_date = this.im_from_date.get_value();
+		const to_date = this.im_to_date.get_value();
 		if (!from_date || !to_date) {
 			frappe.msgprint(__("Please set both From Date and To Date."));
 			return;
 		}
 
 		frappe.call({
-			method: "metta.stock.page.material_analysis.material_analysis.get_data",
+			method: "metta.stock.page.material_analysis.material_analysis.get_item_movement_data",
 			args: {
 				from_date,
 				to_date,
-				warehouse: this.warehouse_field.get_value(),
-				item: this.item_field.get_value(),
-				item_type: this.item_type_field.get_value(),
+				warehouse: this.im_warehouse.get_value(),
+				item: this.im_item.get_value(),
 			},
 			freeze: true,
-			callback: (r) => this.render(r.message || []),
+			callback: (r) => this.render_item_movement(r.message || []),
 		});
 	}
 
-	render(rows) {
-		this.all_rows = rows;
+	render_item_movement(rows) {
+		this.im_rows = rows;
 
-		const fast_count = rows.filter((r) => r.movement_status === "Fast-Moving").length;
-		const slow_count = rows.filter((r) => r.movement_status === "Slow-Moving").length;
-		const non_moving_count = rows.filter((r) => r.movement_status === "Non-Moving").length;
+		const total_available = rows.reduce((sum, row) => sum + flt(row.available_qty), 0);
+		const total_issued = rows.reduce((sum, row) => sum + flt(row.issued_qty), 0);
+		const total_remaining = rows.reduce((sum, row) => sum + flt(row.remaining_qty), 0);
 
-		this.cards_area.html(`
-			<div class="ma-card">
-				<div class="ma-card-label">${__("Total Items")}</div>
-				<div class="ma-card-value">${rows.length}</div>
+		this.im_cards_area.html(`
+			<div class="matan-card">
+				<div class="matan-card-label">${__("Items Listed")}</div>
+				<div class="matan-card-value">${rows.length}</div>
 			</div>
-			<div class="ma-card fast">
-				<div class="ma-card-label">${__("Fast-Moving")}</div>
-				<div class="ma-card-value">${fast_count}</div>
+			<div class="matan-card">
+				<div class="matan-card-label">${__("Total Available")}</div>
+				<div class="matan-card-value">${total_available}</div>
 			</div>
-			<div class="ma-card slow">
-				<div class="ma-card-label">${__("Slow-Moving")}</div>
-				<div class="ma-card-value">${slow_count}</div>
+			<div class="matan-card">
+				<div class="matan-card-label">${__("Total Issued")}</div>
+				<div class="matan-card-value">${total_issued}</div>
 			</div>
-			<div class="ma-card non-moving">
-				<div class="ma-card-label">${__("Non-Moving")}</div>
-				<div class="ma-card-value">${non_moving_count}</div>
+			<div class="matan-card">
+				<div class="matan-card-label">${__("Total Remaining")}</div>
+				<div class="matan-card-value">${total_remaining}</div>
 			</div>
 		`);
 
 		if (!rows.length) {
-			this.table_area.html(`<p class="text-muted">${__("No stock movement found for this range.")}</p>`);
+			this.im_table_area.html(`<p class="text-muted">${__("No stock movement found for this range.")}</p>`);
+			return;
+		}
+
+		const header = ["Item", "Item Name", "Item Type", "Warehouse", "Available", "Issued", "Remaining"]
+			.map((h) => `<th>${__(h)}</th>`)
+			.join("");
+
+		const body = rows
+			.map(
+				(row) => `
+				<tr>
+					<td>${frappe.utils.escape_html(row.item || "")}</td>
+					<td>${frappe.utils.escape_html(row.item_name || "")}
+						${row.not_moving ? `<span class="matan-not-moving">${__("Not Moving")}</span>` : ""}
+					</td>
+					<td>${frappe.utils.escape_html(row.item_type || "")}</td>
+					<td>${frappe.utils.escape_html(row.warehouse || "")}</td>
+					<td class="text-center">${flt(row.available_qty)}</td>
+					<td class="text-center">${flt(row.issued_qty)}</td>
+					<td class="text-center">${flt(row.remaining_qty)}</td>
+				</tr>`
+			)
+			.join("");
+
+		const total_row = `
+			<tr class="matan-total">
+				<td colspan="4">${__("Total")}</td>
+				<td class="text-center">${total_available}</td>
+				<td class="text-center">${total_issued}</td>
+				<td class="text-center">${total_remaining}</td>
+			</tr>`;
+
+		this.im_table_area.html(`
+			<table class="table table-hover matan-table">
+				<thead><tr>${header}</tr></thead>
+				<tbody>${body}${total_row}</tbody>
+			</table>
+		`);
+	}
+
+	get_item_movement_export_data() {
+		if (!this.im_rows) return null;
+		const rows = this.im_rows;
+
+		const columns = ["Item", "Item Name", "Item Type", "Warehouse", "Available", "Issued", "Remaining", "Not Moving"].map(
+			(c) => __(c)
+		);
+		const data = rows.map((row) => [
+			row.item || "",
+			row.item_name || "",
+			row.item_type || "",
+			row.warehouse || "",
+			flt(row.available_qty),
+			flt(row.issued_qty),
+			flt(row.remaining_qty),
+			row.not_moving ? __("Yes") : "",
+		]);
+
+		const total_available = rows.reduce((sum, row) => sum + flt(row.available_qty), 0);
+		const total_issued = rows.reduce((sum, row) => sum + flt(row.issued_qty), 0);
+		const total_remaining = rows.reduce((sum, row) => sum + flt(row.remaining_qty), 0);
+		data.push([__("Total"), "", "", "", total_available, total_issued, total_remaining, ""]);
+
+		const filter_bits = [
+			`${__("From Date")}: ${format_ddmmyy(this.im_from_date.get_value())}`,
+			`${__("To Date")}: ${format_ddmmyy(this.im_to_date.get_value())}`,
+		];
+		if (this.im_warehouse.get_value()) filter_bits.push(`${__("Warehouse")}: ${this.im_warehouse.get_value()}`);
+		if (this.im_item.get_value()) filter_bits.push(`${__("Item")}: ${this.im_item.get_value()}`);
+
+		return {
+			title: __("Item Movement Registration"),
+			subtitle: filter_bits.join("   |   "),
+			columns,
+			rows: data,
+			filename: "Item_Movement_Registration",
+		};
+	}
+
+	// --- Stock Position ---
+
+	make_stock_position_tab() {
+		const body = this.tab_bodies.stock_position;
+		const filter_row = $(
+			`<div class="flex" style="gap: 12px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 15px;"></div>`
+		).appendTo(body);
+
+		this.sp_from_date = this.make_field(filter_row, {
+			fieldname: "from_date",
+			label: __("From Date (dd/mm/yyyy)"),
+			fieldtype: "Date",
+			reqd: 1,
+		});
+		this.sp_to_date = this.make_field(filter_row, {
+			fieldname: "to_date",
+			label: __("To Date (dd/mm/yyyy)"),
+			fieldtype: "Date",
+			reqd: 1,
+		});
+		this.sp_warehouse = this.make_field(filter_row, {
+			fieldname: "warehouse",
+			label: __("Warehouse (Outlet)"),
+			fieldtype: "Link",
+			options: "Warehouse",
+		});
+		this.sp_item = this.make_field(filter_row, { fieldname: "item", label: __("Item"), fieldtype: "Link", options: "Item" });
+		this.sp_status = this.make_field(filter_row, {
+			fieldname: "status",
+			label: __("Status"),
+			fieldtype: "Select",
+			options: INDENT_STATUS_OPTIONS.join("\n"),
+		});
+
+		const button_wrap = $(`<div></div>`).appendTo(filter_row);
+		$(`<button class="btn btn-primary btn-sm">${__("Generate")}</button>`)
+			.appendTo(button_wrap)
+			.on("click", () => this.generate_stock_position());
+
+		this.make_quick_range_buttons(body, ([from_date, to_date]) => {
+			Promise.all([this.sp_from_date.set_value(from_date), this.sp_to_date.set_value(to_date)]).then(() =>
+				this.generate_stock_position()
+			);
+		});
+
+		this.sp_cards_area = $(`<div class="matan-cards"></div>`).appendTo(body);
+		this.sp_table_area = $(`<div class="table-wrapper" style="overflow-x: auto;"></div>`).appendTo(body);
+		this.sp_table_area.html(`<p class="text-muted">${__("Set a From Date and To Date, then click Generate.")}</p>`);
+	}
+
+	generate_stock_position() {
+		const from_date = this.sp_from_date.get_value();
+		const to_date = this.sp_to_date.get_value();
+		if (!from_date || !to_date) {
+			frappe.msgprint(__("Please set both From Date and To Date."));
+			return;
+		}
+
+		frappe.call({
+			method: "metta.stock.page.material_analysis.material_analysis.get_stock_position_data",
+			args: {
+				from_date,
+				to_date,
+				warehouse: this.sp_warehouse.get_value(),
+				item: this.sp_item.get_value(),
+				status: this.sp_status.get_value(),
+			},
+			freeze: true,
+			callback: (r) => this.render_stock_position(r.message || []),
+		});
+	}
+
+	render_stock_position(rows) {
+		this.sp_rows = rows;
+
+		const outlet_count = new Set(rows.map((r) => r.warehouse)).size;
+		const total_requested = rows.reduce((sum, row) => sum + flt(row.qty_requested), 0);
+		const total_issued = rows.reduce((sum, row) => sum + flt(row.qty_issued), 0);
+		const total_pending = rows.reduce((sum, row) => sum + flt(row.qty_pending), 0);
+
+		this.sp_cards_area.html(`
+			<div class="matan-card">
+				<div class="matan-card-label">${__("Outlets")}</div>
+				<div class="matan-card-value">${outlet_count}</div>
+			</div>
+			<div class="matan-card">
+				<div class="matan-card-label">${__("Total Requested")}</div>
+				<div class="matan-card-value">${total_requested}</div>
+			</div>
+			<div class="matan-card">
+				<div class="matan-card-label">${__("Total Issued")}</div>
+				<div class="matan-card-value">${total_issued}</div>
+			</div>
+			<div class="matan-card">
+				<div class="matan-card-label">${__("Total Pending")}</div>
+				<div class="matan-card-value">${total_pending}</div>
+			</div>
+		`);
+
+		if (!rows.length) {
+			this.sp_table_area.html(`<p class="text-muted">${__("No Stock Indents found for this range.")}</p>`);
 			return;
 		}
 
 		const header = [
+			"Warehouse",
+			"Stock Indent",
 			"Item",
 			"Item Name",
-			"Item Type",
-			"Warehouse",
-			"Opening Qty",
-			"Inward Qty",
-			"Outward Qty",
-			"Closing Qty",
-			"Closing Value",
-			"Active Days",
-			"Last Outward",
-			"Movement Status",
+			"Qty Requested",
+			"Qty Issued",
+			"Qty Pending",
+			"Issued By",
+			"Issue Date",
+			"Status",
 		]
 			.map((h) => `<th>${__(h)}</th>`)
 			.join("");
 
 		const body = rows
 			.map((row) => {
-				const indicator = MOVEMENT_STATUS_INDICATOR[row.movement_status] || "gray";
-				const row_class = row.movement_status === "Non-Moving" ? "ma-non-moving-row" : "";
+				const indicator = INDENT_STATUS_INDICATOR[row.status] || "gray";
 				return `
-				<tr class="${row_class}">
+				<tr>
+					<td>${frappe.utils.escape_html(row.warehouse || "")}</td>
+					<td><a href="/app/stock-indent/${row.stock_indent}">${row.stock_indent}</a></td>
 					<td>${frappe.utils.escape_html(row.item || "")}</td>
 					<td>${frappe.utils.escape_html(row.item_name || "")}</td>
-					<td>${frappe.utils.escape_html(row.item_type || "")}</td>
-					<td>${frappe.utils.escape_html(row.warehouse || "")}</td>
-					<td class="text-center">${flt(row.opening_qty)}</td>
-					<td class="text-center">${flt(row.inward_qty)}</td>
-					<td class="text-center">${flt(row.outward_qty)}</td>
-					<td class="text-center">${flt(row.closing_qty)}</td>
-					<td class="text-center">${format_currency(row.closing_value)}</td>
-					<td class="text-center">${row.active_days}/${row.total_days} ${__("days")}</td>
-					<td class="text-center">${format_ddmmyy(row.last_outward_datetime)}</td>
-					<td><span class="indicator-pill ${indicator}"><span>${__(row.movement_status)}</span></span></td>
+					<td class="text-center">${flt(row.qty_requested)}</td>
+					<td class="text-center">${flt(row.qty_issued)}</td>
+					<td class="text-center">${flt(row.qty_pending)}</td>
+					<td>${frappe.utils.escape_html(row.issued_by || "")}</td>
+					<td>${format_ddmmyy(row.issue_date)}</td>
+					<td><span class="indicator-pill ${indicator}"><span>${frappe.utils.escape_html(row.status || "")}</span></span></td>
 				</tr>`;
 			})
 			.join("");
 
-		this.table_area.html(`
-			<table class="table table-hover ma-table">
+		const total_row = `
+			<tr class="matan-total">
+				<td colspan="4">${__("Total")}</td>
+				<td class="text-center">${total_requested}</td>
+				<td class="text-center">${total_issued}</td>
+				<td class="text-center">${total_pending}</td>
+				<td colspan="3"></td>
+			</tr>`;
+
+		this.sp_table_area.html(`
+			<table class="table table-hover matan-table">
 				<thead><tr>${header}</tr></thead>
-				<tbody>${body}</tbody>
+				<tbody>${body}${total_row}</tbody>
 			</table>
 		`);
 	}
 
-	get_export_data() {
-		if (!this.all_rows) return null;
-		const rows = this.all_rows;
+	get_stock_position_export_data() {
+		if (!this.sp_rows) return null;
+		const rows = this.sp_rows;
 
 		const columns = [
+			"Warehouse",
+			"Stock Indent",
 			"Item",
 			"Item Name",
-			"Item Type",
-			"Warehouse",
-			"Opening Qty",
-			"Inward Qty",
-			"Outward Qty",
-			"Closing Qty",
-			"Closing Value",
-			"Active Days",
-			"Last Outward",
-			"Movement Status",
+			"Qty Requested",
+			"Qty Issued",
+			"Qty Pending",
+			"Issued By",
+			"Issue Date",
+			"Status",
 		].map((c) => __(c));
 
 		const data = rows.map((row) => [
+			row.warehouse || "",
+			row.stock_indent || "",
 			row.item || "",
 			row.item_name || "",
-			row.item_type || "",
-			row.warehouse || "",
-			flt(row.opening_qty),
-			flt(row.inward_qty),
-			flt(row.outward_qty),
-			flt(row.closing_qty),
-			format_currency(row.closing_value),
-			`${row.active_days}/${row.total_days}`,
-			format_ddmmyy(row.last_outward_datetime),
-			__(row.movement_status),
+			flt(row.qty_requested),
+			flt(row.qty_issued),
+			flt(row.qty_pending),
+			row.issued_by || "",
+			format_ddmmyy(row.issue_date),
+			row.status || "",
 		]);
 
+		const total_requested = rows.reduce((sum, row) => sum + flt(row.qty_requested), 0);
+		const total_issued = rows.reduce((sum, row) => sum + flt(row.qty_issued), 0);
+		const total_pending = rows.reduce((sum, row) => sum + flt(row.qty_pending), 0);
+		data.push([__("Total"), "", "", "", total_requested, total_issued, total_pending, "", "", ""]);
+
 		const filter_bits = [
-			`${__("From Date")}: ${format_ddmmyy(this.from_date_field.get_value())}`,
-			`${__("To Date")}: ${format_ddmmyy(this.to_date_field.get_value())}`,
+			`${__("From Date")}: ${format_ddmmyy(this.sp_from_date.get_value())}`,
+			`${__("To Date")}: ${format_ddmmyy(this.sp_to_date.get_value())}`,
 		];
-		if (this.warehouse_field.get_value()) filter_bits.push(`${__("Warehouse")}: ${this.warehouse_field.get_value()}`);
-		if (this.item_type_field.get_value()) filter_bits.push(`${__("Item Type")}: ${this.item_type_field.get_value()}`);
+		if (this.sp_warehouse.get_value()) filter_bits.push(`${__("Warehouse")}: ${this.sp_warehouse.get_value()}`);
+		if (this.sp_item.get_value()) filter_bits.push(`${__("Item")}: ${this.sp_item.get_value()}`);
+		if (this.sp_status.get_value()) filter_bits.push(`${__("Status")}: ${this.sp_status.get_value()}`);
 
 		return {
-			title: __("Material Analysis"),
+			title: __("Stock Position"),
 			subtitle: filter_bits.join("   |   "),
 			columns,
 			rows: data,
-			filename: "Material_Analysis",
+			filename: "Stock_Position",
 		};
 	}
 }

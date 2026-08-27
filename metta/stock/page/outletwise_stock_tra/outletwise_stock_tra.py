@@ -5,18 +5,21 @@ import frappe
 
 
 @frappe.whitelist()
-def get_data(from_date, to_date, warehouse=None, status=None):
-	# One row per item line - "outlet-wise" means the same warehouse could be
-	# on either side of a transfer (a store both sends and receives), so the
-	# warehouse filter matches whichever side it's on, not just the source.
+def get_data(from_date, to_date, from_warehouse=None, to_warehouse=None, status=None):
+	# One row per item line - From/To Warehouse are separate directional
+	# filters (e.g. From = Central Store, To = Pharmacy) so staff can see
+	# exactly which route moved stock, not just "involved this warehouse".
 	frappe.has_permission("Stock Transfer", "read", throw=True)
 
 	conditions = ["st.dispatch_date_time >= %(from_date)s", "st.dispatch_date_time <= %(to_date)s"]
 	values = {"from_date": from_date, "to_date": to_date}
 
-	if warehouse:
-		conditions.append("(st.from_warehouse = %(warehouse)s OR st.to_warehouse = %(warehouse)s)")
-		values["warehouse"] = warehouse
+	if from_warehouse:
+		conditions.append("st.from_warehouse = %(from_warehouse)s")
+		values["from_warehouse"] = from_warehouse
+	if to_warehouse:
+		conditions.append("st.to_warehouse = %(to_warehouse)s")
+		values["to_warehouse"] = to_warehouse
 	if status:
 		conditions.append("st.status = %(status)s")
 		values["status"] = status

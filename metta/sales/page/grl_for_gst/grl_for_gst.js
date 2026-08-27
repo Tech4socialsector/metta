@@ -215,22 +215,21 @@ class GrlForGst {
 		const btn = (label, fn) =>
 			$(`<button class="btn btn-default btn-xs" style="margin-right: 6px;">${label}</button>`)
 				.appendTo(wrap)
-				.on("click", () => {
-					fn();
-					this.generate();
-				});
+				.on("click", () => fn().then(() => this.generate()));
 
 		btn(__("This Month"), () => this.set_range(frappe.datetime.month_start(), frappe.datetime.month_end()));
 		btn(__("Last Month"), () => {
 			const last_month_start = frappe.datetime.add_months(frappe.datetime.month_start(), -1);
 			const last_month_end = frappe.datetime.add_days(frappe.datetime.month_start(), -1);
-			this.set_range(last_month_start, last_month_end);
+			return this.set_range(last_month_start, last_month_end);
 		});
 	}
 
 	set_range(from_date, to_date) {
-		this.from_date_field.set_value(from_date);
-		this.to_date_field.set_value(to_date);
+		// set_value() is async (goes through frappe.run_serially) - Generate
+		// must wait on this or it reads the fields' old (still empty) value
+		// and wrongly warns to set both dates.
+		return Promise.all([this.from_date_field.set_value(from_date), this.to_date_field.set_value(to_date)]);
 	}
 
 	make_results_area() {

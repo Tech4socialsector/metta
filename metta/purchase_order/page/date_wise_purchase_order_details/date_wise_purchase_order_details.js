@@ -191,10 +191,7 @@ class DateWisePurchaseOrderDetails {
 		const btn = (label, fn) =>
 			$(`<button class="btn btn-default btn-xs" style="margin-right: 6px;">${label}</button>`)
 				.appendTo(wrap)
-				.on("click", () => {
-					fn();
-					this.generate();
-				});
+				.on("click", () => fn().then(() => this.generate()));
 
 		btn(__("Today"), () => this.set_range_today());
 		btn(__("This Week"), () => this.set_range(frappe.datetime.week_start(), frappe.datetime.week_end()));
@@ -203,12 +200,14 @@ class DateWisePurchaseOrderDetails {
 
 	set_range_today() {
 		const today = frappe.datetime.get_today();
-		this.set_range(today, today);
+		return this.set_range(today, today);
 	}
 
 	set_range(from_date, to_date) {
-		this.from_date_field.set_value(from_date);
-		this.to_date_field.set_value(to_date);
+		// set_value() is async (goes through frappe.run_serially) - Generate
+		// must wait on this or it reads the fields' old (still empty) value
+		// and wrongly warns to set both dates.
+		return Promise.all([this.from_date_field.set_value(from_date), this.to_date_field.set_value(to_date)]);
 	}
 
 	make_results_area() {

@@ -232,10 +232,7 @@ class SupplierWisePurchase {
 		const btn = (label, fn) =>
 			$(`<button class="btn btn-default btn-xs" style="margin-right: 6px;">${label}</button>`)
 				.appendTo(wrap)
-				.on("click", () => {
-					fn();
-					this.generate();
-				});
+				.on("click", () => fn().then(() => this.generate()));
 
 		btn(__("Today"), () => this.set_range_today());
 		btn(__("This Week"), () => this.set_range(frappe.datetime.week_start(), frappe.datetime.week_end()));
@@ -244,12 +241,14 @@ class SupplierWisePurchase {
 
 	set_range_today() {
 		const today = frappe.datetime.get_today();
-		this.set_range(today, today);
+		return this.set_range(today, today);
 	}
 
 	set_range(from_date, to_date) {
-		this.from_date_field.set_value(from_date);
-		this.to_date_field.set_value(to_date);
+		// set_value() is async (goes through frappe.run_serially) - callers
+		// must wait on this before triggering Generate, or it can briefly
+		// re-query with the fields' old (still empty) value.
+		return Promise.all([this.from_date_field.set_value(from_date), this.to_date_field.set_value(to_date)]);
 	}
 
 	make_results_area() {
@@ -322,6 +321,10 @@ class SupplierWisePurchase {
 		const groups = this.group_by_supplier(rows);
 
 		const total_suppliers = groups.length;
+		// Each supplier group already tracks its own POs in a Map (see
+		// group_by_supplier) - summing their sizes gives the total distinct
+		// Purchase Orders across every supplier, without a second query.
+		const total_purchase_orders = groups.reduce((sum, g) => sum + g.pos.size, 0);
 		const total_ordered = groups.reduce((sum, g) => sum + g.total_ordered_amount, 0);
 		const total_billed = groups.reduce((sum, g) => sum + g.total_billed_amount, 0);
 		const total_pending = total_ordered - total_billed;
@@ -330,6 +333,10 @@ class SupplierWisePurchase {
 			<div class="swp-card">
 				<div class="swp-card-label">${__("Total Suppliers")}</div>
 				<div class="swp-card-value">${total_suppliers}</div>
+			</div>
+			<div class="swp-card">
+				<div class="swp-card-label">${__("Total Purchase Orders")}</div>
+				<div class="swp-card-value">${total_purchase_orders}</div>
 			</div>
 			<div class="swp-card">
 				<div class="swp-card-label">${__("Total Ordered Amount")}</div>

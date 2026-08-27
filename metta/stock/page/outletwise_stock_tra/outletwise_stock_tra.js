@@ -199,9 +199,15 @@ class OutletwiseStockTransferSummary {
 			fieldtype: "Date",
 			reqd: 1,
 		});
-		this.warehouse_field = field({
-			fieldname: "warehouse",
-			label: __("Warehouse (Outlet)"),
+		this.from_warehouse_field = field({
+			fieldname: "from_warehouse",
+			label: __("From Warehouse"),
+			fieldtype: "Link",
+			options: "Warehouse",
+		});
+		this.to_warehouse_field = field({
+			fieldname: "to_warehouse",
+			label: __("To Warehouse"),
 			fieldtype: "Link",
 			options: "Warehouse",
 		});
@@ -223,10 +229,7 @@ class OutletwiseStockTransferSummary {
 		const btn = (label, fn) =>
 			$(`<button class="btn btn-default btn-xs" style="margin-right: 6px;">${label}</button>`)
 				.appendTo(wrap)
-				.on("click", () => {
-					fn();
-					this.generate();
-				});
+				.on("click", () => fn().then(() => this.generate()));
 
 		btn(__("Today"), () => this.set_range_today());
 		btn(__("This Week"), () => this.set_range(frappe.datetime.week_start(), frappe.datetime.week_end()));
@@ -235,12 +238,14 @@ class OutletwiseStockTransferSummary {
 
 	set_range_today() {
 		const today = frappe.datetime.get_today();
-		this.set_range(today, today);
+		return this.set_range(today, today);
 	}
 
 	set_range(from_date, to_date) {
-		this.from_date_field.set_value(from_date);
-		this.to_date_field.set_value(to_date);
+		// set_value() is async (goes through frappe.run_serially) - callers
+		// must wait on this before triggering Generate, or it reads the
+		// fields' old (still empty) value and wrongly warns to set both dates.
+		return Promise.all([this.from_date_field.set_value(from_date), this.to_date_field.set_value(to_date)]);
 	}
 
 	make_results_area() {
@@ -262,7 +267,8 @@ class OutletwiseStockTransferSummary {
 			args: {
 				from_date,
 				to_date,
-				warehouse: this.warehouse_field.get_value(),
+				from_warehouse: this.from_warehouse_field.get_value(),
+				to_warehouse: this.to_warehouse_field.get_value(),
 				status: this.status_field.get_value(),
 			},
 			freeze: true,
@@ -312,7 +318,10 @@ class OutletwiseStockTransferSummary {
 			`${__("From Date")}: ${format_ddmmyy(this.from_date_field.get_value())}`,
 			`${__("To Date")}: ${format_ddmmyy(this.to_date_field.get_value())}`,
 		];
-		if (this.warehouse_field.get_value()) filter_bits.push(`${__("Warehouse")}: ${this.warehouse_field.get_value()}`);
+		if (this.from_warehouse_field.get_value())
+			filter_bits.push(`${__("From Warehouse")}: ${this.from_warehouse_field.get_value()}`);
+		if (this.to_warehouse_field.get_value())
+			filter_bits.push(`${__("To Warehouse")}: ${this.to_warehouse_field.get_value()}`);
 		if (this.status_field.get_value()) filter_bits.push(`${__("Status")}: ${this.status_field.get_value()}`);
 
 		return {
