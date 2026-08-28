@@ -4,7 +4,7 @@
 frappe.ui.form.on("Stock Adjustment", {
 	setup(frm) {
 		frm.set_query("item", () => ({
-			filters: { item_type: ["in", ["Medicine", "Consumable", "Asset"]] },
+			filters: { item_type: ["in", ["Medicine", "Consumable"]] },
 		}));
 	},
 	refresh(frm) {

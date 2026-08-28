@@ -6,7 +6,7 @@ frappe.ui.form.on("Quality Inspection", {
 		// Item now lives on the Quality Inspection Item child table, not the
 		// parent, since one inspection can cover a whole delivery's items.
 		frm.set_query("item", "items", () => ({
-			filters: { item_type: ["in", ["Medicine", "Consumable", "Asset"]] },
+			filters: { item_type: ["in", ["Medicine", "Consumable"]] },
 		}));
 	},
 	refresh(frm) {

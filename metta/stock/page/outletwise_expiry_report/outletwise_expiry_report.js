@@ -8,7 +8,7 @@ frappe.pages["outletwise-expiry-report"].on_page_load = function (wrapper) {
 	new OutletwiseExpiryReport(page);
 };
 
-const ITEM_TYPE_OPTIONS = ["", "Medicine", "Service", "Consumable", "Asset"];
+const ITEM_TYPE_OPTIONS = ["", "Medicine", "Service", "Consumable"];
 const STATUS_OPTIONS = ["All", "Expired", "Expiring Soon", "Safe"];
 
 const STATUS_INDICATOR = {

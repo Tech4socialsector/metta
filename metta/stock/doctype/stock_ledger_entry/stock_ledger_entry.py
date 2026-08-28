@@ -71,7 +71,7 @@ def _notify_if_reorder_crossed(item, warehouse, old_qty, new_qty):
 		return
 
 	item_details = frappe.db.get_value(
-		"Item", item, ["item_name", "stock_uom", "rack_location", "standard_purchase_rate"], as_dict=True
+		"Item", item, ["item_name", "unit_of_measure", "rack_location", "standard_purchase_rate"], as_dict=True
 	) or {}
 	reorder_qty = flt(reorder_row.reorder_qty)
 	estimated_cost = reorder_qty * flt(item_details.get("standard_purchase_rate"))
@@ -84,10 +84,10 @@ def _notify_if_reorder_crossed(item, warehouse, old_qty, new_qty):
 		message=frappe.render_template(
 			"""
 			<p>Stock of <b>{{ item_name }}</b> ({{ item }}) at <b>{{ warehouse }}</b> has
-			dropped to <b>{{ new_qty }} {{ stock_uom }}</b>, at or below the configured
-			reorder level of <b>{{ reorder_level }} {{ stock_uom }}</b>.</p>
+			dropped to <b>{{ new_qty }} {{ unit_of_measure }}</b>, at or below the configured
+			reorder level of <b>{{ reorder_level }} {{ unit_of_measure }}</b>.</p>
 			<p>
-				Suggested reorder quantity: <b>{{ reorder_qty }} {{ stock_uom }}</b>
+				Suggested reorder quantity: <b>{{ reorder_qty }} {{ unit_of_measure }}</b>
 				{% if estimated_cost %}(estimated cost: <b>{{ estimated_cost }}</b>){% endif %}<br>
 				{% if rack_location %}Rack / Shelf: <b>{{ rack_location }}</b><br>{% endif %}
 			</p>
@@ -98,7 +98,7 @@ def _notify_if_reorder_crossed(item, warehouse, old_qty, new_qty):
 				"item_name": item_details.get("item_name") or item,
 				"warehouse": warehouse,
 				"new_qty": new_qty,
-				"stock_uom": item_details.get("stock_uom") or "",
+				"unit_of_measure": item_details.get("unit_of_measure") or "",
 				"reorder_level": reorder_row.reorder_level,
 				"reorder_qty": reorder_qty,
 				"estimated_cost": estimated_cost,

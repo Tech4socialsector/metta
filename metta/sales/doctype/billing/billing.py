@@ -315,13 +315,13 @@ def _billing_row(item_code, item_name, qty):
 	item_details = frappe.db.get_value(
 		"Item",
 		item_code,
-		["sale_uom", "standard_selling_rate", "gst_percent", "has_batch", "item_type"],
+		["unit_of_measure", "standard_selling_rate", "gst_percent", "has_batch", "item_type"],
 		as_dict=True,
 	) or frappe._dict()
 	# Medicine/Consumable pricing lives on the Batch, not the Item - rate is
 	# resolved client-side once a warehouse is known and batches can be
-	# allocated (see billing.js). Service/Asset items aren't batch-tracked,
-	# so Standard Selling Rate still applies directly, same as before.
+	# allocated (see billing.js). Service items aren't batch-tracked, so
+	# Standard Selling Rate still applies directly, same as before.
 	is_batched = item_details.item_type in ("Medicine", "Consumable")
 	rate = 0 if is_batched else flt(item_details.standard_selling_rate)
 	return {
@@ -329,7 +329,7 @@ def _billing_row(item_code, item_name, qty):
 		"item_name": item_name,
 		"item_type": item_details.item_type,
 		"qty": flt(qty),
-		"uom": item_details.sale_uom or "",
+		"uom": item_details.unit_of_measure or "",
 		"rate": rate,
 		"gst_percent": flt(item_details.gst_percent),
 		"amount": rate * flt(qty),

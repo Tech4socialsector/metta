@@ -272,7 +272,7 @@ def get_pending_items_for_transfer(stock_indent, from_warehouse=None):
 		pending_qty = flt(indent_row.qty_requested) - flt(indent_row.qty_issued)
 		if pending_qty <= 0:
 			continue
-		unit_of_measure = frappe.db.get_value("Item", indent_row.item, "stock_uom") or ""
+		unit_of_measure = frappe.db.get_value("Item", indent_row.item, "unit_of_measure") or ""
 		# Rows added by this button skip the Item field's own change event
 		# (they're inserted directly, not picked by hand), so the batch
 		# auto-fetch that runs on a manual pick never fires here - fetched

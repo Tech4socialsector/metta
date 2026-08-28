@@ -67,7 +67,7 @@
    "read_only": 1
   },
   {
-   "fetch_from": "item.purchase_uom",
+   "fetch_from": "item.unit_of_measure",
    "fieldname": "unit_of_measure",
    "fieldtype": "Data",
    "in_list_view": 1,

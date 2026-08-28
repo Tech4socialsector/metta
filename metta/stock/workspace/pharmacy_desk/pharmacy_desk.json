@@ -1,7 +1,7 @@
 {
  "app": "metta",
  "charts": [],
- "content": "[{\"id\":\"QdQA4A3M-u\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Welcome to the Pharmacy Desk workspace</b></span>\",\"col\":12}},{\"id\":\"H87pwmP6cH\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Pharmacy</b></span>\",\"col\":12}},{\"id\":\"iDmBhRVt0b\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Billing\",\"col\":3}},{\"id\":\"mMEGJWD6oy\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Batch\",\"col\":3}},{\"id\":\"L-ojsGnVrr\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Stock Balance\",\"col\":3}},{\"id\":\"sG4drG5GZy\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Stock Ledger Entry\",\"col\":3}},{\"id\":\"GASf-CQTMr\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Item\",\"col\":3}},{\"id\":\"EF_e5maZ27\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Warehouse\",\"col\":3}},{\"id\":\"Z1cRF2zQ4_\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Patient</b></span>\",\"col\":12}},{\"id\":\"kHrJs_7FwK\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Doctor Consultation\",\"col\":3}},{\"id\":\"CigNLAw1fe\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Patient Visit\",\"col\":3}},{\"id\":\"Br3-u_zm_Z\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Billing Support</b></span>\",\"col\":12}},{\"id\":\"rZgagf7T53\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Corporate Customer\",\"col\":3}},{\"id\":\"Y0gQPai5J0\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Sales Return\",\"col\":3}},{\"id\":\"fo_FQ73RpP\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports</b></span>\",\"col\":12}},{\"id\":\"dn13t8kCxw\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Batch Wise Stock Listing\",\"col\":3}},{\"id\":\"zgjY-8e4ck\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"FSN Analysis\",\"col\":3}},{\"id\":\"BB8xIvJ-uJ\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Outlet-wise Expiry Report\",\"col\":3}},{\"id\":\"Ete0t94H1L\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Stock Sale Report\",\"col\":3}}]",
+ "content": "[{\"id\":\"QdQA4A3M-u\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Welcome to the Pharmacy Desk workspace</b></span>\",\"col\":12}},{\"id\":\"H87pwmP6cH\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Pharmacy</b></span>\",\"col\":12}},{\"id\":\"iDmBhRVt0b\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Billing\",\"col\":3}},{\"id\":\"mMEGJWD6oy\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Batch\",\"col\":3}},{\"id\":\"L-ojsGnVrr\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Stock Balance\",\"col\":3}},{\"id\":\"sG4drG5GZy\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Stock Ledger Entry\",\"col\":3}},{\"id\":\"GASf-CQTMr\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Item\",\"col\":3}},{\"id\":\"EF_e5maZ27\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Warehouse\",\"col\":3}},{\"id\":\"m3oY7d4nP9\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Stock Indent\",\"col\":3}},{\"id\":\"Z1cRF2zQ4_\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Patient</b></span>\",\"col\":12}},{\"id\":\"kHrJs_7FwK\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Doctor Consultation\",\"col\":3}},{\"id\":\"CigNLAw1fe\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Patient Visit\",\"col\":3}},{\"id\":\"Br3-u_zm_Z\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Billing Support</b></span>\",\"col\":12}},{\"id\":\"rZgagf7T53\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Corporate Customer\",\"col\":3}},{\"id\":\"Y0gQPai5J0\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Sales Return\",\"col\":3}},{\"id\":\"fo_FQ73RpP\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports</b></span>\",\"col\":12}},{\"id\":\"dn13t8kCxw\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Batch Wise Stock Listing\",\"col\":3}},{\"id\":\"zgjY-8e4ck\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Material Analysis\",\"col\":3}},{\"id\":\"BB8xIvJ-uJ\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Outlet-wise Expiry Report\",\"col\":3}},{\"id\":\"Ete0t94H1L\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Stock Sale Report\",\"col\":3}}]",
  "creation": "2026-08-19 17:00:00",
  "custom_blocks": [],
  "docstatus": 0,
@@ -13,7 +13,7 @@
  "label": "Pharmacy Desk",
  "link_type": "DocType",
  "links": [],
- "modified": "2026-08-24 06:40:48.339551",
+ "modified": "2026-08-28 13:57:27.702933",
  "modified_by": "Administrator",
  "module": "Stock",
  "name": "Pharmacy Desk",
@@ -36,6 +36,14 @@
    "doc_view": "List",
    "label": "Billing",
    "link_to": "Billing",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Stock Indent",
+   "link_to": "Stock Indent",
    "stats_filter": "[]",
    "type": "DocType"
   },
@@ -120,8 +128,8 @@
   },
   {
    "color": "Grey",
-   "label": "FSN Analysis",
-   "link_to": "fsn-analysis",
+   "label": "Material Analysis",
+   "link_to": "material-analysis",
    "stats_filter": "[]",
    "type": "Page"
   },

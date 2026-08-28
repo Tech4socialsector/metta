@@ -136,23 +136,16 @@ def get_item_defaults_for_order(item):
 	frappe.has_permission("Purchase Order", "read", throw=True)
 	if not item:
 		return {}
-	data = frappe.db.get_value("Item", item, ["purchase_uom", "standard_purchase_rate"], as_dict=True) or {}
-	purchase_uom = data.get("purchase_uom") or ""
-	# Packing (tablets/units per strip) already exists per-item in the master
-	# via Item UOM Conversion - suggested here as a default so staff aren't
-	# retyping something already on file, but it stays editable since the
-	# actual pack size can occasionally differ between deliveries.
-	packing = 0
-	if purchase_uom:
-		packing = flt(
-			frappe.db.get_value(
-				"Item UOM Conversion", {"parent": item, "uom": purchase_uom}, "conversion_factor"
-			)
-		)
+	data = frappe.db.get_value("Item", item, ["unit_of_measure", "standard_purchase_rate"], as_dict=True) or {}
+	# Packing has no suggested default anymore - Purchase Order is raised
+	# directly in tablet/unit counts now, not supplier packaging (Box/Strip),
+	# so there's no per-item conversion factor left to suggest one from.
+	# Staff type it in themselves, same as always for any item with no
+	# suggestion available.
 	return {
-		"unit_of_measure": purchase_uom,
+		"unit_of_measure": data.get("unit_of_measure") or "",
 		"rate": flt(data.get("standard_purchase_rate")),
-		"packing": packing,
+		"packing": 0,
 	}
 
 
@@ -163,7 +156,7 @@ def search_items_for_order(search_term=""):
 	# right at the moment of ordering, whether Central Store already has
 	# enough on hand.
 	frappe.has_permission("Purchase Order", "read", throw=True)
-	filters = {"item_type": ["in", ["Medicine", "Consumable", "Asset"]]}
+	filters = {"item_type": ["in", ["Medicine", "Consumable"]]}
 	if search_term:
 		filters["item_name"] = ["like", f"%{search_term}%"]
 

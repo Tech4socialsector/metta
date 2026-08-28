@@ -3,8 +3,8 @@
 
 frappe.ui.form.on("Batch", {
 	setup(frm) {
-		// Assets are tracked individually via serial_no, not lot/expiry
-		// batches - only Medicine and Consumable ever get a Batch record.
+		// Services aren't physical stock - only Medicine and Consumable ever
+		// get a Batch record.
 		frm.set_query("item", () => ({
 			filters: { item_type: ["in", ["Medicine", "Consumable"]] },
 		}));

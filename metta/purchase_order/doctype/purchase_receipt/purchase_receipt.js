@@ -6,7 +6,7 @@ frappe.ui.form.on("Purchase Receipt", {
 		// Services aren't bought from a supplier or held in stock - only
 		// let physical, purchasable item types be picked here.
 		frm.set_query("item", "items", () => ({
-			filters: { item_type: ["in", ["Medicine", "Consumable", "Asset"]] },
+			filters: { item_type: ["in", ["Medicine", "Consumable"]] },
 		}));
 		// A supplier delivery always lands at Central Store first - sub-stores
 		// only ever get stock afterward, via a Stock Transfer out of it.
@@ -212,13 +212,13 @@ frappe.ui.form.on("Purchase Receipt Item", {
 			frappe.model.set_value(cdt, cdn, "item_name", "");
 			return;
 		}
-		frappe.db.get_value("Item", row.item, ["purchase_uom", "item_name"], (r) => {
-			frappe.model.set_value(cdt, cdn, "unit_of_measure", r.purchase_uom || "");
+		frappe.db.get_value("Item", row.item, ["unit_of_measure", "item_name"], (r) => {
+			frappe.model.set_value(cdt, cdn, "unit_of_measure", r.unit_of_measure || "");
 			frappe.model.set_value(cdt, cdn, "item_name", r.item_name || "");
 		});
-		// Same Packing lookup Purchase Order uses (Item UOM Conversion) - a
-		// suggested default only, staff can still correct it if this specific
-		// delivery's actual pack size is different.
+		// Same call Purchase Order uses - Packing has no suggested default
+		// anymore (no more Box/Strip conversion factor to suggest it from),
+		// so this just picks up the rate/unit defaults now.
 		frappe.call({
 			method: "metta.purchase_order.doctype.purchase_order.purchase_order.get_item_defaults_for_order",
 			args: { item: row.item },

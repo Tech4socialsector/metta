@@ -7,7 +7,8 @@
  "engine": "InnoDB",
  "field_order": [
   "category_name",
-  "item_group"
+  "item_group",
+  "behaves_as"
  ],
  "fields": [
   {
@@ -26,6 +27,16 @@
    "in_standard_filter": 1,
    "label": "Group",
    "options": "Item Group",
+   "reqd": 1
+  },
+  {
+   "description": "What this category behaves like technically - decides whether an Item under it gets Batch/Expiry tracking, Chemical Composition, goes into Billing's Pharmacy or Service table, and so on. Set once per category; staff picking a Category on an Item never need to touch this.",
+   "fieldname": "behaves_as",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Behaves As",
+   "options": "Medicine\nConsumable\nService",
    "reqd": 1
   }
  ],

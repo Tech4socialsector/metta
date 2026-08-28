@@ -8,7 +8,7 @@ frappe.pages["stock-sale-report"].on_page_load = function (wrapper) {
 	new StockSaleReport(page);
 };
 
-const ITEM_TYPE_OPTIONS = ["", "Medicine", "Service", "Consumable", "Asset"];
+const ITEM_TYPE_OPTIONS = ["", "Medicine", "Service", "Consumable"];
 const BILL_TYPE_OPTIONS = ["", "Pharmacy", "Service", "Mixed"];
 
 function format_ddmmyy(date_str) {

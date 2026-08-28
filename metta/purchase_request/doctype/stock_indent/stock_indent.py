@@ -73,7 +73,7 @@ def search_items_for_indent(warehouse=None, search_term=""):
 	# Services aren't stocked or indentable - only physical items can be
 	# requested from a warehouse.
 	frappe.has_permission("Stock Indent", "read", throw=True)
-	filters = {"item_type": ["in", ["Medicine", "Consumable", "Asset"]]}
+	filters = {"item_type": ["in", ["Medicine", "Consumable"]]}
 	if search_term:
 		filters["item_name"] = ["like", f"%{search_term}%"]
 

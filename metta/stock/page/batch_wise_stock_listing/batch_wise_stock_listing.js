@@ -3,7 +3,7 @@ frappe.pages["batch-wise-stock-listing"].on_page_load = function (wrapper) {
 	new BatchWiseStockListing(page);
 };
 
-const BWSL_ITEM_TYPES = ["", "Medicine", "Service", "Consumable", "Asset"];
+const BWSL_ITEM_TYPES = ["", "Medicine", "Service", "Consumable"];
 const BWSL_STATUSES = ["All", "Expired", "Expiring in 30 Days", "Expiring in 31-60 Days", "Expiring in 61-90 Days", "Safe"];
 const BWSL_INDICATORS = { Expired: "red", "Expiring in 30 Days": "orange", "Expiring in 31-60 Days": "yellow", "Expiring in 61-90 Days": "blue", Safe: "green" };
 

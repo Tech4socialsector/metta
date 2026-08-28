@@ -6,7 +6,7 @@ frappe.ui.form.on("Purchase Order", {
 		// Services aren't bought from a supplier or held in stock - only
 		// let physical, purchasable item types be picked here.
 		frm.set_query("item", "items", () => ({
-			filters: { item_type: ["in", ["Medicine", "Consumable", "Asset"]] },
+			filters: { item_type: ["in", ["Medicine", "Consumable"]] },
 		}));
 	},
 	onload(frm) {

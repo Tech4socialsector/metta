@@ -188,7 +188,7 @@ def get_replacement_receipt_details(purchase_return):
 	items = []
 	for row in pret.items:
 		# The original Purchase Order Item always has this filled in (it's
-		# mandatory there) - Item.purchase_uom isn't reliably set on every
+		# mandatory there) - Item.unit_of_measure isn't reliably set on every
 		# item, so falling back to it directly left this blank.
 		unit_of_measure = ""
 		if purchase_order:
@@ -199,20 +199,14 @@ def get_replacement_receipt_details(purchase_return):
 				or ""
 			)
 		if not unit_of_measure:
-			unit_of_measure = frappe.db.get_value("Item", row.item, "purchase_uom") or ""
-		conversion_factor = (
-			frappe.db.get_value(
-				"Item UOM Conversion", {"parent": row.item, "uom": unit_of_measure}, "conversion_factor"
-			)
-			or 1
-		)
+			unit_of_measure = frappe.db.get_value("Item", row.item, "unit_of_measure") or ""
 		items.append(
 			{
 				"item": row.item,
 				"item_name": frappe.db.get_value("Item", row.item, "item_name") or "",
 				"unit_of_measure": unit_of_measure,
 				"qty_received": row.qty_returned,
-				"conversion_factor": conversion_factor,
+				"conversion_factor": 1,
 			}
 		)
 

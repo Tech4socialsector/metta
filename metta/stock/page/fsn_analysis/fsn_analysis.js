@@ -8,7 +8,7 @@ frappe.pages["fsn-analysis"].on_page_load = function (wrapper) {
 	new MaterialAnalysis(page);
 };
 
-const ITEM_TYPE_OPTIONS = ["", "Medicine", "Service", "Consumable", "Asset"];
+const ITEM_TYPE_OPTIONS = ["", "Medicine", "Service", "Consumable"];
 
 const MOVEMENT_STATUS_INDICATOR = {
 	"Fast-Moving": "green",

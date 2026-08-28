@@ -270,9 +270,9 @@ frappe.ui.form.on("Sales Bill Item", {
 		frappe.db.get_value(
 			"Item",
 			row.item,
-			["sale_uom", "standard_selling_rate", "gst_percent", "item_name", "item_type", "has_batch"],
+			["unit_of_measure", "standard_selling_rate", "gst_percent", "item_name", "item_type", "has_batch"],
 			(r) => {
-				frappe.model.set_value(cdt, cdn, "uom", r.sale_uom || "");
+				frappe.model.set_value(cdt, cdn, "uom", r.unit_of_measure || "");
 				frappe.model.set_value(cdt, cdn, "gst_percent", flt(r.gst_percent));
 				frappe.model.set_value(cdt, cdn, "item_name", r.item_name || "");
 				frappe.model.set_value(cdt, cdn, "item_type", r.item_type || "");

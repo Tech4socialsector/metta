@@ -17,11 +17,15 @@ def item_query(doctype, txt, searchfield, start, page_len, filters):
 	# Code/Name would miss it, so this also matches the linked Chemical
 	# Composition's own name and the Chemical Terms inside it.
 	frappe.has_permission("Item", "read", throw=True)
+	# The Link control always JSON-stringifies filters before sending them,
+	# even for a custom query function - frappe.parse_json leaves an
+	# already-parsed dict untouched, so this handles both call styles.
+	filters = frappe.parse_json(filters) if filters else {}
 
 	conditions = ["i.is_active = 1"]
 	values = {"txt": f"%{txt}%", "start": start, "page_len": page_len}
 
-	for fieldname, value in (filters or {}).items():
+	for fieldname, value in filters.items():
 		if isinstance(value, (list, tuple)) and len(value) == 2 and str(value[0]).lower() == "in":
 			keys = []
 			for idx, option in enumerate(value[1]):

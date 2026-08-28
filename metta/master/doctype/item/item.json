@@ -7,7 +7,6 @@
  "field_order": [
   "item_code",
   "item_name",
-  "item_type",
   "column_break_item_common",
   "is_active",
   "standard_selling_rate",
@@ -15,14 +14,13 @@
   "classification_section",
   "item_group",
   "category",
+  "item_type",
   "column_break_classification",
   "sub_category",
   "classification",
   "chemical_composition",
   "stock_pricing_section",
-  "stock_uom",
-  "purchase_uom",
-  "sale_uom",
+  "unit_of_measure",
   "column_break_stock_pricing",
   "has_batch",
   "has_expiry",
@@ -30,22 +28,11 @@
   "standard_purchase_rate",
   "purchase_price_history",
   "rack_location",
-  "uom_conversions",
   "reorder_levels",
   "medicine_section",
   "manufacturer",
   "hsn_code",
   "gst_percent",
-  "asset_section",
-  "asset_category",
-  "serial_no",
-  "purchase_date",
-  "purchase_cost",
-  "column_break_asset",
-  "warranty_expiry_date",
-  "useful_life_years",
-  "status",
-  "assigned_department",
   "service_section",
   "service_category",
   "duration_minutes",
@@ -70,15 +57,6 @@
    "reqd": 1
   },
   {
-   "fieldname": "item_type",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Item Type",
-   "options": "\nMedicine\nService\nConsumable\nAsset",
-   "reqd": 1
-  },
-  {
    "fieldname": "column_break_item_common",
    "fieldtype": "Column Break"
   },
@@ -89,7 +67,6 @@
    "label": "Is Active"
   },
   {
-   "depends_on": "eval:doc.item_type!=\"Asset\"",
    "description": "MRP for Medicine/Consumable, or the standard charge for a Service.",
    "fieldname": "standard_selling_rate",
    "fieldtype": "Currency",
@@ -123,6 +100,17 @@
    "options": "Item Category"
   },
   {
+   "description": "Derived automatically from the Category's own \"Behaves As\" setting - decides Batch/Expiry tracking, which Billing table this goes into, and so on.",
+   "fetch_from": "category.behaves_as",
+   "fieldname": "item_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Item Type",
+   "options": "\nMedicine\nService\nConsumable",
+   "read_only": 1
+  },
+  {
    "fieldname": "column_break_classification",
    "fieldtype": "Column Break"
   },
@@ -139,6 +127,7 @@
    "options": "Item Classification"
   },
   {
+   "depends_on": "eval:doc.item_type==\"Medicine\"",
    "description": "The finished formula this item is made of, e.g. \"Paracetamol 500mg\" - shown on the bill under the item name, exactly as defined here.",
    "fieldname": "chemical_composition",
    "fieldtype": "Link",
@@ -152,20 +141,11 @@
    "label": "Stock & Pricing"
   },
   {
-   "fieldname": "stock_uom",
+   "description": "One unit used everywhere - Purchase Order, Stock Indent, Stock Transfer, and Billing all show quantities in this same unit (e.g. Tablet, Sachet, Bottle). No separate buy-in-boxes conversion.",
+   "fieldname": "unit_of_measure",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Stock UOM"
-  },
-  {
-   "fieldname": "purchase_uom",
-   "fieldtype": "Data",
-   "label": "Purchase UOM"
-  },
-  {
-   "fieldname": "sale_uom",
-   "fieldtype": "Data",
-   "label": "Sale UOM"
+   "label": "Unit of Measure"
   },
   {
    "fieldname": "column_break_stock_pricing",
@@ -207,13 +187,6 @@
    "label": "Rack / Shelf Location"
   },
   {
-   "fieldname": "uom_conversions",
-   "fieldtype": "Table",
-   "hidden": 1,
-   "label": "UOM Conversions",
-   "options": "Item UOM Conversion"
-  },
-  {
    "fieldname": "reorder_levels",
    "fieldtype": "Table",
    "label": "Reorder Levels",
@@ -242,58 +215,6 @@
    "fieldtype": "Percent",
    "hidden": 1,
    "label": "GST %"
-  },
-  {
-   "depends_on": "eval:doc.item_type==\"Asset\"",
-   "fieldname": "asset_section",
-   "fieldtype": "Section Break",
-   "label": "Asset Details"
-  },
-  {
-   "fieldname": "asset_category",
-   "fieldtype": "Select",
-   "label": "Asset Category",
-   "options": "\nMedical Equipment\nFurniture\nIT Equipment\nOther"
-  },
-  {
-   "fieldname": "serial_no",
-   "fieldtype": "Data",
-   "label": "Serial No"
-  },
-  {
-   "fieldname": "purchase_date",
-   "fieldtype": "Date",
-   "label": "Purchase Date"
-  },
-  {
-   "fieldname": "purchase_cost",
-   "fieldtype": "Currency",
-   "label": "Purchase Cost"
-  },
-  {
-   "fieldname": "column_break_asset",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "warranty_expiry_date",
-   "fieldtype": "Date",
-   "label": "Warranty Expiry Date"
-  },
-  {
-   "fieldname": "useful_life_years",
-   "fieldtype": "Int",
-   "label": "Useful Life (Years)"
-  },
-  {
-   "fieldname": "status",
-   "fieldtype": "Select",
-   "label": "Status",
-   "options": "\nIn Use\nUnder Maintenance\nRetired\nDisposed"
-  },
-  {
-   "fieldname": "assigned_department",
-   "fieldtype": "Data",
-   "label": "Assigned Department"
   },
   {
    "depends_on": "eval:doc.item_type==\"Service\"",
