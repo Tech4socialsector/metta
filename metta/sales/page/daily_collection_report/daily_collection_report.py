@@ -438,19 +438,16 @@ def get_item_type_collection(from_date, to_date):
 
 
 def get_local_group_wise_details(from_date, to_date):
-	# Finer than Item Type Collection's Product/Service split - every
-	# Medicine/Consumable is grouped as "Pharmacy" (item_type is enough,
-	# no per-item tagging needed there), while each Service item is grouped
-	# by its own Local Group (Admission, X-Ray, Laboratory, etc.) - a service
-	# with no Local Group set yet falls into "Others" rather than vanishing.
+	# Grouped by Item Group - the same classification every item already
+	# picks at cataloguing time (Item Group -> Item Category -> Item), not a
+	# separate tag maintained just for this report. Whichever Item Group a
+	# billed item belongs to (Laboratory, Dental, Pharmacy, X-Ray, ...) is
+	# exactly the bucket it lands in here - no per-item local-group field.
 	frappe.has_permission("Billing", "read", throw=True)
 	rows = frappe.db.sql(
 		"""
 		SELECT
-			CASE
-				WHEN i.item_type IN ('Medicine', 'Consumable') THEN 'Pharmacy'
-				ELSE COALESCE(NULLIF(i.local_group, ''), 'Others')
-			END AS label,
+			COALESCE(NULLIF(i.item_group, ''), 'Others') AS label,
 			b.registration_category AS registration_category,
 			sbi.amount AS amount
 		FROM `tabSales Bill Item` sbi
