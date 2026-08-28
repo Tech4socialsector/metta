@@ -35,6 +35,7 @@
   "gst_percent",
   "service_section",
   "service_category",
+  "local_group",
   "duration_minutes",
   "column_break_service",
   "department",
@@ -67,11 +68,12 @@
    "label": "Is Active"
   },
   {
-   "description": "MRP for Medicine/Consumable, or the standard charge for a Service.",
+   "depends_on": "eval:doc.item_type==\"Service\"",
+   "description": "The standard charge for a Service. Medicine/Consumable pricing now lives on the Batch instead (set when its Purchase Bill is approved), so this only applies to Service items.",
    "fieldname": "standard_selling_rate",
    "fieldtype": "Currency",
-   "hidden": 1,
-   "label": "Standard Selling Rate"
+   "label": "Standard Selling Rate",
+   "read_only": 1
   },
   {
    "fieldname": "description",
@@ -229,6 +231,14 @@
    "options": "\nConsultation\nDiagnostic\nProcedure\nNursing\nOther"
   },
   {
+   "fieldname": "local_group",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Local Group",
+   "options": "\nAdmission\nDental\nECG\nLaboratory\nNursing\nOperation Theater\nPhysiotherapy\nRegistration\nRoom/Ward\nUltrasound\nX-Ray\nOthers"
+  },
+  {
    "fieldname": "duration_minutes",
    "fieldtype": "Int",
    "label": "Duration (Minutes)"
@@ -301,5 +311,6 @@
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
- "title_field": "item_name"
+ "title_field": "item_name",
+ "track_changes": 1
 }

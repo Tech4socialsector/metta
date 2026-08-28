@@ -244,7 +244,8 @@ class DailyCollectionReport {
 		this.render_charity_details(data.charity && data.charity.details);
 		this.render_op_ip_section("ip_adjusted_area", __("IP Adjusted"), data.ip_adjusted, __("Particulars"));
 		this.render_op_ip_section("credit_bills_area", __("Credit Bills"), data.credit_bills, __("Particulars"), true);
-		this.render_tax_section("tax_bills_area", __("Tax - Details - Bills"), data.tax_bills, false);
+		this.render_op_ip_section("local_group_wise_area", __("Local Group Wise Details"), data.local_group_wise, __("Particulars"), true);
+		this.render_tax_section("tax_bills_area", __("Tax - Details - Bills"), data.tax_bills, true);
 		this.render_tax_section("tax_returns_area", __("Tax - Details - Returns"), data.tax_returns, true);
 		this.balance_grid();
 	}
@@ -379,23 +380,23 @@ class DailyCollectionReport {
 			<tr>
 				<td class="text-center">${sl}</td>
 				<td>${frappe.utils.escape_html(r.label || "")}</td>
+				${extra_cells(r)}
 				<td class="text-center">${format_currency(r.amount)}</td>
 				<td class="text-center">${format_currency(r.tax_amount)}</td>
-				${extra_cells(r)}
 			</tr>`;
 		const total_html = `
 			<tr class="dcr-total">
 				<td></td>
 				<td>${__("Total")}</td>
+				${with_op_ip ? `<td class="text-center">${format_currency(total.op_amount)}</td><td class="text-center">${format_currency(total.ip_amount)}</td>` : ""}
 				<td class="text-center">${format_currency(total.amount)}</td>
 				<td class="text-center">${format_currency(total.tax_amount)}</td>
-				${with_op_ip ? `<td class="text-center">${format_currency(total.op_amount)}</td><td class="text-center">${format_currency(total.ip_amount)}</td>` : ""}
 			</tr>`;
 		$target.html(`
 			<div class="dcr-box-title">${heading}</div>
 			<div class="table-wrapper">
 				<table class="table table-hover dcr-table">
-					<thead><tr><th>${__("Sl No")}</th><th>${__("Particulars")}</th><th>${__("Amount")}</th><th>${__("Tax Amount")}</th>${extra_header}</tr></thead>
+					<thead><tr><th>${__("Sl No")}</th><th>${__("Particulars")}</th>${extra_header}<th>${__("Amount")}</th><th>${__("Tax Amount")}</th></tr></thead>
 					<tbody>${rows.map((r, i) => row_html(r, i + 1)).join("")}${total_html}</tbody>
 				</table>
 			</div>
@@ -507,13 +508,14 @@ class DailyCollectionReport {
 			this.user_wise_charity_section(),
 			this.op_ip_export_section(__("Advances"), data.advances, __("Particulars")),
 			this.op_ip_export_section(__("Item Type Collection"), data.item_type_collection, __("Particulars")),
+			this.op_ip_export_section(__("Local Group Wise Details"), data.local_group_wise, __("Particulars")),
 			this.op_ip_export_section(__("Sales Return - Cash"), data.sales_return_cash, __("Particulars")),
 			this.op_ip_export_section(__("Sales Return - Credit"), data.sales_return_credit, __("Particulars")),
 			this.op_ip_export_section(__("Charity - Summary"), data.charity && data.charity.summary, __("Particulars")),
 			...this.charity_details_export_sections(data.charity && data.charity.details),
 			this.op_ip_export_section(__("IP Adjusted"), data.ip_adjusted, __("Particulars")),
 			this.op_ip_export_section(__("Credit Bills"), data.credit_bills, __("Particulars")),
-			this.tax_export_section(__("Tax - Details - Bills"), data.tax_bills, false),
+			this.tax_export_section(__("Tax - Details - Bills"), data.tax_bills, true),
 			this.tax_export_section(__("Tax - Details - Returns"), data.tax_returns, true),
 		].filter(Boolean);
 		if (!sections.length) return null;
@@ -609,16 +611,19 @@ class DailyCollectionReport {
 		const rows = (data && data.rows) || [];
 		if (!rows.length) return null;
 		const total = data.total || {};
-		const columns = [__("Sl No"), __("Particulars"), __("Amount"), __("Tax Amount")];
+		const columns = [__("Sl No"), __("Particulars")];
 		if (with_op_ip) columns.push(__("OP Amount"), __("IP Amount"));
+		columns.push(__("Amount"), __("Tax Amount"));
 
 		const out_rows = rows.map((r, i) => {
-			const row = [i + 1, r.label || "", format_currency(r.amount), format_currency(r.tax_amount)];
+			const row = [i + 1, r.label || ""];
 			if (with_op_ip) row.push(format_currency(r.op_amount), format_currency(r.ip_amount));
+			row.push(format_currency(r.amount), format_currency(r.tax_amount));
 			return row;
 		});
-		const total_row = ["", __("Total"), format_currency(total.amount), format_currency(total.tax_amount)];
+		const total_row = ["", __("Total")];
 		if (with_op_ip) total_row.push(format_currency(total.op_amount), format_currency(total.ip_amount));
+		total_row.push(format_currency(total.amount), format_currency(total.tax_amount));
 		out_rows.push(total_row);
 
 		return { heading, columns, rows: out_rows };

@@ -20,6 +20,7 @@ def get_data(from_date, to_date):
 		"advances": get_advances(from_date, to_date),
 		"user_wise_charity": get_user_wise_charity(from_date, to_date),
 		"item_type_collection": get_item_type_collection(from_date, to_date),
+		"local_group_wise": get_local_group_wise_details(from_date, to_date),
 		"sales_return_cash": get_sales_return_by_mode(from_date, to_date, "Cash"),
 		"sales_return_credit": get_sales_return_by_mode(from_date, to_date, "Credit"),
 		"charity": get_charity(from_date, to_date),
@@ -309,29 +310,54 @@ def get_credit_bills(from_date, to_date):
 def get_tax_details(from_date, to_date):
 	# Grouped by Item Type + GST%, combined into one "(P) PHARMACY - 12.00%"
 	# style Particulars label - matches the reference report's own single
-	# combined column exactly, instead of a separate GST % column.
+	# combined column exactly, instead of a separate GST % column. Split by
+	# OP/IP the same way Tax - Details - Returns already is, rather than
+	# aggregated away in SQL.
 	frappe.has_permission("Billing", "read", throw=True)
 	rows = frappe.db.sql(
 		"""
 		SELECT
 			CASE WHEN sbi.item_type IN ('Medicine', 'Consumable') THEN 'PRODUCT' ELSE 'SERVICE' END AS item_type,
 			sbi.gst_percent AS gst_percent,
-			SUM(sbi.amount) AS amount, SUM(sbi.gst_amount) AS tax_amount
+			b.registration_category AS registration_category,
+			sbi.amount AS amount, sbi.gst_amount AS tax_amount
 		FROM `tabSales Bill Item` sbi
 		INNER JOIN `tabBilling` b ON b.name = sbi.parent
 		WHERE b.docstatus = 1 AND sbi.gst_percent > 0
 			AND b.sale_datetime BETWEEN %(from_date)s AND %(to_date)s
-		GROUP BY item_type, sbi.gst_percent
-		ORDER BY item_type, sbi.gst_percent
 		""",
 		{"from_date": f"{from_date} 00:00:00", "to_date": f"{to_date} 23:59:59"},
 		as_dict=True,
 	)
+
+	grouped = {}
+	order = []
 	for r in rows:
-		r["label"] = f"{r.item_type} - {flt(r.gst_percent):.2f}%"
-	total_amount = sum(flt(r.amount) for r in rows)
-	total_tax = sum(flt(r.tax_amount) for r in rows)
-	return {"rows": rows, "total": {"amount": total_amount, "tax_amount": total_tax}}
+		key = (r.item_type, r.gst_percent)
+		if key not in grouped:
+			grouped[key] = {
+				"label": f"{r.item_type} - {flt(r.gst_percent):.2f}%",
+				"amount": 0,
+				"tax_amount": 0,
+				"op_amount": 0,
+				"ip_amount": 0,
+			}
+			order.append(key)
+		grouped[key]["amount"] += flt(r.amount)
+		grouped[key]["tax_amount"] += flt(r.tax_amount)
+		if r.registration_category == "IP":
+			grouped[key]["ip_amount"] += flt(r.amount)
+		else:
+			grouped[key]["op_amount"] += flt(r.amount)
+
+	out_rows = [grouped[k] for k in order]
+	total = {
+		"amount": sum(r["amount"] for r in out_rows),
+		"tax_amount": sum(r["tax_amount"] for r in out_rows),
+		"op_amount": sum(r["op_amount"] for r in out_rows),
+		"ip_amount": sum(r["ip_amount"] for r in out_rows),
+	}
+	return {"rows": out_rows, "total": total}
 
 
 def get_tax_details_returns(from_date, to_date):
@@ -403,6 +429,33 @@ def get_item_type_collection(from_date, to_date):
 			sbi.amount AS amount
 		FROM `tabSales Bill Item` sbi
 		INNER JOIN `tabBilling` b ON b.name = sbi.parent
+		WHERE b.docstatus = 1 AND b.sale_datetime BETWEEN %(from_date)s AND %(to_date)s
+		""",
+		{"from_date": f"{from_date} 00:00:00", "to_date": f"{to_date} 23:59:59"},
+		as_dict=True,
+	)
+	return _op_ip_rows(rows, "label")
+
+
+def get_local_group_wise_details(from_date, to_date):
+	# Finer than Item Type Collection's Product/Service split - every
+	# Medicine/Consumable is grouped as "Pharmacy" (item_type is enough,
+	# no per-item tagging needed there), while each Service item is grouped
+	# by its own Local Group (Admission, X-Ray, Laboratory, etc.) - a service
+	# with no Local Group set yet falls into "Others" rather than vanishing.
+	frappe.has_permission("Billing", "read", throw=True)
+	rows = frappe.db.sql(
+		"""
+		SELECT
+			CASE
+				WHEN i.item_type IN ('Medicine', 'Consumable') THEN 'Pharmacy'
+				ELSE COALESCE(NULLIF(i.local_group, ''), 'Others')
+			END AS label,
+			b.registration_category AS registration_category,
+			sbi.amount AS amount
+		FROM `tabSales Bill Item` sbi
+		INNER JOIN `tabBilling` b ON b.name = sbi.parent
+		INNER JOIN `tabItem` i ON i.name = sbi.item
 		WHERE b.docstatus = 1 AND b.sale_datetime BETWEEN %(from_date)s AND %(to_date)s
 		""",
 		{"from_date": f"{from_date} 00:00:00", "to_date": f"{to_date} 23:59:59"},
