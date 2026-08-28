@@ -7,10 +7,15 @@ frappe.ui.form.on("Billing", {
 		// one's own picker only ever offers the item types that actually
 		// belong there, so staff can't put a medicine in the service table
 		// or a charge in the pharmacy table by mistake.
+		// Custom query so typing a Chemical Term/Composition name (e.g.
+		// "para") surfaces a matching item even when the brand name itself
+		// doesn't contain it - staff often know the salt name, not the brand.
 		frm.set_query("item", "pharmacy_items", () => ({
+			query: "metta.master.doctype.item.item.item_query",
 			filters: { item_type: ["in", ["Medicine", "Consumable"]] },
 		}));
 		frm.set_query("item", "service_items", () => ({
+			query: "metta.master.doctype.item.item.item_query",
 			filters: { item_type: "Service" },
 		}));
 		// Never let a row's batch belong to a different item - the field was

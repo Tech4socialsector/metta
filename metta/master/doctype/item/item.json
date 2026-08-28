@@ -7,12 +7,18 @@
  "field_order": [
   "item_code",
   "item_name",
-  "generic_name",
   "item_type",
   "column_break_item_common",
   "is_active",
   "standard_selling_rate",
   "description",
+  "classification_section",
+  "item_group",
+  "category",
+  "column_break_classification",
+  "sub_category",
+  "classification",
+  "chemical_composition",
   "stock_pricing_section",
   "stock_uom",
   "purchase_uom",
@@ -94,6 +100,50 @@
    "fieldname": "description",
    "fieldtype": "Small Text",
    "label": "Description"
+  },
+  {
+   "fieldname": "classification_section",
+   "fieldtype": "Section Break",
+   "label": "Classification"
+  },
+  {
+   "fieldname": "item_group",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Group",
+   "options": "Item Group"
+  },
+  {
+   "description": "Options are filtered to only show categories that belong to the Group selected above.",
+   "fieldname": "category",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Category",
+   "options": "Item Category"
+  },
+  {
+   "fieldname": "column_break_classification",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sub_category",
+   "fieldtype": "Link",
+   "label": "Sub Category",
+   "options": "Item Sub Category"
+  },
+  {
+   "fieldname": "classification",
+   "fieldtype": "Link",
+   "label": "Classification",
+   "options": "Item Classification"
+  },
+  {
+   "description": "The finished formula this item is made of, e.g. \"Paracetamol 500mg\" - shown on the bill under the item name, exactly as defined here.",
+   "fieldname": "chemical_composition",
+   "fieldtype": "Link",
+   "label": "Chemical Composition",
+   "options": "Chemical Composition"
   },
   {
    "depends_on": "eval:doc.item_type==\"Medicine\" || doc.item_type==\"Consumable\"",
@@ -276,11 +326,6 @@
    "fieldname": "is_taxable",
    "fieldtype": "Check",
    "label": "Is Taxable"
-  },
-  {
-   "fieldname": "generic_name",
-   "fieldtype": "Data",
-   "label": "Generic Name"
   }
  ],
  "grid_page_length": 50,

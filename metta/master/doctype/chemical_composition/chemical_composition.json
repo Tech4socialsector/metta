@@ -1,0 +1,82 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "field:composition_name",
+ "creation": "2026-08-28 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "composition_name",
+  "terms"
+ ],
+ "fields": [
+  {
+   "description": "e.g. \"Paracetamol 500mg\" or \"Paracetamol 500mg + Caffeine 30mg\" - the finished formula, reused across every brand/Item that shares it.",
+   "fieldname": "composition_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Composition Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "terms",
+   "fieldtype": "Table",
+   "label": "Chemical Terms",
+   "options": "Chemical Composition Term",
+   "reqd": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-08-28 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Master",
+ "name": "Chemical Composition",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Store Staff"
+  },
+  {
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Pharmacy Staff"
+  },
+  {
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Billing Staff"
+  },
+  {
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Account Staff"
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "ASC",
+ "states": []
+}

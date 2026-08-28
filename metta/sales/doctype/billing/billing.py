@@ -342,17 +342,36 @@ def search_items_for_billing(search_term="", table="pharmacy_items"):
 	# Powers the quick-add widget above each Items table - Pharmacy Items
 	# only ever searches Medicine/Consumable, Service Items only ever
 	# searches Service, same split the two tables themselves enforce.
+	#
+	# Also matches the item's linked Chemical Composition and the Chemical
+	# Terms inside it - staff often know a drug by its salt/generic name
+	# ("para") rather than the specific brand actually stocked ("Dolo 650").
 	frappe.has_permission("Billing", "read", throw=True)
 	item_types = list(PHARMACY_ITEM_TYPES) if table == "pharmacy_items" else ["Service"]
-	filters = {"item_type": ["in", item_types], "is_active": 1}
-	if search_term:
-		filters["item_name"] = ["like", f"%{search_term}%"]
 
-	items = frappe.get_all(
-		"Item",
-		fields=["name as item_code", "item_name", "standard_selling_rate"],
-		filters=filters,
-		limit=20,
+	values = {"item_types": item_types, "limit": 20}
+	search_condition = ""
+	if search_term:
+		search_condition = """
+			AND (i.item_name LIKE %(search_term)s OR i.item_code LIKE %(search_term)s
+				OR cc.name LIKE %(search_term)s OR ct.name LIKE %(search_term)s)
+		"""
+		values["search_term"] = f"%{search_term}%"
+
+	items = frappe.db.sql(
+		f"""
+		SELECT DISTINCT i.name AS item_code, i.item_name, i.standard_selling_rate
+		FROM `tabItem` i
+		LEFT JOIN `tabChemical Composition` cc ON cc.name = i.chemical_composition
+		LEFT JOIN `tabChemical Composition Term` cct ON cct.parent = cc.name
+		LEFT JOIN `tabChemical Term` ct ON ct.name = cct.chemical_term
+		WHERE i.item_type IN %(item_types)s AND i.is_active = 1
+		{search_condition}
+		ORDER BY i.item_name
+		LIMIT %(limit)s
+		""",
+		values,
+		as_dict=True,
 	)
 
 	pharmacy_warehouse = None

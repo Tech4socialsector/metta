@@ -2,6 +2,19 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Item", {
+	setup(frm) {
+		// Category only ever lists categories that belong to the selected
+		// Group - Pharmacy Store items shouldn't see General Store categories
+		// and vice versa.
+		frm.set_query("category", () => ({
+			filters: { item_group: frm.doc.item_group || "" },
+		}));
+	},
+	item_group(frm) {
+		// A category picked under the old Group would no longer be valid -
+		// clear it rather than silently leaving a mismatched value saved.
+		frm.set_value("category", "");
+	},
 	item_type(frm) {
 		// Each Item Type only ever fills in its own section - clear the others
 		// so switching type can't leave behind fields that no longer apply
