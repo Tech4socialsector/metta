@@ -12,9 +12,10 @@
   "no_of_unit",
   "free",
   "qty",
-  "purchase_rate",
   "amount",
+  "purchase_rate",
   "purchase_tax_section",
+  "discount_percent",
   "discount",
   "gst_percent",
   "gst_amount",
@@ -88,16 +89,18 @@
    "read_only": 1
   },
   {
-   "fieldname": "purchase_rate",
-   "fieldtype": "Currency",
-   "in_list_view": 1,
-   "label": "P Rate"
-  },
-  {
+   "description": "The taxable value for this row, as billed on the supplier invoice (before GST) - P Rate is worked out from this, not the other way around.",
    "fieldname": "amount",
    "fieldtype": "Currency",
    "in_list_view": 1,
-   "label": "Amount",
+   "label": "Taxable Amount"
+  },
+  {
+   "description": "Rate per single tablet/unit - calculated back from Taxable Amount ÷ billable Qty, not typed in directly.",
+   "fieldname": "purchase_rate",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "P Rate",
    "read_only": 1
   },
   {
@@ -107,10 +110,19 @@
   },
   {
    "default": "0",
+   "description": "% of the Taxable Amount to discount - the ₹ Discount below is calculated from this.",
+   "fieldname": "discount_percent",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "Discount %"
+  },
+  {
+   "default": "0",
    "fieldname": "discount",
    "fieldtype": "Currency",
    "in_list_view": 1,
-   "label": "Discount"
+   "label": "Discount",
+   "read_only": 1
   },
   {
    "fetch_from": "item.gst_percent",

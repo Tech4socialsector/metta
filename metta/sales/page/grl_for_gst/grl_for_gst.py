@@ -120,7 +120,7 @@ def _get_purchase_rows(from_date, to_date):
 			'Purchase Bill' AS doc_type, pb.name AS doc_no, pb.supplier_invoice_date AS doc_date,
 			pb.supplier AS party, s.gst_number AS gstin, 1 AS is_b2b,
 			pbi.item, pbi.item_name, TRIM(BOTH '\t' FROM TRIM(i.hsn_code)) AS hsn_code, hsn.description AS hsn_description,
-			pbi.qty, pbi.rate, pbi.amount, pbi.gst_percent, pbi.gst_amount
+			pbi.qty, pbi.purchase_rate AS rate, pbi.amount, pbi.gst_percent, pbi.gst_amount
 		FROM `tabPurchase Bill Item` pbi
 		INNER JOIN `tabPurchase Bill` pb ON pb.name = pbi.parent
 		INNER JOIN `tabItem` i ON i.name = pbi.item

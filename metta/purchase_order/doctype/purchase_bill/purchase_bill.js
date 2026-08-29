@@ -45,10 +45,10 @@ frappe.ui.form.on("Purchase Bill Item", {
 	free(frm, cdt, cdn) {
 		calculate_amount(frm, cdt, cdn);
 	},
-	purchase_rate(frm, cdt, cdn) {
+	amount(frm, cdt, cdn) {
 		calculate_amount(frm, cdt, cdn);
 	},
-	discount(frm, cdt, cdn) {
+	discount_percent(frm, cdt, cdn) {
 		calculate_amount(frm, cdt, cdn);
 	},
 	gst_percent(frm, cdt, cdn) {
@@ -169,30 +169,38 @@ function calculate_amount(frm, cdt, cdn) {
 	const qty = flt(row.packing) * flt(row.no_of_unit);
 	frappe.model.set_value(cdt, cdn, "qty", qty);
 
-	// P Rate is entered per single tablet/unit directly (not per strip) -
-	// Free strips are converted to tablets so they can be netted out of Qty
-	// in the same units.
+	// Taxable Amount is entered directly, matching the supplier invoice's
+	// own Taxable Amount column - P Rate per single tablet/unit is worked
+	// out backward from it, not typed in. Free strips are converted to
+	// tablets so they can be netted out of Qty in the same units.
 	const free_qty = flt(row.free) * flt(row.packing);
 	const billable_qty = qty - free_qty;
-	const amount = billable_qty * flt(row.purchase_rate);
+	const amount = flt(row.amount);
+	const purchase_rate = billable_qty ? amount / billable_qty : 0;
+
+	// Discount is entered as a % of the Taxable Amount - the ₹ value is
+	// calculated from it, same as the supplier invoice shows both the % and
+	// the resulting amount.
+	const discount = (amount * flt(row.discount_percent)) / 100;
 
 	// GST is calculated on Amount net of Discount, same as the supplier
 	// invoice - Amount itself still shows the full gross value (matches the
 	// invoice's own Taxable Amount column), but the tax is worked out on
 	// what's actually being paid for it.
-	const taxable_value = amount - flt(row.discount);
+	const taxable_value = amount - discount;
 	const gst_amount = (taxable_value * flt(row.gst_percent)) / 100;
 	const cgst_amount = gst_amount / 2;
 	const sgst_amount = gst_amount / 2;
 	const igst_amount = flt(row.igst_amount); // not wired up yet - inter-state, add later
 
 	// Landed cost per tablet/unit, net of discount, including GST.
-	const discount_per_unit = qty ? flt(row.discount) / qty : 0;
-	const net_rate = flt(row.purchase_rate) - discount_per_unit;
+	const discount_per_unit = qty ? discount / qty : 0;
+	const net_rate = purchase_rate - discount_per_unit;
 	const purchase_cost = net_rate * (1 + flt(row.gst_percent) / 100);
 
+	frappe.model.set_value(cdt, cdn, "purchase_rate", purchase_rate);
+	frappe.model.set_value(cdt, cdn, "discount", discount);
 	frappe.model.set_value(cdt, cdn, "purchase_cost", purchase_cost);
-	frappe.model.set_value(cdt, cdn, "amount", amount);
 	frappe.model.set_value(cdt, cdn, "gst_amount", gst_amount);
 	frappe.model.set_value(cdt, cdn, "cgst_rate", flt(row.gst_percent) / 2);
 	frappe.model.set_value(cdt, cdn, "cgst_amount", cgst_amount);
