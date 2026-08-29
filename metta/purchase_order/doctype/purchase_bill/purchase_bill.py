@@ -28,12 +28,19 @@ class PurchaseBill(Document):
 		for row in self.items:
 			row.qty = flt(row.packing) * flt(row.no_of_unit)
 
-			# P Rate is entered per single tablet/unit directly (not per
-			# strip) - Free strips are converted to tablets so they can be
-			# netted out of Qty in the same units.
+			# Taxable Amount is entered directly, matching the supplier
+			# invoice's own Taxable Amount column - P Rate per single
+			# tablet/unit is worked out backward from it, not typed in.
+			# Free strips are converted to tablets so they can be netted out
+			# of Qty in the same units.
 			free_qty = flt(row.free) * flt(row.packing)
 			billable_qty = flt(row.qty) - free_qty
-			row.amount = billable_qty * flt(row.purchase_rate)
+			row.purchase_rate = flt(row.amount) / billable_qty if billable_qty else 0
+
+			# Discount is entered as a % of the Taxable Amount - the ₹ value
+			# is calculated from it, same as the supplier invoice shows both
+			# the % and the resulting amount.
+			row.discount = flt(row.amount) * flt(row.discount_percent) / 100
 
 			# GST is calculated on the Amount net of Discount, same as the
 			# supplier invoice - Amount itself still shows the full gross
@@ -329,6 +336,7 @@ def get_items_from_receipt(purchase_receipt):
 				"purchase_cost": 0,
 				"last_purchase_cost": flt(item_details.get("standard_purchase_rate")),
 				"amount": 0,
+				"discount_percent": 0,
 				"discount": 0,
 				"gst_percent": gst_percent,
 				"gst_amount": 0,
