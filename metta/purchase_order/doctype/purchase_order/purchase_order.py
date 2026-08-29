@@ -156,7 +156,7 @@ def search_items_for_order(search_term=""):
 	# right at the moment of ordering, whether Central Store already has
 	# enough on hand.
 	frappe.has_permission("Purchase Order", "read", throw=True)
-	filters = {"item_type": ["in", ["Medicine", "Consumable"]]}
+	filters = {"item_type": ["in", ["Medicine", "Consumable"]], "is_active": 1}
 	if search_term:
 		filters["item_name"] = ["like", f"%{search_term}%"]
 

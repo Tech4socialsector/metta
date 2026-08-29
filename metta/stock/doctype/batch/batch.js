@@ -6,7 +6,7 @@ frappe.ui.form.on("Batch", {
 		// Services aren't physical stock - only Medicine and Consumable ever
 		// get a Batch record.
 		frm.set_query("item", () => ({
-			filters: { item_type: ["in", ["Medicine", "Consumable"]] },
+			filters: { item_type: ["in", ["Medicine", "Consumable"]], is_active: 1 },
 		}));
 	},
 });

@@ -3,7 +3,7 @@
 
 frappe.ui.form.on("Service Rate List", {
 	setup(frm) {
-		frm.set_query("item", () => ({ filters: { item_type: "Service" } }));
+		frm.set_query("item", () => ({ filters: { item_type: "Service", is_active: 1 } }));
 	},
 	refresh(frm) {
 		if (frm.is_new()) return;

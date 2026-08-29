@@ -47,7 +47,7 @@ def item_query(doctype, txt, searchfield, start, page_len, filters):
 		LEFT JOIN `tabChemical Composition Term` cct ON cct.parent = cc.name
 		LEFT JOIN `tabChemical Term` ct ON ct.name = cct.chemical_term
 		WHERE {where_clause}
-			AND (i.item_code LIKE %(txt)s OR i.item_name LIKE %(txt)s
+			AND (i.item_name LIKE %(txt)s
 				OR cc.name LIKE %(txt)s OR ct.name LIKE %(txt)s)
 		ORDER BY i.item_name
 		LIMIT %(page_len)s OFFSET %(start)s

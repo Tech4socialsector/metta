@@ -353,7 +353,7 @@ def search_items_for_billing(search_term="", table="pharmacy_items"):
 	search_condition = ""
 	if search_term:
 		search_condition = """
-			AND (i.item_name LIKE %(search_term)s OR i.item_code LIKE %(search_term)s
+			AND (i.item_name LIKE %(search_term)s
 				OR cc.name LIKE %(search_term)s OR ct.name LIKE %(search_term)s)
 		"""
 		values["search_term"] = f"%{search_term}%"

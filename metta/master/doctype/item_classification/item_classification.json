@@ -1,6 +1,6 @@
 {
  "actions": [],
- "allow_rename": 0,
+ "allow_rename": 1,
  "autoname": "field:classification_name",
  "creation": "2026-08-28 00:00:00",
  "doctype": "DocType",

@@ -6,7 +6,7 @@ frappe.ui.form.on("Material Issue", {
 		// Issuing to a patient only ever means dispensing medicine or
 		// consumable stock - never a service or a fixed asset.
 		frm.set_query("item", "items", () => ({
-			filters: { item_type: ["in", ["Medicine", "Consumable"]] },
+			filters: { item_type: ["in", ["Medicine", "Consumable"]], is_active: 1 },
 		}));
 	},
 	refresh(frm) {

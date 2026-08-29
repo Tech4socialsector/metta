@@ -6,7 +6,7 @@ frappe.ui.form.on("Purchase Receipt", {
 		// Services aren't bought from a supplier or held in stock - only
 		// let physical, purchasable item types be picked here.
 		frm.set_query("item", "items", () => ({
-			filters: { item_type: ["in", ["Medicine", "Consumable"]] },
+			filters: { item_type: ["in", ["Medicine", "Consumable"]], is_active: 1 },
 		}));
 	},
 	refresh(frm) {

@@ -6,7 +6,7 @@ frappe.ui.form.on("Diagnostic Test", {
 		// A suggested test has to be a real, priced Service item - same
 		// constraint as suggested_tests on Doctor Consultation.
 		frm.set_query("item", () => ({
-			filters: { item_type: "Service" },
+			filters: { item_type: "Service", is_active: 1 },
 		}));
 	},
 });

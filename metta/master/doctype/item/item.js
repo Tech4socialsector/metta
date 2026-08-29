@@ -26,7 +26,6 @@ frappe.ui.form.on("Item", {
 			"unit_of_measure",
 			"has_batch",
 			"has_expiry",
-			"shelf_life_months",
 			"standard_purchase_rate",
 			"rack_location",
 		];

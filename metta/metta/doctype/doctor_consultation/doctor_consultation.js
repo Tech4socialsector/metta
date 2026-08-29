@@ -6,12 +6,12 @@ frappe.ui.form.on("Doctor Consultation", {
 		// Only actual medicines belong on a prescription - not consumables,
 		// assets, or services.
 		frm.set_query("item", "prescribed_items", () => ({
-			filters: { item_type: "Medicine" },
+			filters: { item_type: "Medicine", is_active: 1 },
 		}));
 		// A suggested test has to be a real, priced Service item - that's
 		// what makes it billable at all, not free text.
 		frm.set_query("item", "suggested_tests", () => ({
-			filters: { item_type: "Service" },
+			filters: { item_type: "Service", is_active: 1 },
 		}));
 	},
 	onload(frm) {
