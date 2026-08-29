@@ -8,24 +8,6 @@ frappe.ui.form.on("Purchase Receipt", {
 		frm.set_query("item", "items", () => ({
 			filters: { item_type: ["in", ["Medicine", "Consumable"]] },
 		}));
-		// A supplier delivery always lands at Central Store first - sub-stores
-		// only ever get stock afterward, via a Stock Transfer out of it.
-		frm.set_query("receiving_warehouse", () => ({
-			filters: { warehouse_type: "Central Store" },
-		}));
-	},
-	onload(frm) {
-		// Every supplier delivery lands at Central Store - looked up dynamically
-		// rather than hardcoding the name, same as the Available Qty lookup, in
-		// case it's ever renamed. Only for a fresh, unsaved document - never
-		// override a value that's already there.
-		if (frm.is_new() && !frm.doc.receiving_warehouse) {
-			frappe.db.get_value("Warehouse", { warehouse_type: "Central Store" }, "name").then((r) => {
-				if (r.message && r.message.name) {
-					frm.set_value("receiving_warehouse", r.message.name);
-				}
-			});
-		}
 	},
 	refresh(frm) {
 		show_get_items_button(frm);
