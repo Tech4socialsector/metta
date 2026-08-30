@@ -153,6 +153,10 @@ function show_create_payment_entry_button(frm) {
 	// now, 60 later) - no duplicate check needed here, unlike the other
 	// "Create X" buttons that should only ever produce one linked document.
 	if (frm.doc.docstatus !== 1 || flt(frm.doc.balance_due) <= 0) return;
+	// Store/Purchase/Warehouse staff can all view an approved bill, but
+	// recording payment is Account Staff's job - hide the button rather than
+	// let them hit a permission error only after opening the form.
+	if (!frappe.model.can_create("Payment Entry")) return;
 
 	frm.add_custom_button(__("Create Payment Entry"), () => {
 		frappe.new_doc("Payment Entry", {

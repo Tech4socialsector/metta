@@ -97,9 +97,13 @@ function show_create_document_button(frm) {
 		// One button offering only whichever of the two hasn't been created
 		// yet (and are actually valid at this docstatus), instead of two
 		// separate "Create X" buttons sitting side by side.
+		// Store Staff can raise a Quality Inspection but not a Purchase Bill
+		// (Account Staff's job) - only offer choices the current user can
+		// actually create, rather than letting them pick one and hit a
+		// permission error.
 		const options = [];
-		if (!existingQI) options.push("Quality Inspection");
-		if (!existingBill && frm.doc.docstatus === 1) options.push("Purchase Bill");
+		if (!existingQI && frappe.model.can_create("Quality Inspection")) options.push("Quality Inspection");
+		if (!existingBill && frm.doc.docstatus === 1 && frappe.model.can_create("Purchase Bill")) options.push("Purchase Bill");
 		if (!options.length) return;
 
 		frm.add_custom_button(__("Create Follow-up Document"), () => {
