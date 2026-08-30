@@ -158,6 +158,7 @@
    "report": 1,
    "role": "Purchase Approver",
    "share": 1,
+   "submit": 1,
    "write": 1
   },
   {

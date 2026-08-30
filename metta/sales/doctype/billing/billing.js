@@ -12,7 +12,7 @@ frappe.ui.form.on("Billing", {
 		// doesn't contain it - staff often know the salt name, not the brand.
 		frm.set_query("item", "pharmacy_items", () => ({
 			query: "metta.master.doctype.item.item.item_query",
-			filters: { item_type: ["in", ["Medicine", "Consumable"]] },
+			filters: { item_type: ["in", ["Medicine", "Consumable"]], item_group: "Pharmacy Store" },
 		}));
 		frm.set_query("item", "service_items", () => ({
 			query: "metta.master.doctype.item.item.item_query",
@@ -550,6 +550,11 @@ function add_admission_charge_if_due(frm) {
 }
 
 function offer_pending_consultations(frm) {
+	// A Billing only ever covers one consultation (see the "already billed"
+	// check server-side) - once its items are loaded, offering this button
+	// again would just append the same rows a second time on every click.
+	if (frm.doc.doctor_consultation) return;
+
 	frappe.call({
 		method: "metta.sales.doctype.billing.billing.get_unbilled_consultations_for_patient",
 		args: { patient: frm.doc.patient },
@@ -813,6 +818,11 @@ function render_item_search(frm, opts) {
 }
 
 function load_consultation_items(frm, consultation) {
+	// Guards against a fast double-click on "Load Prescribed Items" - the
+	// button only disappears on the next refresh, which hasn't happened yet
+	// the instant a second click lands, so this check has to live here too.
+	if (frm.doc.doctor_consultation) return;
+
 	frappe.call({
 		method: "metta.sales.doctype.billing.billing.get_billing_items_for_consultation",
 		args: { consultation },

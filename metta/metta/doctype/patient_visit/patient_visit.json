@@ -512,7 +512,7 @@
    "read_only": 1
   },
   {
-   "depends_on": "eval:doc.billing_category!='Staff'",
+   "depends_on": "eval:doc.net_amount > 0",
    "fieldname": "payment_mode",
    "fieldtype": "Select",
    "label": "Payment Mode",

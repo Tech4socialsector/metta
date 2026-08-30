@@ -6,7 +6,7 @@ frappe.ui.form.on("Sales Return", {
 		// Services aren't stocked and Assets aren't dispensed to patients -
 		// only Medicine/Consumable make sense to return here.
 		frm.set_query("item", "items", () => ({
-			filters: { item_type: ["in", ["Medicine", "Consumable"]], is_active: 1 },
+			filters: { item_type: ["in", ["Medicine", "Consumable"]], item_group: "Pharmacy Store", is_active: 1 },
 		}));
 		// Only show bills/issues belonging to the selected patient, so the
 		// picker doesn't force scrolling through every patient's documents.

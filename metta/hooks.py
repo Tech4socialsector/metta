@@ -11,7 +11,13 @@ app_license = "mit"
 fixtures = [
 	{
 		"doctype": "Print Format",
-		"filters": [["name", "in", ["Patient Registration Receipt", "Discharge Bill", "Billing Receipt"]]],
+		"filters": [
+			[
+				"name",
+				"in",
+				["Patient Registration Receipt", "Discharge Bill", "Billing Receipt", "Doctor Consultation Prescription"],
+			]
+		],
 	},
 	{"doctype": "Letter Head", "filters": [["name", "=", "Landour Community Hospital"]]},
 	{

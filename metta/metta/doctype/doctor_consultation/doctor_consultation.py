@@ -87,7 +87,11 @@ def has_permission(doc, ptype, user):
 def get_prescription_html(consultation):
 	doc = frappe.get_doc("Doctor Consultation", consultation)
 	doc.check_permission("read")
-	print_format = frappe.get_doc("Print Format", "Doctor Consultation Prescription")
+	# Print Format itself is locked down to System Manager only (its HTML/Jinja
+	# isn't meant for general browsing) - get_cached_doc skips that check,
+	# same as Frappe's own print rendering does, since the check that
+	# actually matters here already happened above on the Consultation itself.
+	print_format = frappe.get_cached_doc("Print Format", "Doctor Consultation Prescription")
 	return frappe.render_template(print_format.html, {"doc": doc.as_dict()})
 
 
