@@ -4,7 +4,7 @@
 frappe.ui.form.on("Stock Reconciliation", {
 	setup(frm) {
 		frm.set_query("item", "items", () => ({
-			filters: { item_type: ["in", ["Medicine", "Consumable"]], item_group: "Pharmacy Store", is_active: 1 },
+			filters: { item_type: ["in", ["Medicine", "Consumable"]], is_active: 1 },
 		}));
 		// A batch belongs to exactly one item - showing every batch in the
 		// system here is how a wrong-item batch gets picked by mistake.

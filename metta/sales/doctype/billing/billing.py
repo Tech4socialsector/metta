@@ -282,6 +282,42 @@ def get_pharmacy_warehouse():
 
 
 @frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def pharmacy_item_query(doctype, txt, searchfield, start, page_len, filters):
+	# What actually matters for dispensing is real stock on hand right now,
+	# not just an item's Group/Category tagging - an item correctly tagged
+	# "Pharmacy Store" with nothing left in stock has nothing to offer here,
+	# so this joins against the Pharmacy warehouse's own Stock Balance
+	# instead of trusting the item's classification alone.
+	frappe.has_permission("Billing", "read", throw=True)
+	warehouse = get_pharmacy_warehouse()
+	if not warehouse:
+		return []
+
+	return frappe.db.sql(
+		"""
+		SELECT DISTINCT i.name, i.item_name
+		FROM `tabItem` i
+		INNER JOIN `tabStock Balance` sb ON sb.item = i.name AND sb.warehouse = %(warehouse)s AND sb.actual_qty > 0
+		LEFT JOIN `tabChemical Composition` cc ON cc.name = i.chemical_composition
+		LEFT JOIN `tabChemical Composition Term` cct ON cct.parent = cc.name
+		LEFT JOIN `tabChemical Term` ct ON ct.name = cct.chemical_term
+		WHERE i.item_type IN %(item_types)s AND i.is_active = 1
+			AND (i.item_name LIKE %(txt)s OR cc.name LIKE %(txt)s OR ct.name LIKE %(txt)s)
+		ORDER BY i.item_name
+		LIMIT %(page_len)s OFFSET %(start)s
+		""",
+		{
+			"warehouse": warehouse,
+			"item_types": list(PHARMACY_ITEM_TYPES),
+			"txt": f"%{txt}%",
+			"start": start,
+			"page_len": page_len,
+		},
+	)
+
+
+@frappe.whitelist()
 def get_fefo_batch(item_code):
 	# First-Expiry-First-Out - standard pharmacy dispensing practice, and
 	# not something a busy front desk should have to remember to apply by
@@ -388,6 +424,10 @@ def search_items_for_billing(search_term="", table="pharmacy_items"):
 				)
 				or 0
 			)
+			# Nothing to dispense if there's really none left - same rule
+			# pharmacy_item_query enforces for the Items table's own Link field.
+			if avail_qty <= 0:
+				continue
 		result.append(
 			{
 				"item_code": it.item_code,

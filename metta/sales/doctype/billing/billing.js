@@ -10,9 +10,11 @@ frappe.ui.form.on("Billing", {
 		// Custom query so typing a Chemical Term/Composition name (e.g.
 		// "para") surfaces a matching item even when the brand name itself
 		// doesn't contain it - staff often know the salt name, not the brand.
+		// Only offers items that actually have stock on hand in the Pharmacy
+		// warehouse right now, not just ones tagged Medicine/Consumable -
+		// nothing to dispense if there's really none left.
 		frm.set_query("item", "pharmacy_items", () => ({
-			query: "metta.master.doctype.item.item.item_query",
-			filters: { item_type: ["in", ["Medicine", "Consumable"]], item_group: "Pharmacy Store" },
+			query: "metta.sales.doctype.billing.billing.pharmacy_item_query",
 		}));
 		frm.set_query("item", "service_items", () => ({
 			query: "metta.master.doctype.item.item.item_query",
