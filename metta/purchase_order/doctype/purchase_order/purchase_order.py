@@ -70,12 +70,14 @@ class PurchaseOrder(Document):
 
 	@frappe.whitelist()
 	def mark_sent_to_dealer(self):
+		validate_can_fulfill()
 		if self.status != "Approved":
 			frappe.throw(_("Only an Approved order can be marked as Sent to Dealer."))
 		self.db_set("status", "Sent to Dealer", update_modified=False)
 
 	@frappe.whitelist()
 	def close_order(self):
+		validate_can_fulfill()
 		if self.status != "Received":
 			frappe.throw(_("Only a fully Received order can be closed."))
 		self.db_set("status", "Closed", update_modified=False)
@@ -91,6 +93,19 @@ def validate_can_approve():
 	if "Purchase Approver" not in user_roles and "System Manager" not in user_roles:
 		frappe.throw(
 			_("Only a Purchase Approver can approve or reject a Purchase Order."),
+			frappe.PermissionError,
+		)
+
+
+def validate_can_fulfill():
+	# Same reasoning as validate_can_approve() - Purchase Approver has write
+	# access on Purchase Order for the approve/reject step, which would
+	# otherwise be enough to also let them dispatch or close the order.
+	# Fulfilling it is Store Staff's job, so it's enforced here.
+	user_roles = frappe.get_roles(frappe.session.user)
+	if "Store Staff" not in user_roles and "System Manager" not in user_roles:
+		frappe.throw(
+			_("Only Store Staff can mark an order as Sent to Dealer or close it."),
 			frappe.PermissionError,
 		)
 

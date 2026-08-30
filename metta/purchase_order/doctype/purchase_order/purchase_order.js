@@ -68,13 +68,18 @@ frappe.ui.form.on("Purchase Order", {
 			});
 		}
 
-		if (frm.doc.status === "Approved") {
+		// Fulfilling the order (dispatch, closing it out) is Store Staff's job,
+		// not the Approver's - same "hide it, and enforce it server-side too"
+		// treatment as the Approve/Reject buttons above.
+		const can_fulfill = frappe.user_roles.includes("Store Staff") || frappe.user_roles.includes("System Manager");
+
+		if (frm.doc.status === "Approved" && can_fulfill) {
 			frm.add_custom_button(__("Mark Sent to Dealer"), () => {
 				frm.call("mark_sent_to_dealer").then(() => frm.reload_doc());
 			}).addClass("btn-primary");
 		}
 
-		if (frm.doc.status === "Received") {
+		if (frm.doc.status === "Received" && can_fulfill) {
 			frm.add_custom_button(__("Close Order"), () => {
 				frm.call("close_order").then(() => frm.reload_doc());
 			}).addClass("btn-primary");
