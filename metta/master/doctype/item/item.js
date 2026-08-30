@@ -30,7 +30,7 @@ frappe.ui.form.on("Item", {
 			"rack_location",
 		];
 		const medicine_fields = ["manufacturer", "hsn_code", "gst_percent", "chemical_composition"];
-		const service_fields = ["service_category", "duration_minutes", "department"];
+		const service_fields = ["service_category", "department"];
 
 		const keep =
 			frm.doc.item_type === "Medicine"

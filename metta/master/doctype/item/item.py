@@ -3,10 +3,31 @@
 
 import frappe
 from frappe.model.document import Document
+from frappe.utils import flt
 
 
 class Item(Document):
-	pass
+	def on_update(self):
+		self.ensure_service_rate_list()
+
+	def ensure_service_rate_list(self):
+		# Saves staff a separate "go create the rate list too" step. Starts
+		# from whatever was typed into Standard Selling Rate while this Item
+		# was still new (that field locks right after this first save) - so
+		# the very first price is set in one go, right here. Every rate
+		# change after this one goes through Service Rate List's own
+		# "Update Rate" instead, which keeps a history of each change.
+		if self.item_type != "Service":
+			return
+		if frappe.db.exists("Service Rate List", self.name):
+			return
+		frappe.get_doc(
+			{
+				"doctype": "Service Rate List",
+				"item": self.name,
+				"current_rate": flt(self.standard_selling_rate),
+			}
+		).insert(ignore_permissions=True)
 
 
 @frappe.whitelist()
