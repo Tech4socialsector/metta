@@ -279,7 +279,10 @@ def get_ip_adjusted(from_date, to_date):
 		{"from_date": f"{from_date} 00:00:00", "to_date": f"{to_date} 23:59:59"},
 		as_dict=True,
 	)[0].total
-	return {"rows": [{"label": _("Advance Adjusted"), "op_amount": 0, "ip_amount": flt(total)}], "total": {"op_amount": 0, "ip_amount": flt(total)}}
+	total = flt(total)
+	if not total:
+		return {"rows": [], "total": {"op_amount": 0, "ip_amount": 0}}
+	return {"rows": [{"label": _("Advance Adjusted"), "op_amount": 0, "ip_amount": total}], "total": {"op_amount": 0, "ip_amount": total}}
 
 
 def get_credit_bills(from_date, to_date):
