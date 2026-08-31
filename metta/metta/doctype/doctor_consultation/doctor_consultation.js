@@ -3,10 +3,10 @@
 
 frappe.ui.form.on("Doctor Consultation", {
 	setup(frm) {
-		// Only actual medicines belong on a prescription - not consumables,
-		// assets, or services.
+		// Only offers Medicine that Pharmacy actually has in stock right now -
+		// not just anything tagged Medicine in the Item master.
 		frm.set_query("item", "prescribed_items", () => ({
-			filters: { item_type: "Medicine", is_active: 1 },
+			query: "metta.metta.doctype.doctor_consultation.doctor_consultation.prescribable_item_query",
 		}));
 		// A suggested test has to be a real, priced Service item - that's
 		// what makes it billable at all, not free text.
@@ -33,6 +33,7 @@ frappe.ui.form.on("Doctor Consultation", {
 		render_patient_history(frm);
 		check_vitals_status(frm);
 		show_vitals_popup(frm);
+		render_prescription_item_search(frm);
 
 		if (!frm.is_new()) {
 			frm.add_custom_button(__("Print Prescription"), () => {
@@ -306,5 +307,137 @@ function render_patient_history(frm) {
 					.join("")
 			);
 		},
+	});
+}
+
+function render_prescription_item_search(frm) {
+	const wrapper = frm.fields_dict.prescription_item_search_area.$wrapper;
+	wrapper.html(`
+		<div class="rx-item-search-widget" style="border:1px solid var(--border-color, #d1d8dd); border-radius:6px; padding:12px; margin-bottom:10px;">
+			<div style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+				<div style="flex:2; min-width:220px; position:relative;">
+					<label class="control-label" style="display:block; font-size:12px; margin-bottom:2px;">${__(
+						"Medicine Name"
+					)}</label>
+					<input type="text" class="form-control rx-item-search" placeholder="${__(
+						"Search medicine in stock..."
+					)}" autocomplete="off">
+					<div class="rx-item-results" style="display:none; position:absolute; z-index:50; background:var(--fg-color,#fff); border:1px solid var(--border-color,#d1d8dd); width:100%; max-height:260px; overflow:auto; box-shadow:0 2px 6px rgba(0,0,0,0.15);"></div>
+				</div>
+				<div style="width:100px;">
+					<label class="control-label" style="display:block; font-size:12px; margin-bottom:2px;">${__("Qty")}</label>
+					<input type="number" class="form-control rx-item-qty" min="1" step="1" value="1">
+				</div>
+				<div>
+					<button class="btn btn-primary btn-sm rx-item-add">${__("Add")}</button>
+				</div>
+			</div>
+			<div class="rx-item-selected text-muted" style="margin-top:6px; font-size:12px;"></div>
+		</div>
+	`);
+
+	let selected = null;
+	let current_rows = [];
+	const $search = wrapper.find(".rx-item-search");
+	const $results = wrapper.find(".rx-item-results");
+	const $qty = wrapper.find(".rx-item-qty");
+	const $selectedNote = wrapper.find(".rx-item-selected");
+
+	const select_row = (idx) => {
+		if (!current_rows[idx]) return;
+		selected = current_rows[idx];
+		$search.val(selected.item_name);
+		$selectedNote.text(__("Selected: {0} ({1}) - Warehouse: {2}", [selected.item_name, selected.item_code, selected.warehouse]));
+		$results.hide();
+		$qty.trigger("focus").trigger("select");
+	};
+
+	const render_results = (rows) => {
+		current_rows = rows || [];
+		if (!current_rows.length) {
+			$results.html(`<div class="text-muted" style="padding:8px;">${__("No matches in stock")}</div>`).show();
+			return;
+		}
+		const header = `
+			<table class="table table-condensed" style="margin-bottom:0;">
+				<thead>
+					<tr>
+						<th>${__("Name")}</th>
+						<th class="text-right">${__("Avail. Qty")}</th>
+						<th>${__("Warehouse")}</th>
+					</tr>
+				</thead>
+				<tbody>
+					${current_rows
+						.map(
+							(r, i) => `
+						<tr class="rx-item-row" data-idx="${i}" style="cursor:pointer;">
+							<td>${frappe.utils.escape_html(r.item_name)}</td>
+							<td class="text-right">${flt(r.avail_qty)}</td>
+							<td>${frappe.utils.escape_html(r.warehouse || "")}</td>
+						</tr>`
+						)
+						.join("")}
+				</tbody>
+			</table>`;
+		$results.html(header).show();
+		$results.find(".rx-item-row").on("click", function () {
+			select_row($(this).data("idx"));
+		});
+	};
+
+	const do_search = frappe.utils.debounce((term) => {
+		frappe.call({
+			method:
+				"metta.metta.doctype.doctor_consultation.doctor_consultation.search_pharmacy_items_for_prescription",
+			args: { search_term: term },
+			callback(r) {
+				render_results(r.message);
+			},
+		});
+	}, 300);
+
+	$search.on("input", () => {
+		selected = null;
+		$selectedNote.text("");
+		do_search($search.val());
+	});
+	$search.on("focus", () => {
+		if (!$search.val()) do_search("");
+	});
+	$(document).on("click.rx-item-search", (e) => {
+		if (!$(e.target).closest(".rx-item-search-widget").length) $results.hide();
+	});
+
+	wrapper.find(".rx-item-add").on("click", () => {
+		if (!selected) {
+			frappe.msgprint(__("Please search and select a medicine first."));
+			return;
+		}
+		const qty = cint($qty.val());
+		if (!qty || qty <= 0) {
+			frappe.msgprint(__("Please enter a Qty greater than 0."));
+			return;
+		}
+
+		// Frappe auto-adds one blank starter row to a new document's required
+		// Table field - remove it before adding the first real item, so it
+		// doesn't linger as an empty Row 1 forever.
+		const existing_rows = frm.doc.prescribed_items || [];
+		if (existing_rows.length && existing_rows.every((r) => !r.item)) {
+			frm.clear_table("prescribed_items");
+		}
+
+		const row = frm.add_child("prescribed_items");
+		row.item = selected.item_code;
+		row.item_name = selected.item_name;
+		row.qty = qty;
+		frm.refresh_field("prescribed_items");
+
+		selected = null;
+		$search.val("");
+		$qty.val("1");
+		$selectedNote.text("");
+		$results.hide();
 	});
 }

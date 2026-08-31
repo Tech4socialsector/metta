@@ -5,7 +5,11 @@ import frappe
 from frappe import _
 from frappe.utils import flt
 
-from metta.metta.doctype.patient_registration.patient_registration import GENERAL_CATEGORY
+from metta.metta.doctype.patient_registration.patient_registration import (
+	GENERAL_CATEGORY,
+	STAFF_CATEGORY,
+	STAFF_DEPENDENT_CATEGORY,
+)
 from metta.sales.report.collection_report.collection_report import execute as get_collection_report_data
 
 
@@ -148,8 +152,11 @@ def get_charity(from_date, to_date):
 		"label",
 	)
 
-	details = {}
-	order = []
+	# These three are always shown, even with nothing to report for the
+	# period - unlike a corporate tie-up category, they're permanent fixtures
+	# of the billing model, not something that only exists when it's used.
+	details = {GENERAL_CATEGORY: [], STAFF_CATEGORY: [], STAFF_DEPENDENT_CATEGORY: []}
+	order = [GENERAL_CATEGORY, STAFF_CATEGORY, STAFF_DEPENDENT_CATEGORY]
 	for r in rows:
 		category = r.category or _("Not Set")
 		if category not in details:
@@ -228,10 +235,11 @@ def get_user_wise_charity(from_date, to_date):
 	)
 	rows += [frappe._dict({"owner": r.owner, "category": GENERAL_CATEGORY, "amount": r.amount}) for r in general_rows]
 
-	if not rows:
-		return {"categories": [], "rows": []}
-
-	categories = []
+	# General/Staff/Staff Dependent are permanent fixtures of the billing
+	# model (see get_charity's own details boxes) - always shown as columns,
+	# even with nothing to report for the period, rather than only appearing
+	# once something has actually been discounted under them.
+	categories = [GENERAL_CATEGORY, STAFF_CATEGORY, STAFF_DEPENDENT_CATEGORY]
 	by_user = {}
 	for r in rows:
 		category = r.category or _("Not Set")

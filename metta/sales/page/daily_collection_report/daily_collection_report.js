@@ -70,22 +70,24 @@ class DailyCollectionReport {
 			}
 			.dcr-page .dcr-box {
 				border: 1px solid var(--border-color);
-				border-radius: 8px;
+				border-radius: 10px;
 				overflow: hidden;
 				background: var(--card-bg, #fff);
+				box-shadow: 0 1px 3px rgba(16, 42, 67, 0.06);
 			}
 			.dcr-page .dcr-box.dcr-wide,
 			.dcr-page .dcr-box.dcr-fill {
 				grid-column: 1 / -1;
 			}
 			.dcr-page .dcr-box-title {
-				background: #1b4f8c;
-				color: #fff;
+				background: #f3f8ff;
+				color: #2c5c8f;
+				border-left: 3px solid #7ab0e8;
 				font-weight: 700;
 				font-size: 12px;
 				letter-spacing: 0.04em;
 				text-transform: uppercase;
-				padding: 8px 14px;
+				padding: 9px 14px 9px 12px;
 			}
 			.dcr-page .dcr-box .table-wrapper {
 				overflow-x: auto;
@@ -95,12 +97,12 @@ class DailyCollectionReport {
 				margin-bottom: 0;
 			}
 			.dcr-page table.dcr-table thead th {
-				background: #eaf1fb;
-				color: #0b4a86;
+				background: #fafcff;
+				color: #5b7893;
 				text-transform: uppercase;
 				font-size: 11px;
 				letter-spacing: 0.04em;
-				border-bottom: none;
+				border-bottom: 1px solid #eef2f7;
 				padding: 8px 14px;
 				white-space: nowrap;
 			}
@@ -116,13 +118,13 @@ class DailyCollectionReport {
 				font-variant-numeric: tabular-nums;
 			}
 			.dcr-page table.dcr-table tbody tr:nth-child(even) {
-				background: var(--subtle-fg, rgba(140, 140, 140, 0.04));
+				background: var(--subtle-fg, rgba(140, 140, 140, 0.03));
 			}
 			.dcr-page table.dcr-table tr.dcr-total td {
-				background: #eaf3fc;
-				color: #0b4a86;
+				background: #f3f8ff;
+				color: #2c5c8f;
 				font-weight: 700;
-				border-top: 2px solid #1b4f8c;
+				border-top: 1px solid #cfe1f4;
 			}
 		</style>`).appendTo("head");
 	}
@@ -233,20 +235,26 @@ class DailyCollectionReport {
 		const advances = data.advances || { rows: [], total: { op_amount: 0, ip_amount: 0 } };
 		const item_type_collection = data.item_type_collection || { rows: [], total: { op_amount: 0, ip_amount: 0 } };
 
+		// Order here is the visual order on the page - get_area() places each
+		// box the first time its key is requested, so this sequence IS the
+		// layout. render_charity_details() is deliberately last: unlike every
+		// other section, it fully removes and re-appends its boxes on every
+		// render (the number of Charity categories can change between
+		// periods), so it has to run last or its boxes would jump to the
+		// bottom on any re-render regardless of where this call sits.
 		this.render_table(detail_rows, total_row);
-		this.render_user_wise_charity(data.user_wise_charity || { categories: [], rows: [] });
 		this.render_op_ip_section("advances_area", __("Advances"), advances, __("Particulars"));
-		this.render_op_ip_section("item_type_area", __("Item Type Collection"), item_type_collection, __("Particulars"));
-
+		this.render_op_ip_section("ip_adjusted_area", __("IP Adjusted"), data.ip_adjusted, __("Particulars"));
+		this.render_op_ip_section("credit_bills_area", __("Credit Bills"), data.credit_bills, __("Particulars"), true);
+		this.render_user_wise_charity(data.user_wise_charity || { categories: [], rows: [] });
 		this.render_op_ip_section("sales_return_cash_area", __("Sales Return - Cash"), data.sales_return_cash, __("Particulars"));
 		this.render_op_ip_section("sales_return_credit_area", __("Sales Return - Credit"), data.sales_return_credit, __("Particulars"));
 		this.render_op_ip_section("charity_summary_area", __("Charity - Summary"), data.charity && data.charity.summary, __("Particulars"));
-		this.render_charity_details(data.charity && data.charity.details);
-		this.render_op_ip_section("ip_adjusted_area", __("IP Adjusted"), data.ip_adjusted, __("Particulars"));
-		this.render_op_ip_section("credit_bills_area", __("Credit Bills"), data.credit_bills, __("Particulars"), true);
-		this.render_op_ip_section("local_group_wise_area", __("Local Group Wise Details"), data.local_group_wise, __("Particulars"), true);
+		this.render_op_ip_section("item_type_area", __("Item Type Collection"), item_type_collection, __("Particulars"));
 		this.render_tax_section("tax_bills_area", __("Tax - Details - Bills"), data.tax_bills, true);
 		this.render_tax_section("tax_returns_area", __("Tax - Details - Returns"), data.tax_returns, true);
+		this.render_op_ip_section("local_group_wise_area", __("Local Group Wise Details"), data.local_group_wise, __("Particulars"), true);
+		this.render_charity_details(data.charity && data.charity.details);
 		this.balance_grid();
 	}
 
@@ -285,14 +293,20 @@ class DailyCollectionReport {
 	render_op_ip_section(area_key, heading, data, label_header, wide) {
 		const $target = this.get_area(area_key, wide);
 		const rows = (data && data.rows) || [];
+		const total = (data && data.total) || { op_amount: 0, ip_amount: 0 };
+		const header = `<tr><th>${__("Sl No")}</th><th>${label_header}</th><th>${__("OP Amount")}</th><th>${__("IP Amount")}</th></tr>`;
 		if (!rows.length) {
 			$target.html(`
 				<div class="dcr-box-title">${heading}</div>
-				<p class="text-muted" style="padding: 10px 14px;">${__("No data for this period.")}</p>
+				<div class="table-wrapper">
+					<table class="table table-hover dcr-table">
+						<thead>${header}</thead>
+						<tbody><tr><td colspan="4" class="text-muted text-center">${__("No data for this period.")}</td></tr></tbody>
+					</table>
+				</div>
 			`);
 			return;
 		}
-		const total = data.total || { op_amount: 0, ip_amount: 0 };
 		const row_html = (r, sl) => `
 			<tr>
 				<td class="text-center">${sl}</td>
@@ -311,7 +325,7 @@ class DailyCollectionReport {
 			<div class="dcr-box-title">${heading}</div>
 			<div class="table-wrapper">
 				<table class="table table-hover dcr-table">
-					<thead><tr><th>${__("Sl No")}</th><th>${label_header}</th><th>${__("OP Amount")}</th><th>${__("IP Amount")}</th></tr></thead>
+					<thead>${header}</thead>
 					<tbody>${rows.map((r, i) => row_html(r, i + 1)).join("")}${total_html}</tbody>
 				</table>
 			</div>
@@ -363,15 +377,21 @@ class DailyCollectionReport {
 	render_tax_section(area_key, heading, data, with_op_ip) {
 		const $target = this.get_area(area_key, true);
 		const rows = (data && data.rows) || [];
+		const total = (data && data.total) || {};
+		const extra_header = with_op_ip ? `<th>${__("OP Amount")}</th><th>${__("IP Amount")}</th>` : "";
 		if (!rows.length) {
+			const colspan = with_op_ip ? 6 : 4;
 			$target.html(`
 				<div class="dcr-box-title">${heading}</div>
-				<p class="text-muted" style="padding: 10px 14px;">${__("No data for this period.")}</p>
+				<div class="table-wrapper">
+					<table class="table table-hover dcr-table">
+						<thead><tr><th>${__("Sl No")}</th><th>${__("Particulars")}</th>${extra_header}<th>${__("Amount")}</th><th>${__("Tax Amount")}</th></tr></thead>
+						<tbody><tr><td colspan="${colspan}" class="text-muted text-center">${__("No data for this period.")}</td></tr></tbody>
+					</table>
+				</div>
 			`);
 			return;
 		}
-		const total = data.total || {};
-		const extra_header = with_op_ip ? `<th>${__("OP Amount")}</th><th>${__("IP Amount")}</th>` : "";
 		const extra_cells = (r) =>
 			with_op_ip
 				? `<td class="text-center">${format_currency(r.op_amount)}</td><td class="text-center">${format_currency(r.ip_amount)}</td>`
@@ -405,19 +425,15 @@ class DailyCollectionReport {
 
 	render_table(detail_rows, total_row) {
 		const $target = this.get_area("table_area", true);
-		if (!detail_rows.length) {
-			$target.html(`
-				<div class="dcr-box-title">${__("User Wise Details")}</div>
-				<p class="text-muted" style="padding: 10px 14px;">${__("No collections found for this period.")}</p>
-			`);
-			return;
-		}
 
 		const header = [
 			"Sl No",
 			"User Name",
 			"Gross Amt",
 			"Charity",
+			"General",
+			"Staff",
+			"Staff Dependent",
 			"Card",
 			"Gpay",
 			"Credit Bills",
@@ -431,6 +447,9 @@ class DailyCollectionReport {
 		const money_fields = [
 			"gross_amt",
 			"charity",
+			"general",
+			"staff",
+			"staff_dependent",
 			"card",
 			"gpay",
 			"credit_bills",
@@ -438,6 +457,19 @@ class DailyCollectionReport {
 			"adv_ip",
 			"cash_amt",
 		];
+
+		if (!detail_rows.length) {
+			$target.html(`
+				<div class="dcr-box-title">${__("User Wise Details")}</div>
+				<div class="table-wrapper">
+					<table class="table table-hover dcr-table">
+						<thead><tr>${header}</tr></thead>
+						<tbody><tr><td colspan="${money_fields.length + 2}" class="text-muted text-center">${__("No collections found for this period.")}</td></tr></tbody>
+					</table>
+				</div>
+			`);
+			return;
+		}
 
 		const row_html = (row, sl) => `
 			<tr>
@@ -466,15 +498,20 @@ class DailyCollectionReport {
 		const $target = this.get_area("user_wise_charity_area", true);
 		const rows = data.rows || [];
 		const categories = data.categories || [];
+		const header = ["Sl No", "User Name", ...categories].map((h) => `<th>${frappe.utils.escape_html(h)}</th>`).join("");
 		if (!rows.length || !categories.length) {
 			$target.html(`
 				<div class="dcr-box-title">${__("User Wise Charity Details")}</div>
-				<p class="text-muted" style="padding: 10px 14px;">${__("No data for this period.")}</p>
+				<div class="table-wrapper">
+					<table class="table table-hover dcr-table">
+						<thead><tr>${header}</tr></thead>
+						<tbody><tr><td colspan="${categories.length + 2}" class="text-muted text-center">${__("No data for this period.")}</td></tr></tbody>
+					</table>
+				</div>
 			`);
 			return;
 		}
 
-		const header = ["Sl No", "User Name", ...categories].map((h) => `<th>${frappe.utils.escape_html(h)}</th>`).join("");
 		const row_html = (row, sl) => `
 			<tr>
 				<td class="text-center">${sl != null ? sl : ""}</td>
@@ -542,6 +579,9 @@ class DailyCollectionReport {
 			"User Name",
 			"Gross Amt",
 			"Charity",
+			"General",
+			"Staff",
+			"Staff Dependent",
 			"Card",
 			"Gpay",
 			"Credit Bills",
@@ -553,6 +593,9 @@ class DailyCollectionReport {
 		const money_fields = [
 			"gross_amt",
 			"charity",
+			"general",
+			"staff",
+			"staff_dependent",
 			"card",
 			"gpay",
 			"credit_bills",

@@ -14,6 +14,7 @@
   "column_break_diagnosis",
   "clinical_notes",
   "prescription_section",
+  "prescription_item_search_area",
   "prescribed_items",
   "investigations_section",
   "suggested_tests",
@@ -80,6 +81,10 @@
   {
    "fieldname": "prescription_section",
    "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "prescription_item_search_area",
+   "fieldtype": "HTML"
   },
   {
    "fieldname": "prescribed_items",

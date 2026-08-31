@@ -419,3 +419,64 @@ def apply_my_leave(from_date, to_date, reason=None):
 	)
 	leave.insert()
 	return {"name": leave.name}
+
+
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def prescribable_item_query(doctype, txt, searchfield, start, page_len, filters):
+	# Same "must actually be in stock" rule as the search widget above,
+	# applied to the Prescription table's own Item Link field too, so typing
+	# directly into a row can't slip past the same check.
+	frappe.has_permission("Doctor Consultation", "read", throw=True)
+	from metta.sales.doctype.billing.billing import get_pharmacy_warehouse
+
+	warehouse = get_pharmacy_warehouse()
+	if not warehouse:
+		return []
+
+	return frappe.db.sql(
+		"""
+		SELECT DISTINCT i.name, i.item_name
+		FROM `tabItem` i
+		INNER JOIN `tabStock Balance` sb ON sb.item = i.name AND sb.warehouse = %(warehouse)s AND sb.actual_qty > 0
+		WHERE i.item_type = 'Medicine' AND i.is_active = 1 AND i.item_name LIKE %(txt)s
+		ORDER BY i.item_name
+		LIMIT %(page_len)s OFFSET %(start)s
+		""",
+		{"warehouse": warehouse, "txt": f"%{txt}%", "start": start, "page_len": page_len},
+	)
+
+
+@frappe.whitelist()
+def search_pharmacy_items_for_prescription(search_term=""):
+	# A Doctor should only ever be offered what Pharmacy can actually hand
+	# over right now - prescribing something with nothing left in stock just
+	# pushes the problem downstream to Billing/Pharmacy discovering it later.
+	# Only Medicine belongs on a prescription (see prescribed_items' own
+	# query filter) - Consumables are dispensed separately, not prescribed.
+	frappe.has_permission("Doctor Consultation", "read", throw=True)
+	from metta.sales.doctype.billing.billing import get_pharmacy_warehouse
+
+	warehouse = get_pharmacy_warehouse()
+	if not warehouse:
+		return []
+
+	values = {"warehouse": warehouse, "limit": 20}
+	search_condition = ""
+	if search_term:
+		search_condition = "AND i.item_name LIKE %(search_term)s"
+		values["search_term"] = f"%{search_term}%"
+
+	return frappe.db.sql(
+		f"""
+		SELECT DISTINCT i.name AS item_code, i.item_name, sb.actual_qty AS avail_qty, %(warehouse)s AS warehouse
+		FROM `tabItem` i
+		INNER JOIN `tabStock Balance` sb ON sb.item = i.name AND sb.warehouse = %(warehouse)s AND sb.actual_qty > 0
+		WHERE i.item_type = 'Medicine' AND i.is_active = 1
+		{search_condition}
+		ORDER BY i.item_name
+		LIMIT %(limit)s
+		""",
+		values,
+		as_dict=True,
+	)
