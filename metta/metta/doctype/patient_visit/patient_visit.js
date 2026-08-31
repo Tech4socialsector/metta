@@ -47,8 +47,10 @@ frappe.ui.form.on("Patient Visit", {
 	department_name(frm) {
 		// Picking Department = Emergency by hand is just as valid a trigger as
 		// arriving after hours - Front Desk knows a genuine emergency when
-		// they see one, daytime or not.
-		suggest_registration_type(frm);
+		// they see one, daytime or not. Forced through even on an
+		// already-saved visit, since this is a deliberate action, not a
+		// passive reopen.
+		suggest_registration_type(frm, true);
 		// If Doctor Name was already set to someone outside the newly picked
 		// Department, it no longer applies - cleared rather than left
 		// silently mismatched with the Department shown right above it.
@@ -461,11 +463,15 @@ function ist_time_now_str() {
 	return `${hour12}:${get("minute")}:${get("second")} ${get("dayPeriod").toUpperCase()}`;
 }
 
-function suggest_registration_type(frm) {
-	// Only meaningful for a brand-new OP visit - Registration Type isn't even
-	// shown for IP, and an already-saved visit's fee category shouldn't
-	// silently change just because someone reopens the record.
-	if (!frm.doc.uhin_id || !frm.is_new() || frm.doc.registration_category === "IP") return;
+function suggest_registration_type(frm, force) {
+	// Registration Type isn't even shown for IP. Otherwise only meaningful
+	// for a brand-new visit - an already-saved visit's fee category
+	// shouldn't silently change just because someone reopens the record -
+	// UNLESS force is set, which only happens when Front Desk deliberately
+	// picks Department = Emergency by hand. That's a real decision made on
+	// an existing visit too, not a passive side effect of reopening it.
+	if (!frm.doc.uhin_id || frm.doc.registration_category === "IP") return;
+	if (!frm.is_new() && !force) return;
 	// Once Emergency applies - because it's past 5:30 PM, Front Desk picked
 	// Department = Emergency by hand, or a manual Emergency call was already
 	// made earlier - it's kept even if this runs again later with an earlier

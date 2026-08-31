@@ -473,6 +473,7 @@
    "fieldtype": "Column Break"
   },
   {
+   "depends_on": "eval:doc.registration_category!='IP'",
    "fetch_from": "uhin_id.billing_category",
    "fieldname": "billing_category",
    "fieldtype": "Link",
@@ -480,6 +481,7 @@
    "options": "Category Price Adjustment"
   },
   {
+   "depends_on": "eval:doc.registration_category!='IP'",
    "fetch_from": "billing_category.discount_percent",
    "fetch_if_empty": 1,
    "fieldname": "discount_percent",
@@ -487,6 +489,7 @@
    "label": "Discount Percent"
   },
   {
+   "depends_on": "eval:doc.registration_category!='IP'",
    "fetch_from": "billing_category.adjustment_type",
    "fieldname": "adjustment_type",
    "fieldtype": "Select",
@@ -494,18 +497,20 @@
    "options": "\nDiscount\nIncrease"
   },
   {
-   "depends_on": "eval:doc.billing_category=='General'",
+   "depends_on": "eval:doc.billing_category=='General' && doc.registration_category!='IP'",
    "fieldname": "charity_amount",
    "fieldtype": "Currency",
    "label": "Charity Amount"
   },
   {
+   "depends_on": "eval:doc.registration_category!='IP'",
    "fieldname": "discount_amount",
    "fieldtype": "Currency",
    "label": "Discount Amount",
    "read_only": 1
   },
   {
+   "depends_on": "eval:doc.registration_category!='IP'",
    "fieldname": "net_amount",
    "fieldtype": "Currency",
    "label": "Net Amount",
