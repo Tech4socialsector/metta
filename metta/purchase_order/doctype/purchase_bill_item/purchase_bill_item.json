@@ -30,7 +30,6 @@
   "last_purchase_cost",
   "total_amount",
   "selling_price_section",
-  "mrp",
   "packing_mrp",
   "single_tablet_price",
   "column_break_selling",
@@ -204,18 +203,14 @@
    "label": "Selling Price"
   },
   {
-   "fieldname": "mrp",
-   "fieldtype": "Currency",
-   "in_list_view": 1,
-   "label": "MRP"
-  },
-  {
+   "description": "The MRP printed on the pack/strip, as received - Single Tablet Price is worked out from this, not typed in directly.",
    "fieldname": "packing_mrp",
    "fieldtype": "Currency",
-   "label": "Packing MRP",
-   "read_only": 1
+   "in_list_view": 1,
+   "label": "Packing MRP"
   },
   {
+   "description": "MRP is tax-inclusive by law, so GST is extracted out of Packing MRP first, then divided by Packing - this is the per-unit, GST-exclusive price pushed onto the Batch once approved. GST added back on it at Sales Bill time lands exactly back on the printed MRP.",
    "fieldname": "single_tablet_price",
    "fieldtype": "Currency",
    "label": "Single Tablet Price",

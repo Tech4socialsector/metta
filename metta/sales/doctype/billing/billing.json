@@ -23,10 +23,12 @@
   "service_item_search_area",
   "service_items",
   "totals_section",
+  "total_pharmacy_amount",
+  "total_service_amount",
   "subtotal",
+  "gst_amount",
   "discount_percent",
   "discount_amount",
-  "gst_amount",
   "net_amount",
   "advance_collected",
   "advance_used",
@@ -155,9 +157,34 @@
    "label": "Total"
   },
   {
+   "description": "Pharmacy Items only, before GST - the real selling price of every pharmacy row, combined.",
+   "fieldname": "total_pharmacy_amount",
+   "fieldtype": "Currency",
+   "label": "Total Pharmacy Amount",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "description": "Service Items only, before GST - the real charge of every service row, combined.",
+   "fieldname": "total_service_amount",
+   "fieldtype": "Currency",
+   "label": "Total Service Amount",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "description": "Total Pharmacy Amount + Total Service Amount, before GST.",
    "fieldname": "subtotal",
    "fieldtype": "Currency",
    "label": "Subtotal",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "description": "The real, full GST owed on the real selling price - never reduced by Discount %/Charity, same as it would be for a full-paying patient.",
+   "fieldname": "gst_amount",
+   "fieldtype": "Currency",
+   "label": "GST Amount",
    "precision": "2",
    "read_only": 1
   },
@@ -168,16 +195,10 @@
    "label": "Discount %"
   },
   {
+   "description": "% applied to Subtotal + GST Amount combined - not to Subtotal alone, so GST itself is never reduced by this.",
    "fieldname": "discount_amount",
    "fieldtype": "Currency",
    "label": "Discount Amount",
-   "precision": "2",
-   "read_only": 1
-  },
-  {
-   "fieldname": "gst_amount",
-   "fieldtype": "Currency",
-   "label": "GST Amount",
    "precision": "2",
    "read_only": 1
   },

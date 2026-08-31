@@ -421,25 +421,51 @@ function calculate_totals(frm) {
 
 	let subtotal = 0;
 	let gst_total = 0;
+	let pharmacy_total = 0;
+	let service_total = 0;
 
 	// Rounded to currency precision at every step, same as the server -
 	// otherwise an unrounded float preview here can flash a value that
 	// differs from what actually gets saved at the 15th decimal place.
 	[...(frm.doc.pharmacy_items || []), ...(frm.doc.service_items || [])].forEach((row) => {
 		const amount = flt(row.amount);
-		const taxable_value = amount * (1 - signed_percent / 100);
-		const gst_amount = flt((taxable_value * flt(row.gst_percent)) / 100, 2);
+		// GST is calculated on the real, full Amount - Discount %/Charity
+		// never touches this, only the final Net Amount below.
+		const gst_amount = flt((amount * flt(row.gst_percent)) / 100, 2);
+		const net_amount = flt(amount + gst_amount, 2);
 		frappe.model.set_value(row.doctype, row.name, "gst_amount", gst_amount);
+		// CGST/SGST split for the printed invoice - same GST always applied
+		// symmetrically both ways, matching the hospital's own real bill format.
+		frappe.model.set_value(row.doctype, row.name, "cgst_rate", flt(row.gst_percent) / 2);
+		frappe.model.set_value(row.doctype, row.name, "cgst_amount", flt(gst_amount / 2, 2));
+		frappe.model.set_value(row.doctype, row.name, "sgst_rate", flt(row.gst_percent) / 2);
+		frappe.model.set_value(row.doctype, row.name, "sgst_amount", flt(gst_amount / 2, 2));
+		frappe.model.set_value(row.doctype, row.name, "net_amount", net_amount);
 		subtotal += amount;
 		gst_total += gst_amount;
+		// Pharmacy/Service totals are the pre-GST selling price only, so they
+		// segregate cleanly by source - GST is shown once, combined, rather
+		// than baked separately into each side.
+		if (row.parentfield === "service_items") {
+			service_total += amount;
+		} else {
+			pharmacy_total += amount;
+		}
 	});
 	subtotal = flt(subtotal, 2);
+	gst_total = flt(gst_total, 2);
 
-	const discount_amount = flt((subtotal * signed_percent) / 100, 2);
-	const net_amount = flt(subtotal - discount_amount + gst_total, 2);
+	// Discount %/Charity is applied only once, right here, against the real
+	// Subtotal+GST combined - it reduces what the patient actually pays,
+	// never the real selling price or the real GST owed above.
+	const combined_total = flt(subtotal + gst_total, 2);
+	const discount_amount = flt((combined_total * signed_percent) / 100, 2);
+	const net_amount = flt(combined_total - discount_amount, 2);
 	frm.set_value("subtotal", subtotal);
-	frm.set_value("discount_amount", discount_amount);
 	frm.set_value("gst_amount", gst_total);
+	frm.set_value("total_pharmacy_amount", flt(pharmacy_total, 2));
+	frm.set_value("total_service_amount", flt(service_total, 2));
+	frm.set_value("discount_amount", discount_amount);
 
 	frm.set_value("net_amount", net_amount);
 
@@ -676,7 +702,7 @@ function render_item_search(frm, opts) {
 				<thead>
 					<tr>
 						<th>${__("Name")}</th>
-						<th class="text-right">${__("Rate")}</th>
+						<th class="text-right">${__("Rate (incl. GST)")}</th>
 						${avail_col}
 					</tr>
 				</thead>

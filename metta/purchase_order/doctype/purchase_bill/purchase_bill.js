@@ -54,7 +54,7 @@ frappe.ui.form.on("Purchase Bill Item", {
 	gst_percent(frm, cdt, cdn) {
 		calculate_amount(frm, cdt, cdn);
 	},
-	mrp(frm, cdt, cdn) {
+	packing_mrp(frm, cdt, cdn) {
 		calculate_amount(frm, cdt, cdn);
 	},
 	items_add(frm) {
@@ -216,11 +216,16 @@ function calculate_amount(frm, cdt, cdn) {
 	// tablet/unit, previewed here so Selling Rate never has to be typed a
 	// second time on the Item itself (pushed there on approval). Selling
 	// GST % always mirrors GST % above - entered once, never typed twice.
+	//
+	// MRP is legally tax-inclusive (Legal Metrology) - a pharmacy can never
+	// charge more than what's printed on the strip, GST or not. So GST has
+	// to be extracted out of the pack MRP here, not added on top of it - the
+	// resulting per-unit price, with GST added back the normal way at Sales
+	// Bill time, lands exactly back on MRP.
 	frappe.model.set_value(cdt, cdn, "selling_gst_percent", flt(row.gst_percent));
-	const packing_mrp = flt(row.mrp) * flt(row.packing);
-	const single_tablet_price = flt(row.mrp);
+	const pack_selling_price = flt(row.packing_mrp) / (1 + flt(row.gst_percent) / 100);
+	const single_tablet_price = flt(row.packing) ? pack_selling_price / flt(row.packing) : 0;
 	const selling_gst_amount = (single_tablet_price * flt(row.gst_percent)) / 100;
-	frappe.model.set_value(cdt, cdn, "packing_mrp", packing_mrp);
 	frappe.model.set_value(cdt, cdn, "single_tablet_price", single_tablet_price);
 	frappe.model.set_value(cdt, cdn, "selling_gst_amount", selling_gst_amount);
 	frappe.model.set_value(cdt, cdn, "selling_cgst_amount", selling_gst_amount / 2);

@@ -66,6 +66,8 @@ class Billing(Document):
 		# real edit and blocks with "Cannot Update After Submit".
 		subtotal = 0
 		gst_total = 0
+		pharmacy_total = 0
+		service_total = 0
 		for row in self.pharmacy_items + self.service_items:
 			if not flt(row.qty):
 				frappe.throw(
@@ -73,17 +75,42 @@ class Billing(Document):
 					title=_("Invalid Qty"),
 				)
 			row.amount = flt(flt(row.qty) * flt(row.rate), 2)
-			taxable_value = row.amount * (1 - signed_percent / 100)
-			row.gst_amount = flt(taxable_value * flt(row.gst_percent) / 100, 2)
+			# GST is calculated on the real, full Amount - Discount %/Charity
+			# never touches this, so GST always reflects the real tax owed on
+			# the real selling price, exactly as it would for a full-paying
+			# patient. It only ever reduces what the patient actually pays,
+			# applied once at the bill level, below.
+			row.gst_amount = flt(row.amount * flt(row.gst_percent) / 100, 2)
+			# CGST/SGST split for the printed invoice - same GST always applied
+			# symmetrically both ways, matching the hospital's own real bill format.
+			row.cgst_rate = flt(row.gst_percent) / 2
+			row.cgst_amount = flt(row.gst_amount / 2, 2)
+			row.sgst_rate = flt(row.gst_percent) / 2
+			row.sgst_amount = flt(row.gst_amount / 2, 2)
+			row.net_amount = flt(row.amount + row.gst_amount, 2)
 			subtotal += row.amount
 			gst_total += row.gst_amount
+			# Pharmacy/Service totals are the pre-GST selling price only, so
+			# they segregate cleanly by source - GST is shown once, combined,
+			# rather than baked separately into each side.
+			if row.parentfield == "service_items":
+				service_total += row.amount
+			else:
+				pharmacy_total += row.amount
 		self.subtotal = flt(subtotal, 2)
+		self.gst_amount = flt(gst_total, 2)
+		self.total_pharmacy_amount = flt(pharmacy_total, 2)
+		self.total_service_amount = flt(service_total, 2)
+
+		# Discount %/Charity is applied only once, right here, against the
+		# real Subtotal+GST combined - it reduces what the patient actually
+		# pays, never the real selling price or the real GST owed above.
 		# discount_amount stays signed too, so the same subtraction below
 		# works for both directions: positive shrinks net_amount (Discount),
 		# negative grows it (Increase).
-		self.discount_amount = flt(self.subtotal * signed_percent / 100, 2)
-		self.gst_amount = flt(gst_total, 2)
-		self.net_amount = flt(self.subtotal - self.discount_amount + self.gst_amount, 2)
+		combined_total = self.subtotal + self.gst_amount
+		self.discount_amount = flt(combined_total * signed_percent / 100, 2)
+		self.net_amount = flt(combined_total - self.discount_amount, 2)
 
 		self.validate_advance_adjustment()
 		self.validate_amount_collected()
@@ -396,7 +423,7 @@ def search_items_for_billing(search_term="", table="pharmacy_items"):
 
 	items = frappe.db.sql(
 		f"""
-		SELECT DISTINCT i.name AS item_code, i.item_name, i.standard_selling_rate
+		SELECT DISTINCT i.name AS item_code, i.item_name, i.standard_selling_rate, i.has_batch, i.gst_percent
 		FROM `tabItem` i
 		LEFT JOIN `tabChemical Composition` cc ON cc.name = i.chemical_composition
 		LEFT JOIN `tabChemical Composition Term` cct ON cct.parent = cc.name
@@ -417,6 +444,10 @@ def search_items_for_billing(search_term="", table="pharmacy_items"):
 	result = []
 	for it in items:
 		avail_qty = None
+		# Batched items are priced per-batch, never off the Item's own static
+		# Standard Selling Rate - show the same FEFO batch rate that Add will
+		# actually apply, so this preview never disagrees with the real row.
+		rate = flt(it.standard_selling_rate)
 		if pharmacy_warehouse:
 			avail_qty = (
 				frappe.db.get_value(
@@ -428,11 +459,19 @@ def search_items_for_billing(search_term="", table="pharmacy_items"):
 			# pharmacy_item_query enforces for the Items table's own Link field.
 			if avail_qty <= 0:
 				continue
+			if it.has_batch:
+				fefo_batch = get_fefo_batch(it.item_code)
+				rate = flt(frappe.db.get_value("Batch", fefo_batch, "selling_rate")) if fefo_batch else 0
+		# Staff pick items by what they'll actually collect from the patient,
+		# not the pre-GST rate that then quietly grows once added - show the
+		# final, GST-inclusive amount here. The row itself still stores the
+		# base rate separately and computes GST on it the same way as always.
+		final_rate = flt(rate * (1 + flt(it.gst_percent) / 100), 2)
 		result.append(
 			{
 				"item_code": it.item_code,
 				"name": it.item_name,
-				"rate": flt(it.standard_selling_rate),
+				"rate": final_rate,
 				"avail_qty": avail_qty,
 			}
 		)

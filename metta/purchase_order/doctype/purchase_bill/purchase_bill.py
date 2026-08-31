@@ -72,9 +72,14 @@ class PurchaseBill(Document):
 			# tablet/unit, computed here so Selling Rate never has to be typed
 			# a second time on the Item itself (see approve_bill()). Selling
 			# GST % always mirrors GST % above - entered once, never typed twice.
+			# MRP is legally tax-inclusive (Legal Metrology) - a pharmacy can
+			# never charge more than what's printed on the strip, GST or not.
+			# So GST has to be extracted out of the pack MRP here, not added
+			# on top of it - the resulting per-unit price, with GST added back
+			# the normal way at Sales Bill time, lands exactly back on MRP.
 			row.selling_gst_percent = flt(row.gst_percent)
-			row.packing_mrp = flt(row.mrp) * flt(row.packing)
-			row.single_tablet_price = flt(row.mrp)
+			pack_selling_price = flt(row.packing_mrp) / (1 + flt(row.selling_gst_percent) / 100)
+			row.single_tablet_price = pack_selling_price / flt(row.packing) if row.packing else 0
 			row.selling_gst_amount = row.single_tablet_price * flt(row.selling_gst_percent) / 100
 			row.selling_cgst_amount = row.selling_gst_amount / 2
 			row.selling_sgst_amount = row.selling_gst_amount / 2
@@ -347,11 +352,13 @@ def get_items_from_receipt(purchase_receipt):
 				"igst_rate": 0,
 				"igst_amount": 0,
 				"total_amount": 0,
-				# Last known selling price is only a starting point here - staff
-				# still confirm/update it from the strip's actual printed MRP.
-				"mrp": flt(item_details.get("standard_selling_rate")),
-				"packing_mrp": 0,
-				"single_tablet_price": 0,
+				# Last known per-unit selling price, scaled up to a pack-level
+				# starting suggestion - staff still confirm/update it from the
+				# strip's actual printed Packing MRP. Single Tablet Price mirrors
+				# the same GST-extraction validate() applies, so this preview
+				# isn't already wrong the moment the row is added.
+				"packing_mrp": flt(item_details.get("standard_selling_rate")) * flt(pr_row.packing),
+				"single_tablet_price": flt(item_details.get("standard_selling_rate")) / (1 + flt(gst_percent) / 100),
 				"selling_gst_percent": gst_percent,
 				"selling_gst_amount": 0,
 				"selling_cgst_amount": 0,

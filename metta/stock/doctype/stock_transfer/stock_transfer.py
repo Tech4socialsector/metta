@@ -246,6 +246,10 @@ def get_return_transfer_details(stock_transfer):
 				"item": row.item,
 				"item_name": row.item_name,
 				"batch": row.batch,
+				# Rows added via add_child() skip the Batch field's own change
+				# event, so its usual client-side fetch_from never fires here -
+				# fetched explicitly instead, same as get_pending_items_for_transfer.
+				"expiry_date": frappe.db.get_value("Batch", row.batch, "expiry_date") if row.batch else None,
 				"qty_dispatched": qty,
 				"qty_confirmed": qty,
 				"unit_of_measure": row.unit_of_measure,
@@ -283,6 +287,7 @@ def get_pending_items_for_transfer(stock_indent, from_warehouse=None):
 				"item": indent_row.item,
 				"item_name": indent_row.item_name or frappe.db.get_value("Item", indent_row.item, "item_name") or "",
 				"batch": batch.name if batch else "",
+				"expiry_date": batch.expiry_date if batch else None,
 				"qty_requested": indent_row.qty_requested,
 				# Lets the store person see straight away whether the
 				# requested qty can actually be fulfilled, before they touch
