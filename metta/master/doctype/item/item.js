@@ -14,14 +14,16 @@ frappe.ui.form.on("Item", {
 		// A category picked under the old Group would no longer be valid -
 		// clear it rather than silently leaving a mismatched value saved.
 		frm.set_value("category", "");
+		// Item Type is derived straight from Group now (mirrors
+		// ITEM_TYPE_BY_GROUP in item.py) - set live here so the right
+		// sections show immediately, not just after the next save.
+		const item_type_by_group = { "Pharmacy Store": "Medicine", "General Store": "Consumable", Service: "Service" };
+		frm.set_value("item_type", item_type_by_group[frm.doc.item_group] || "");
 	},
 	item_type(frm) {
-		// item_type is derived from the selected Category's own "Behaves As"
-		// setting (see Item Category) - this still fires whenever that
-		// happens, same as any other fetched value change. Each behaviour
-		// only ever fills in its own section - clear the others so switching
-		// Category can't leave behind fields that no longer apply (and would
-		// otherwise still get saved, invisibly).
+		// Each behaviour only ever fills in its own section - clear the
+		// others so switching Group can't leave behind fields that no longer
+		// apply (and would otherwise still get saved, invisibly).
 		const stock_pricing_fields = [
 			"unit_of_measure",
 			"has_batch",
@@ -30,7 +32,7 @@ frappe.ui.form.on("Item", {
 			"rack_location",
 		];
 		const medicine_fields = ["manufacturer", "hsn_code", "gst_percent", "chemical_composition"];
-		const service_fields = ["service_category", "department"];
+		const service_fields = ["department"];
 
 		const keep =
 			frm.doc.item_type === "Medicine"

@@ -6,13 +6,30 @@ from frappe.model.document import Document
 from frappe.utils import flt
 
 
+ITEM_TYPE_BY_GROUP = {
+	"Pharmacy Store": "Medicine",
+	"General Store": "Consumable",
+	"Service": "Service",
+}
+
+
 class Item(Document):
+	def validate(self):
+		self.set_item_type()
+
+	def set_item_type(self):
+		# Item Type comes straight from Group now - Category is purely a
+		# reporting/organizational label (Tablets, Lab, X-Ray, ...) with no
+		# behaviour of its own, same reasoning Item Category's own
+		# "Behaves As" field was removed for.
+		self.item_type = ITEM_TYPE_BY_GROUP.get(self.item_group)
+
 	def on_update(self):
 		self.ensure_service_rate_list()
 
 	def ensure_service_rate_list(self):
 		# Saves staff a separate "go create the rate list too" step. Starts
-		# from whatever was typed into Standard Selling Rate while this Item
+		# from whatever was typed into Service Rate while this Item
 		# was still new (that field locks right after this first save) - so
 		# the very first price is set in one go, right here. Every rate
 		# change after this one goes through Service Rate List's own

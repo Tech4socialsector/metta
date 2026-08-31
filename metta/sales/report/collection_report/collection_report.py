@@ -4,12 +4,6 @@
 import frappe
 from frappe.utils import flt
 
-from metta.metta.doctype.patient_registration.patient_registration import (
-	GENERAL_CATEGORY,
-	STAFF_CATEGORY,
-	STAFF_DEPENDENT_CATEGORY,
-)
-
 # Patient Debit and Debit Collected have no backing field or doctype anywhere
 # in the app, so they're always reported as 0 rather than silently guessed
 # at. Adv/IP comes straight from Billing.advance_adjusted.
@@ -34,9 +28,6 @@ def get_columns():
 		{"label": "User Name", "fieldname": "user_name", "fieldtype": "Data", "width": 160},
 		{"label": "Gross Amt", "fieldname": "gross_amt", "fieldtype": "Currency", "width": 110},
 		{"label": "Charity", "fieldname": "charity", "fieldtype": "Currency", "width": 100},
-		{"label": "General", "fieldname": "general", "fieldtype": "Currency", "width": 100},
-		{"label": "Staff", "fieldname": "staff", "fieldtype": "Currency", "width": 100},
-		{"label": "Staff Dependent", "fieldname": "staff_dependent", "fieldtype": "Currency", "width": 120},
 		{"label": "Card", "fieldname": "card", "fieldtype": "Currency", "width": 100},
 		{"label": "Gpay", "fieldname": "gpay", "fieldtype": "Currency", "width": 100},
 		{"label": "Credit Bills", "fieldname": "credit_bills", "fieldtype": "Currency", "width": 110},
@@ -50,19 +41,17 @@ def get_columns():
 
 def get_data(filters):
 	bill_conditions, bill_values = _date_range_conditions(filters, "sale_datetime")
-	bill_values["staff"] = STAFF_CATEGORY
-	bill_values["staff_dependent"] = STAFF_DEPENDENT_CATEGORY
 	bills = frappe.db.sql(
 		f"""
 		SELECT
 			owner,
-			SUM(net_amount) AS gross_amt,
+			-- net_amount is already AFTER charity/discount - a fully-discounted
+			-- bill would otherwise show Gross Amt as 0 despite genuinely having
+			-- been billed for something, and Cash Amt would go negative once
+			-- Charity is subtracted from it below. Adding discount_amount back
+			-- recovers the real total billed before any charity was applied.
+			SUM(net_amount + discount_amount) AS gross_amt,
 			SUM(discount_amount) AS charity,
-			-- General charity isn't included here - it lives on Patient Visit,
-			-- not Billing (see the general_rows query below), same split
-			-- Charity - Summary and User Wise Charity Details already use.
-			SUM(CASE WHEN billing_category = %(staff)s THEN discount_amount ELSE 0 END) AS staff,
-			SUM(CASE WHEN billing_category = %(staff_dependent)s THEN discount_amount ELSE 0 END) AS staff_dependent,
 			-- amount_collected, not net_amount - a bill fully (or partly)
 			-- covered by Advance Adjusted still keeps whatever Payment Mode
 			-- was picked, even though nothing (or only part) was actually
@@ -98,19 +87,6 @@ def get_data(filters):
 		as_dict=True,
 	)
 
-	general_conditions, general_values = _date_range_conditions(filters, "date")
-	general_values["general"] = GENERAL_CATEGORY
-	general_rows = frappe.db.sql(
-		f"""
-		SELECT collected_by AS owner, SUM(discount_amount) AS general
-		FROM `tabPatient Visit`
-		WHERE billing_category = %(general)s AND discount_amount > 0 {general_conditions}
-		GROUP BY collected_by
-		""",
-		general_values,
-		as_dict=True,
-	)
-
 	# A cashier who only processed returns (no bills) in this range, or vice
 	# versa, still needs a row - neither side of this merge is allowed to
 	# silently drop them.
@@ -119,17 +95,11 @@ def get_data(filters):
 		entry = rows_by_user.setdefault(row.owner, frappe._dict())
 		entry.sales_ret = row.sales_ret
 		entry.credit_returns = row.credit_returns
-	for row in general_rows:
-		entry = rows_by_user.setdefault(row.owner, frappe._dict())
-		entry.general = row.general
 
 	full_names = _get_full_names(rows_by_user.keys())
 	amount_fields = (
 		"gross_amt",
 		"charity",
-		"general",
-		"staff",
-		"staff_dependent",
 		"card",
 		"gpay",
 		"credit_bills",

@@ -454,11 +454,15 @@ def get_local_group_wise_details(from_date, to_date):
 	# Dental, ...) lives one level deeper, on Category. Whichever Category a
 	# billed item belongs to is exactly the bucket it lands in here - no
 	# separate tag maintained just for this report.
+	#
+	# A Service item (Group: Service) has no Category at all anymore - it's
+	# classified by Department instead, so that's what this falls back to
+	# for those rows, rather than collapsing every service into "Others".
 	frappe.has_permission("Billing", "read", throw=True)
 	rows = frappe.db.sql(
 		"""
 		SELECT
-			COALESCE(NULLIF(i.category, ''), 'Others') AS label,
+			COALESCE(NULLIF(i.category, ''), NULLIF(i.department, ''), 'Others') AS label,
 			b.registration_category AS registration_category,
 			sbi.amount AS amount
 		FROM `tabSales Bill Item` sbi

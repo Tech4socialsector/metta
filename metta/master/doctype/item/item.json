@@ -33,7 +33,6 @@
   "hsn_code",
   "gst_percent",
   "service_section",
-  "service_category",
   "column_break_service",
   "department",
   "is_taxable"
@@ -61,7 +60,7 @@
    "description": "The standard charge for a Service. Medicine/Consumable pricing now lives on the Batch instead (set when its Purchase Bill is approved), so this only applies to Service items. Editable only while creating this Item - once saved, change it through Service Rate List's \"Update Rate\" instead, which keeps a history of every change.",
    "fieldname": "standard_selling_rate",
    "fieldtype": "Currency",
-   "label": "Standard Selling Rate",
+   "label": "Service Rate",
    "read_only_depends_on": "eval:!doc.__islocal"
   },
   {
@@ -83,7 +82,7 @@
    "options": "Item Group"
   },
   {
-   "description": "Options are filtered to only show categories that belong to the Group selected above.",
+   "description": "Options are filtered to only show categories that belong to the Group selected above. Purely a reporting/organizational label - decides nothing about Item Type, which comes from Group instead.",
    "fieldname": "category",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -91,8 +90,7 @@
    "options": "Item Category"
   },
   {
-   "description": "Derived automatically from the Category's own \"Behaves As\" setting - decides Batch/Expiry tracking, which Billing table this goes into, and so on.",
-   "fetch_from": "category.behaves_as",
+   "description": "Derived automatically from the Group selected above - Pharmacy Store is always Medicine, General Store is always Consumable, Service is always Service.",
    "fieldname": "item_type",
    "fieldtype": "Select",
    "in_list_view": 1,
@@ -207,12 +205,6 @@
    "fieldname": "service_section",
    "fieldtype": "Section Break",
    "label": "Service Details"
-  },
-  {
-   "fieldname": "service_category",
-   "fieldtype": "Select",
-   "label": "Service Category",
-   "options": "\nConsultation\nDiagnostic\nProcedure\nNursing\nOther"
   },
   {
    "fieldname": "column_break_service",

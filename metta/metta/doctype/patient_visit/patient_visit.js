@@ -24,6 +24,9 @@ frappe.ui.form.on("Patient Visit", {
 	uhin_id(frm) {
 		suggest_registration_type(frm);
 	},
+	date(frm) {
+		suggest_registration_type(frm);
+	},
 	registration_category(frm) {
 		// Registration Type / Fee Amount are OP-only - clear immediately so a
 		// value auto-suggested before Category was switched to IP doesn't sit
@@ -42,6 +45,10 @@ frappe.ui.form.on("Patient Visit", {
 		if (digits !== frm.doc.phone) frm.set_value("phone", digits);
 	},
 	department_name(frm) {
+		// Picking Department = Emergency by hand is just as valid a trigger as
+		// arriving after hours - Front Desk knows a genuine emergency when
+		// they see one, daytime or not.
+		suggest_registration_type(frm);
 		// If Doctor Name was already set to someone outside the newly picked
 		// Department, it no longer applies - cleared rather than left
 		// silently mismatched with the Department shown right above it.
@@ -393,6 +400,10 @@ frappe.ui.form.on("Patient Visit", {
 // hospital's own convention, an Emergency case regardless of whether it's
 // their first visit or a return one.
 const AFTER_HOURS_CUTOFF_MINUTES = 17 * 60 + 30;
+// The weekend runs long past a single evening cutoff - Saturday afternoon
+// onward, all of Sunday, and Monday morning until OPD hours resume.
+const SATURDAY_EMERGENCY_CUTOFF_MINUTES = 13 * 60 + 30; // 1:30 PM
+const MONDAY_EMERGENCY_END_MINUTES = 8 * 60; // 8:00 AM
 
 // Time is a plain Data field (not Frappe's built-in Time fieldtype) so it can
 // show 12-hour Indian clock time (e.g. "09:25:11 PM") - the Time fieldtype's
@@ -405,10 +416,30 @@ function parse_12h_time(time_str) {
 	return { hours, minutes: Number(match[2]), seconds: Number(match[3]) };
 }
 
-function is_after_hours(time_str) {
+function is_after_hours(date_str, time_str) {
 	const parsed = parse_12h_time(time_str);
 	if (!parsed) return false;
-	return parsed.hours * 60 + parsed.minutes >= AFTER_HOURS_CUTOFF_MINUTES;
+	const minutes = parsed.hours * 60 + parsed.minutes;
+
+	// getDay(): 0 = Sunday ... 6 = Saturday. Falls back to today if the Date
+	// field is somehow blank - a visit is always "now", never dateless.
+	const weekday = frappe.datetime.str_to_obj(date_str || frappe.datetime.get_today()).getDay();
+
+	if (weekday === 1) {
+		// Monday carries both edges: still the weekend's carryover before OPD
+		// opens, and its own regular evening cutoff once it does.
+		return minutes < MONDAY_EMERGENCY_END_MINUTES || minutes >= AFTER_HOURS_CUTOFF_MINUTES;
+	}
+	if (weekday >= 2 && weekday <= 5) {
+		// Tuesday-Friday: after the 5:30 PM cutoff.
+		return minutes >= AFTER_HOURS_CUTOFF_MINUTES;
+	}
+	if (weekday === 6) {
+		// Saturday: from 1:30 PM onward, straight through into Sunday.
+		return minutes >= SATURDAY_EMERGENCY_CUTOFF_MINUTES;
+	}
+	// Sunday: emergency all day, carrying into Monday morning.
+	return true;
 }
 
 function ist_time_now_str() {
@@ -435,12 +466,13 @@ function suggest_registration_type(frm) {
 	// shown for IP, and an already-saved visit's fee category shouldn't
 	// silently change just because someone reopens the record.
 	if (!frm.doc.uhin_id || !frm.is_new() || frm.doc.registration_category === "IP") return;
-	// Once Emergency applies - because it's past 5:30 PM, or Front Desk
-	// picked it by hand - it's kept even if this runs again later with an
-	// earlier time typed in; a manual Emergency call is never silently
-	// downgraded back to General.
+	// Once Emergency applies - because it's past 5:30 PM, Front Desk picked
+	// Department = Emergency by hand, or a manual Emergency call was already
+	// made earlier - it's kept even if this runs again later with an earlier
+	// time typed in; never silently downgraded back to General.
 	const already_emergency = (frm.doc.registration_type || "").startsWith("Emergency");
-	const is_emergency = already_emergency || is_after_hours(frm.doc.time);
+	const is_emergency =
+		already_emergency || frm.doc.department_name === "Emergency" || is_after_hours(frm.doc.date, frm.doc.time);
 	frappe.call({
 		method: "metta.metta.doctype.patient_visit.patient_visit.has_prior_visit_of_type",
 		args: { uhin_id: frm.doc.uhin_id, emergency: is_emergency ? 1 : 0 },
