@@ -58,6 +58,7 @@ class PurchaseReturn(Document):
 
 	@frappe.whitelist()
 	def mark_credit_received(self):
+		validate_can_update_return_status()
 		if self.docstatus != 1:
 			frappe.throw(_("Only a submitted Purchase Return can have credit marked as received."))
 		self.db_set("status", "Credit Received", update_modified=False)
@@ -68,9 +69,25 @@ class PurchaseReturn(Document):
 		# replacement stock instead. This starts the second path; the actual
 		# "received" transition only happens once a Purchase Receipt linked
 		# back to this return is submitted (see get_replacement_receipt_details).
+		validate_can_update_return_status()
 		if self.status != "Submitted":
 			frappe.throw(_("Only a Submitted Purchase Return can be marked as awaiting a replacement."))
 		self.db_set("status", "Replacement Pending", update_modified=False)
+
+
+def validate_can_update_return_status():
+	# Account Staff only has read on Purchase Return (see purchase_return.json)
+	# - but Frappe's generic run_doc_method endpoint only checks read
+	# permission before calling any whitelisted instance method, which would
+	# otherwise let a read-only user flip the supplier-credit status by
+	# calling this directly. Same reasoning as Purchase Order's
+	# validate_can_approve()/validate_can_fulfill().
+	user_roles = frappe.get_roles(frappe.session.user)
+	if "Store Staff" not in user_roles and "System Manager" not in user_roles:
+		frappe.throw(
+			_("Only Store Staff can update a Purchase Return's credit/replacement status."),
+			frappe.PermissionError,
+		)
 
 
 def update_status_on_replacement_receipt(purchase_return_name, received):

@@ -64,7 +64,13 @@ frappe.ui.form.on("Purchase Return", {
 
 		if (frm.doc.docstatus !== 1) return;
 
-		if (frm.doc.status === "Submitted") {
+		// The real gate is server-side (validate_can_update_return_status) -
+		// this just avoids showing a button that would only error out for
+		// someone without the role, like Account Staff who can only read this.
+		const can_update_status =
+			frappe.user_roles.includes("Store Staff") || frappe.user_roles.includes("System Manager");
+
+		if (frm.doc.status === "Submitted" && can_update_status) {
 			// A supplier resolves a return one of two ways - credit back, or
 			// send replacement stock - one button prompts which one actually
 			// happened instead of cluttering the toolbar with two.
