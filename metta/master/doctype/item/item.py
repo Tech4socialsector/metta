@@ -23,6 +23,14 @@ class Item(Document):
 		# behaviour of its own, same reasoning Item Category's own
 		# "Behaves As" field was removed for.
 		self.item_type = ITEM_TYPE_BY_GROUP.get(self.item_group)
+		if self.item_group == "Service":
+			# Has Batch defaults to checked and is hidden once Service Details
+			# takes over - a Service item can otherwise end up with it still
+			# on underneath, which makes Billing try to batch-allocate stock
+			# for something that was never stocked at all (see IP Admission
+			# Charge, which hit exactly this).
+			self.has_batch = 0
+			self.has_expiry = 0
 
 	def on_update(self):
 		self.ensure_service_rate_list()
