@@ -114,26 +114,28 @@ def get_charity(from_date, to_date):
 		as_dict=True,
 	)
 
-	# General charity isn't a category-wide charity_percent (General sits at
-	# 0%, by design - the hospital doesn't discount everyone) - it's a manual,
-	# patient-specific amount Front Desk types in at registration/admission
-	# for someone who genuinely can't pay at all. That lives on Patient
-	# Visit's own charity_amount -> discount_amount, not on Billing at all,
-	# so it has to be pulled in from there as a second source.
-	general_rows = frappe.db.sql(
+	# The registration fee itself (Patient Visit's own fee_amount) can also
+	# have charity applied to it - either a category-wide rate (Staff 100%,
+	# Staff Dependent 60%, Patient 10%, ...) or, for General specifically (it
+	# sits at 0% by design - the hospital doesn't discount everyone), a
+	# manual, patient-specific amount Front Desk types in for someone who
+	# genuinely can't pay at all. Either way this lives on Patient Visit's
+	# own discount_amount, not on Billing at all, so it has to be pulled in
+	# from there as a second source - across every category, not just General.
+	registration_charity_rows = frappe.db.sql(
 		"""
-		SELECT patient_name, uid, payment_mode, registration_category, discount_amount AS amount
+		SELECT patient_name, uid, payment_mode, registration_category, billing_category, discount_amount AS amount
 		FROM `tabPatient Visit`
-		WHERE billing_category = %(general)s AND discount_amount > 0
+		WHERE discount_amount > 0
 			AND date BETWEEN %(from_date)s AND %(to_date)s
 		""",
-		{"general": GENERAL_CATEGORY, "from_date": from_date, "to_date": to_date},
+		{"from_date": from_date, "to_date": to_date},
 		as_dict=True,
 	)
 	rows += [
 		frappe._dict(
 			{
-				"category": GENERAL_CATEGORY,
+				"category": r.billing_category or GENERAL_CATEGORY,
 				"patient_name": r.patient_name,
 				"uid": r.uid,
 				"payment_mode": r.payment_mode,
@@ -141,7 +143,7 @@ def get_charity(from_date, to_date):
 				"amount": r.amount,
 			}
 		)
-		for r in general_rows
+		for r in registration_charity_rows
 	]
 
 	summary = _op_ip_rows(
@@ -219,21 +221,27 @@ def get_user_wise_charity(from_date, to_date):
 		as_dict=True,
 	)
 
-	# General charity lives on Patient Visit, not Billing (see get_charity) -
-	# same second source pulled in here, attributed to whoever collected the
-	# fee (collected_by) the same way Billing attributes to "owner".
-	general_rows = frappe.db.sql(
+	# Registration-fee charity lives on Patient Visit, not Billing (see
+	# get_charity) - same second source pulled in here, attributed to
+	# whoever collected the fee (collected_by) the same way Billing
+	# attributes to "owner". Every category can have charity here, not just
+	# General - Staff/Staff Dependent/etc. get a category-wide rate applied
+	# to the registration fee too.
+	registration_charity_rows = frappe.db.sql(
 		"""
-		SELECT collected_by AS owner, SUM(discount_amount) AS amount
+		SELECT collected_by AS owner, billing_category AS category, SUM(discount_amount) AS amount
 		FROM `tabPatient Visit`
-		WHERE billing_category = %(general)s AND discount_amount > 0
+		WHERE discount_amount > 0
 			AND date BETWEEN %(from_date)s AND %(to_date)s
-		GROUP BY collected_by
+		GROUP BY collected_by, billing_category
 		""",
-		{"general": GENERAL_CATEGORY, "from_date": from_date, "to_date": to_date},
+		{"from_date": from_date, "to_date": to_date},
 		as_dict=True,
 	)
-	rows += [frappe._dict({"owner": r.owner, "category": GENERAL_CATEGORY, "amount": r.amount}) for r in general_rows]
+	rows += [
+		frappe._dict({"owner": r.owner, "category": r.category or GENERAL_CATEGORY, "amount": r.amount})
+		for r in registration_charity_rows
+	]
 
 	# General/Staff/Staff Dependent are permanent fixtures of the billing
 	# model (see get_charity's own details boxes) - always shown as columns,
@@ -473,6 +481,26 @@ def get_local_group_wise_details(from_date, to_date):
 		{"from_date": f"{from_date} 00:00:00", "to_date": f"{to_date} 23:59:59"},
 		as_dict=True,
 	)
+
+	# The OP registration/consultation fee is its own transaction on Patient
+	# Visit, not a Sales Bill Item row against a real Item - so it was never
+	# reachable through the query above and needs pulling in separately.
+	# IP has no fee_amount of its own at all (see patient_visit.json), so
+	# there's nothing to add for IP here - its charges all flow through
+	# Billing instead, already covered above.
+	frappe.has_permission("Patient Visit", "read", throw=True)
+	registration_rows = frappe.db.sql(
+		"""
+		SELECT 'Registration' AS label, registration_category, net_amount AS amount
+		FROM `tabPatient Visit`
+		WHERE registration_category = 'OP' AND net_amount > 0
+			AND date BETWEEN %(from_date)s AND %(to_date)s
+		""",
+		{"from_date": from_date, "to_date": to_date},
+		as_dict=True,
+	)
+	rows += registration_rows
+
 	return _op_ip_rows(rows, "label")
 
 
