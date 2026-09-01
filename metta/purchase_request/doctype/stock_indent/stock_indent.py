@@ -79,7 +79,7 @@ def search_items_for_indent(warehouse=None, search_term=""):
 
 	items = frappe.get_all(
 		"Item",
-		fields=["name as item_code", "item_name", "manufacturer", "rack_location"],
+		fields=["name as item_code", "item_name", "manufacturer", "rack_location", "unit_of_measure"],
 		filters=filters,
 		limit=20,
 	)
@@ -98,6 +98,7 @@ def search_items_for_indent(warehouse=None, search_term=""):
 				"avail_qty": avail_qty,
 				"manufacturer": it.manufacturer or "",
 				"rack_location": it.rack_location or "",
+				"unit_of_measure": it.unit_of_measure or "",
 			}
 		)
 	return result
