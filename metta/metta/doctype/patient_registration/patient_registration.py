@@ -71,13 +71,13 @@ class PatientRegistration(Document):
 		if not check_dependent_aged_out(self.dependent_relationship, self.age):
 			return
 		self.billing_category = GENERAL_CATEGORY
-		# discount_percent is normally kept correct by the client's own
+		# charity_percent is normally kept correct by the client's own
 		# fetch_from - but this can also run with no client involved (the
 		# daily age-out job), so it's resynced here directly rather than
-		# trusting whatever discount_percent happened to already be on
+		# trusting whatever charity_percent happened to already be on
 		# the document.
-		self.discount_percent = (
-			frappe.db.get_value("Category Price Adjustment", GENERAL_CATEGORY, "discount_percent") or 0
+		self.charity_percent = (
+			frappe.db.get_value("Category Price Adjustment", GENERAL_CATEGORY, "charity_percent") or 0
 		)
 
 
@@ -169,16 +169,16 @@ def ensure_default_billing_categories():
 		STAFF_DEPENDENT_CATEGORY: 60,
 		GENERAL_CATEGORY: 0,
 	}
-	for category_name, discount_percent in defaults.items():
+	for category_name, charity_percent in defaults.items():
 		if frappe.db.exists("Category Price Adjustment", category_name):
 			continue
 		frappe.get_doc(
 			{
 				"doctype": "Category Price Adjustment",
 				"name": category_name,
-				"adjustment_type": "Discount",
-				"discount_percent": discount_percent,
-				"discount_status": "Active",
+				"adjustment_type": "Charity",
+				"charity_percent": charity_percent,
+				"charity_status": "Active",
 			}
 		).insert(ignore_permissions=True)
 

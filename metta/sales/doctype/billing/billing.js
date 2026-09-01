@@ -75,7 +75,7 @@ frappe.ui.form.on("Billing", {
 		// billing_category can already be set when the form first loads (an
 		// existing bill, or one prefilled by the Pharmacy Dashboard's Dispense
 		// action) without the field's own change handler ever having fired to
-		// populate frm._category_adjustment - fetch it now so the discount
+		// populate frm._category_adjustment - fetch it now so the charity
 		// preview isn't stuck showing zero until the user re-touches the field.
 		if (frm.doc.billing_category && !frm._category_adjustment) {
 			frappe.call({
@@ -216,7 +216,10 @@ frappe.ui.form.on("Billing", {
 			},
 		});
 	},
-	discount_percent(frm) {
+	charity_percent(frm) {
+		calculate_totals(frm);
+	},
+	charity_amount(frm) {
 		calculate_totals(frm);
 	},
 	payment_mode(frm) {
@@ -415,12 +418,10 @@ function calculate_totals(frm) {
 	// sign so it grows the bill instead of shrinking it.
 	const adjustment = frm._category_adjustment;
 	const adjustment_type =
-		adjustment && adjustment.discount_status === "Active" ? adjustment.adjustment_type : null;
-	const raw_percent = ["Discount", "Increase"].includes(adjustment_type) ? flt(frm.doc.discount_percent) : 0;
+		adjustment && adjustment.charity_status === "Active" ? adjustment.adjustment_type : null;
+	const raw_percent = ["Charity", "Increase"].includes(adjustment_type) ? flt(frm.doc.charity_percent) : 0;
 	const signed_percent = adjustment_type === "Increase" ? -raw_percent : raw_percent;
 
-	let subtotal = 0;
-	let gst_total = 0;
 	let pharmacy_total = 0;
 	let service_total = 0;
 
@@ -429,10 +430,10 @@ function calculate_totals(frm) {
 	// differs from what actually gets saved at the 15th decimal place.
 	[...(frm.doc.pharmacy_items || []), ...(frm.doc.service_items || [])].forEach((row) => {
 		const amount = flt(row.amount);
-		// GST is calculated on the real, full Amount - Discount %/Charity
-		// never touches this, only the final Net Amount below.
+		// GST is calculated on the real, full Amount - Charity never touches
+		// this, only the bill-level Payable Amount further below.
 		const gst_amount = flt((amount * flt(row.gst_percent)) / 100, 2);
-		const net_amount = flt(amount + gst_amount, 2);
+		const row_net_amount = flt(amount + gst_amount, 2);
 		frappe.model.set_value(row.doctype, row.name, "gst_amount", gst_amount);
 		// CGST/SGST split for the printed invoice - same GST always applied
 		// symmetrically both ways, matching the hospital's own real bill format.
@@ -440,45 +441,59 @@ function calculate_totals(frm) {
 		frappe.model.set_value(row.doctype, row.name, "cgst_amount", flt(gst_amount / 2, 2));
 		frappe.model.set_value(row.doctype, row.name, "sgst_rate", flt(row.gst_percent) / 2);
 		frappe.model.set_value(row.doctype, row.name, "sgst_amount", flt(gst_amount / 2, 2));
-		frappe.model.set_value(row.doctype, row.name, "net_amount", net_amount);
-		subtotal += amount;
-		gst_total += gst_amount;
-		// Pharmacy/Service totals are the pre-GST selling price only, so they
-		// segregate cleanly by source - GST is shown once, combined, rather
-		// than baked separately into each side.
+		frappe.model.set_value(row.doctype, row.name, "net_amount", row_net_amount);
+		// Pharmacy/Service totals include GST - the real amount each side
+		// actually comes to, not just its pre-tax selling price. GST itself
+		// is only ever shown per-row above - there's no separate Subtotal/
+		// GST Amount at the bill level.
 		if (row.parentfield === "service_items") {
-			service_total += amount;
+			service_total += row_net_amount;
 		} else {
-			pharmacy_total += amount;
+			pharmacy_total += row_net_amount;
 		}
 	});
-	subtotal = flt(subtotal, 2);
-	gst_total = flt(gst_total, 2);
+	pharmacy_total = flt(pharmacy_total, 2);
+	service_total = flt(service_total, 2);
 
-	// Discount %/Charity is applied only once, right here, against the real
-	// Subtotal+GST combined - it reduces what the patient actually pays,
-	// never the real selling price or the real GST owed above.
-	const combined_total = flt(subtotal + gst_total, 2);
-	const discount_amount = flt((combined_total * signed_percent) / 100, 2);
-	const net_amount = flt(combined_total - discount_amount, 2);
-	frm.set_value("subtotal", subtotal);
-	frm.set_value("gst_amount", gst_total);
-	frm.set_value("total_pharmacy_amount", flt(pharmacy_total, 2));
-	frm.set_value("total_service_amount", flt(service_total, 2));
-	frm.set_value("discount_amount", discount_amount);
+	// Net Amount = Total Pharmacy + Total Service (both GST-inclusive) - the
+	// real, full amount owed before Charity is applied.
+	const net_amount = flt(pharmacy_total + service_total, 2);
 
+	// Staff can hand-type a specific Charity Amount for this particular bill -
+	// it wins over the percentage-based one, same as the server's own
+	// validate().
+	const manual_charity_amount = flt(frm.doc.charity_amount);
+	let charity_amount;
+	if (manual_charity_amount) {
+		// Capped at Net Amount itself so the bill can never net negative.
+		charity_amount = Math.min(manual_charity_amount, net_amount);
+		const derived_percent = net_amount ? flt((charity_amount / net_amount) * 100, 2) : 0;
+		if (derived_percent !== flt(frm.doc.charity_percent)) {
+			frm.set_value("charity_percent", derived_percent);
+		}
+	} else {
+		// Charity is applied only once, right here, against Net Amount - it
+		// reduces what the patient actually pays, never the real selling
+		// price or the real GST owed above.
+		charity_amount = flt((net_amount * signed_percent) / 100, 2);
+	}
+	const payable_amount = flt(net_amount - charity_amount, 2);
+	frm.set_value("total_pharmacy_amount", pharmacy_total);
+	frm.set_value("total_service_amount", service_total);
 	frm.set_value("net_amount", net_amount);
+	frm.set_value("charity_amount", charity_amount);
+	frm.set_value("payable_amount", payable_amount);
 
 	// Mirrors validate_advance_adjustment() on the server - just a preview,
 	// the save is what actually enforces the balance cap.
 	const previous_amount_due = flt(frm.doc.amount_due);
-	const new_amount_due = flt(frm.doc.net_amount) - flt(frm.doc.advance_adjusted);
+	const new_amount_due = flt(frm.doc.payable_amount) - flt(frm.doc.advance_adjusted);
 	frm.set_value("amount_due", new_amount_due);
 
 	// Defaults to fully collected - staff reduce this by hand only for a
 	// genuine partial payment, as the LAST step before submitting. Only reset
 	// it when Amount Due itself actually changed (a real edit - items,
-	// discount, advance) - calculate_totals() also runs on every refresh()
+	// charity, advance) - calculate_totals() also runs on every refresh()
 	// (e.g. right after Save, when the form re-renders), and resetting
 	// unconditionally there would silently wipe out a partial payment the
 	// moment the page redraws, even though nothing was actually edited.
@@ -527,7 +542,7 @@ function add_advance_button(frm) {
 				frm._advance_balance = r.message || null;
 				set_advance_balance_fields(frm);
 				const balance = frm._advance_balance ? flt(frm._advance_balance.balance) : 0;
-				const amount = Math.min(balance, flt(frm.doc.net_amount));
+				const amount = Math.min(balance, flt(frm.doc.payable_amount));
 				frm.set_value("advance_adjusted", amount);
 			},
 		});

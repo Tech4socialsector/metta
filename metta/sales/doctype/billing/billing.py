@@ -37,35 +37,33 @@ class Billing(Document):
 		# JS keeps this live while editing, but validate() is the authoritative
 		# recompute, same as Purchase Bill's subtotal/gst/total.
 		#
-		# discount_percent is fetched straight from the Category Price
-		# Adjustment record, but that record's own adjustment_type ("Discount"
-		# vs "Increase") and discount_status ("Active"/"Inactive") aren't
+		# charity_percent is fetched straight from the Category Price
+		# Adjustment record, but that record's own adjustment_type ("Charity"
+		# vs "Increase") and charity_status ("Active"/"Inactive") aren't
 		# fetched onto Billing anywhere - so they have to be looked up here
 		# to actually be enforced, not just displayed.
 		adjustment_type = None
 		if self.billing_category:
 			category = frappe.db.get_value(
-				"Category Price Adjustment", self.billing_category, ["adjustment_type", "discount_status"], as_dict=True
+				"Category Price Adjustment", self.billing_category, ["adjustment_type", "charity_status"], as_dict=True
 			)
-			if category and category.discount_status == "Active":
+			if category and category.charity_status == "Active":
 				adjustment_type = category.adjustment_type
 
-		if adjustment_type not in ("Discount", "Increase"):
+		if adjustment_type not in ("Charity", "Increase"):
 			# No active adjustment applies - an Inactive category, or one with
 			# no adjustment_type set, contributes nothing to the bill.
-			self.discount_percent = 0
+			self.charity_percent = 0
 
-		# Signed so "Discount" shrinks the taxable value and "Increase" grows
+		# Signed so "Charity" shrinks the taxable value and "Increase" grows
 		# it, using the same +/- formula either way.
-		signed_percent = -flt(self.discount_percent) if adjustment_type == "Increase" else flt(self.discount_percent)
+		signed_percent = -flt(self.charity_percent) if adjustment_type == "Increase" else flt(self.charity_percent)
 
 		# Rounded to currency precision at every step - an unrounded float
 		# (e.g. 0.07200000000000001) recomputed on a later re-save of an
 		# already-submitted bill would otherwise differ from the originally
 		# stored value at the 17th decimal place, which Frappe treats as a
 		# real edit and blocks with "Cannot Update After Submit".
-		subtotal = 0
-		gst_total = 0
 		pharmacy_total = 0
 		service_total = 0
 		for row in self.pharmacy_items + self.service_items:
@@ -75,9 +73,9 @@ class Billing(Document):
 					title=_("Invalid Qty"),
 				)
 			row.amount = flt(flt(row.qty) * flt(row.rate), 2)
-			# GST is calculated on the real, full Amount - Discount %/Charity
-			# never touches this, so GST always reflects the real tax owed on
-			# the real selling price, exactly as it would for a full-paying
+			# GST is calculated on the real, full Amount - Charity never
+			# touches this, so GST always reflects the real tax owed on the
+			# real selling price, exactly as it would for a full-paying
 			# patient. It only ever reduces what the patient actually pays,
 			# applied once at the bill level, below.
 			row.gst_amount = flt(row.amount * flt(row.gst_percent) / 100, 2)
@@ -88,29 +86,43 @@ class Billing(Document):
 			row.sgst_rate = flt(row.gst_percent) / 2
 			row.sgst_amount = flt(row.gst_amount / 2, 2)
 			row.net_amount = flt(row.amount + row.gst_amount, 2)
-			subtotal += row.amount
-			gst_total += row.gst_amount
-			# Pharmacy/Service totals are the pre-GST selling price only, so
-			# they segregate cleanly by source - GST is shown once, combined,
-			# rather than baked separately into each side.
+			# Pharmacy/Service totals include GST - the real amount each side
+			# actually comes to, not just its pre-tax selling price. GST
+			# itself is only ever shown per-row (see GST/CGST/SGST above) -
+			# there's no separate Subtotal/GST Amount at the bill level.
 			if row.parentfield == "service_items":
-				service_total += row.amount
+				service_total += row.net_amount
 			else:
-				pharmacy_total += row.amount
-		self.subtotal = flt(subtotal, 2)
-		self.gst_amount = flt(gst_total, 2)
+				pharmacy_total += row.net_amount
 		self.total_pharmacy_amount = flt(pharmacy_total, 2)
 		self.total_service_amount = flt(service_total, 2)
 
-		# Discount %/Charity is applied only once, right here, against the
-		# real Subtotal+GST combined - it reduces what the patient actually
-		# pays, never the real selling price or the real GST owed above.
-		# discount_amount stays signed too, so the same subtraction below
-		# works for both directions: positive shrinks net_amount (Discount),
-		# negative grows it (Increase).
-		combined_total = self.subtotal + self.gst_amount
-		self.discount_amount = flt(combined_total * signed_percent / 100, 2)
-		self.net_amount = flt(combined_total - self.discount_amount, 2)
+		# Net Amount = Total Pharmacy + Total Service (both GST-inclusive) -
+		# the real, full amount owed before Charity is applied, same as it
+		# would be for a full-paying patient.
+		self.net_amount = flt(self.total_pharmacy_amount + self.total_service_amount, 2)
+
+		# Staff can hand-type a specific Charity Amount for this particular
+		# bill/patient - a one-off judgment call, overriding whatever rate
+		# Category Price Adjustment would otherwise apply. A hand-typed rupee
+		# figure wins over the percentage-based one - never both at once, so
+		# the two can't be stacked into an unintended double charity.
+		manual_charity_amount = flt(self.charity_amount)
+		if manual_charity_amount:
+			if manual_charity_amount < 0:
+				frappe.throw(_("Charity Amount cannot be negative."))
+			# Capped at Net Amount itself so the bill can never net negative.
+			self.charity_amount = min(manual_charity_amount, self.net_amount)
+			self.charity_percent = flt(self.charity_amount / self.net_amount * 100, 2) if self.net_amount else 0
+		else:
+			# Charity is applied only once, right here, against Net Amount - it
+			# reduces what the patient actually pays, never the real selling
+			# price or the real GST owed above. charity_amount stays signed
+			# too, so the same subtraction below works for both directions:
+			# positive shrinks payable_amount (Charity), negative grows it
+			# (Increase).
+			self.charity_amount = flt(self.net_amount * signed_percent / 100, 2)
+		self.payable_amount = flt(self.net_amount - self.charity_amount, 2)
 
 		self.validate_advance_adjustment()
 		self.validate_amount_collected()
@@ -137,15 +149,15 @@ class Billing(Document):
 
 	def validate_advance_adjustment(self):
 		if not self.advance_adjusted:
-			self.amount_due = self.net_amount
+			self.amount_due = self.payable_amount
 			return
 
 		if not self.patient:
 			frappe.throw(_("Select a Patient before adjusting an advance against this bill."))
 
-		if flt(self.advance_adjusted) > flt(self.net_amount):
+		if flt(self.advance_adjusted) > flt(self.payable_amount):
 			frappe.throw(
-				_("Advance Adjusted cannot exceed the Net Amount."), title=_("Invalid Advance Adjustment")
+				_("Advance Adjusted cannot exceed the Payable Amount."), title=_("Invalid Advance Adjustment")
 			)
 
 		# Add back this same doc's own previous value - otherwise re-saving an
@@ -162,7 +174,7 @@ class Billing(Document):
 				title=_("Advance Balance Exceeded"),
 			)
 
-		self.amount_due = flt(self.net_amount) - flt(self.advance_adjusted)
+		self.amount_due = flt(self.payable_amount) - flt(self.advance_adjusted)
 
 	def validate_has_items(self):
 		# Pharmacy Items and Service Items are two separate tables now (each
@@ -259,15 +271,15 @@ class Billing(Document):
 
 @frappe.whitelist()
 def get_category_adjustment(billing_category):
-	# JS needs the same adjustment_type/discount_status check validate() does,
+	# JS needs the same adjustment_type/charity_status check validate() does,
 	# so the live total preview matches what actually gets saved.
 	frappe.has_permission("Billing", "read", throw=True)
 	if not billing_category:
-		return {"adjustment_type": None, "discount_status": None}
+		return {"adjustment_type": None, "charity_status": None}
 	category = frappe.db.get_value(
-		"Category Price Adjustment", billing_category, ["adjustment_type", "discount_status"], as_dict=True
+		"Category Price Adjustment", billing_category, ["adjustment_type", "charity_status"], as_dict=True
 	)
-	return category or {"adjustment_type": None, "discount_status": None}
+	return category or {"adjustment_type": None, "charity_status": None}
 
 
 IP_ADMISSION_CHARGE_ITEM = "IP-ADMISSION-CHARGE"

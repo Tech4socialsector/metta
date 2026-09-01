@@ -43,25 +43,25 @@ class PatientVisit(Document):
 
 	def calculate_billing_totals(self):
 		# Re-derived from Category Price Adjustment directly (not trusted from
-		# the fetched fields) since discount_status could have changed since
+		# the fetched fields) since charity_status could have changed since
 		# this doc last fetched it - same authoritative-recompute pattern
-		# Billing uses for its own discount math.
+		# Billing uses for its own charity math.
 		adjustment_type = None
 		if self.billing_category:
 			category = frappe.db.get_value(
-				"Category Price Adjustment", self.billing_category, ["adjustment_type", "discount_status"], as_dict=True
+				"Category Price Adjustment", self.billing_category, ["adjustment_type", "charity_status"], as_dict=True
 			)
-			if category and category.discount_status == "Active":
+			if category and category.charity_status == "Active":
 				adjustment_type = category.adjustment_type
 
-		raw_percent = flt(self.discount_percent) if adjustment_type in ("Discount", "Increase") else 0
-		# discount_percent isn't read-only, so this can't just trust the
+		raw_percent = flt(self.charity_percent) if adjustment_type in ("Charity", "Increase") else 0
+		# charity_percent isn't read-only, so this can't just trust the
 		# category's own bound (see Category Price Adjustment.validate) -
 		# someone could still type a value directly on the visit itself.
-		if adjustment_type == "Discount" and raw_percent > 100:
+		if adjustment_type == "Charity" and raw_percent > 100:
 			frappe.throw(
-				_("Discount Percent cannot exceed 100% - that would make the bill negative."),
-				title=_("Invalid Discount"),
+				_("Charity Percent cannot exceed 100% - that would make the bill negative."),
+				title=_("Invalid Charity"),
 			)
 		# "Increase" grows the bill instead of shrinking it, same sign flip
 		# Billing applies for the same two adjustment types.
@@ -393,7 +393,7 @@ def get_category_adjustment(billing_category):
 	return frappe.db.get_value(
 		"Category Price Adjustment",
 		billing_category,
-		["adjustment_type", "discount_status", "discount_percent"],
+		["adjustment_type", "charity_status", "charity_percent"],
 		as_dict=True,
 	) or {}
 
@@ -477,7 +477,7 @@ def get_admission_defaults(op_registration):
 		"doctor_name": op.doctor_name,
 		"converted_from_registration": op.name,
 		"billing_category": op.billing_category,
-		"discount_percent": op.discount_percent,
+		"charity_percent": op.charity_percent,
 		"adjustment_type": op.adjustment_type,
 	}
 

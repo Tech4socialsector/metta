@@ -45,13 +45,12 @@ def get_data(filters):
 		f"""
 		SELECT
 			owner,
-			-- net_amount is already AFTER charity/discount - a fully-discounted
-			-- bill would otherwise show Gross Amt as 0 despite genuinely having
-			-- been billed for something, and Cash Amt would go negative once
-			-- Charity is subtracted from it below. Adding discount_amount back
-			-- recovers the real total billed before any charity was applied.
-			SUM(net_amount + discount_amount) AS gross_amt,
-			SUM(discount_amount) AS charity,
+			-- net_amount is already the real Subtotal+GST total, before Charity
+			-- is applied - a fully-charitied bill would otherwise show Gross Amt
+			-- as 0 despite genuinely having been billed for something, and Cash
+			-- Amt would go negative once Charity is subtracted from it below.
+			SUM(net_amount) AS gross_amt,
+			SUM(charity_amount) AS charity,
 			-- amount_collected, not net_amount - a bill fully (or partly)
 			-- covered by Advance Adjusted still keeps whatever Payment Mode
 			-- was picked, even though nothing (or only part) was actually

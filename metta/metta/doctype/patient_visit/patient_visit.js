@@ -119,7 +119,7 @@ frappe.ui.form.on("Patient Visit", {
 								doctor_name: r.message.doctor_name,
 								converted_from_registration: r.message.converted_from_registration,
 								billing_category: r.message.billing_category,
-								discount_percent: r.message.discount_percent,
+								charity_percent: r.message.charity_percent,
 								adjustment_type: r.message.adjustment_type,
 							});
 						},
@@ -360,7 +360,7 @@ frappe.ui.form.on("Patient Visit", {
 	fee_amount(frm) {
 		calculate_billing_totals(frm);
 	},
-	discount_percent(frm) {
+	charity_percent(frm) {
 		calculate_billing_totals(frm);
 	},
 	charity_amount(frm) {
@@ -379,7 +379,7 @@ frappe.ui.form.on("Patient Visit", {
 		}
 		if (!frm.doc.billing_category) {
 			frm._category_adjustment = null;
-			frm.set_value("discount_percent", 0);
+			frm.set_value("charity_percent", 0);
 			frm.set_value("adjustment_type", "");
 			calculate_billing_totals(frm);
 			return;
@@ -390,7 +390,7 @@ frappe.ui.form.on("Patient Visit", {
 			callback(r) {
 				const adjustment = r.message || null;
 				frm._category_adjustment = adjustment;
-				frm.set_value("discount_percent", (adjustment && adjustment.discount_percent) || 0);
+				frm.set_value("charity_percent", (adjustment && adjustment.charity_percent) || 0);
 				frm.set_value("adjustment_type", (adjustment && adjustment.adjustment_type) || "");
 				calculate_billing_totals(frm);
 			},
@@ -657,8 +657,8 @@ function calculate_billing_totals(frm) {
 	// preview only, validate() on save is what's actually authoritative.
 	const adjustment = frm._category_adjustment;
 	const adjustment_type =
-		adjustment && adjustment.discount_status === "Active" ? adjustment.adjustment_type : null;
-	const raw_percent = ["Discount", "Increase"].includes(adjustment_type) ? flt(frm.doc.discount_percent) : 0;
+		adjustment && adjustment.charity_status === "Active" ? adjustment.adjustment_type : null;
+	const raw_percent = ["Charity", "Increase"].includes(adjustment_type) ? flt(frm.doc.charity_percent) : 0;
 	const signed_percent = adjustment_type === "Increase" ? -raw_percent : raw_percent;
 
 	// A hand-typed Charity Amount wins over the percentage-based discount -

@@ -103,10 +103,10 @@ def get_charity(from_date, to_date):
 		"""
 		SELECT b.billing_category AS category, b.customer_name AS patient_name,
 			pv.uid AS uid, b.payment_mode AS payment_mode,
-			b.registration_category AS registration_category, b.discount_amount AS amount
+			b.registration_category AS registration_category, b.charity_amount AS amount
 		FROM `tabBilling` b
 		LEFT JOIN `tabPatient Visit` pv ON pv.name = b.patient
-		WHERE b.docstatus = 1 AND b.discount_amount > 0
+		WHERE b.docstatus = 1 AND b.charity_amount > 0
 			AND b.sale_datetime BETWEEN %(from_date)s AND %(to_date)s
 		ORDER BY b.billing_category, b.sale_datetime
 		""",
@@ -114,7 +114,7 @@ def get_charity(from_date, to_date):
 		as_dict=True,
 	)
 
-	# General charity isn't a category-wide discount_percent (General sits at
+	# General charity isn't a category-wide charity_percent (General sits at
 	# 0%, by design - the hospital doesn't discount everyone) - it's a manual,
 	# patient-specific amount Front Desk types in at registration/admission
 	# for someone who genuinely can't pay at all. That lives on Patient
@@ -209,9 +209,9 @@ def get_user_wise_charity(from_date, to_date):
 	frappe.has_permission("Billing", "read", throw=True)
 	rows = frappe.db.sql(
 		"""
-		SELECT owner, billing_category AS category, SUM(discount_amount) AS amount
+		SELECT owner, billing_category AS category, SUM(charity_amount) AS amount
 		FROM `tabBilling`
-		WHERE docstatus = 1 AND discount_amount > 0
+		WHERE docstatus = 1 AND charity_amount > 0
 			AND sale_datetime BETWEEN %(from_date)s AND %(to_date)s
 		GROUP BY owner, billing_category
 		""",
@@ -298,7 +298,7 @@ def get_credit_bills(from_date, to_date):
 	rows = frappe.db.sql(
 		"""
 		SELECT COALESCE(cc.customer_name, %(unassigned)s) AS label, b.registration_category AS registration_category,
-			b.net_amount AS amount
+			b.payable_amount AS amount
 		FROM `tabBilling` b
 		LEFT JOIN `tabCorporate Customer` cc ON cc.name = b.corporate_customer
 		WHERE b.docstatus = 1 AND b.payment_mode = 'Credit - Corporate'

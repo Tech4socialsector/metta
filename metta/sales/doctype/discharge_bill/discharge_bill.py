@@ -78,7 +78,7 @@ def compile_discharge_bill(ip_id):
 	bills = frappe.get_all(
 		"Billing",
 		filters={"patient": ip_id, "docstatus": ["!=", 2]},
-		fields=["name", "sale_datetime", "net_amount", "advance_adjusted", "amount_collected"],
+		fields=["name", "sale_datetime", "payable_amount", "advance_adjusted", "amount_collected"],
 		order_by="sale_datetime asc",
 	)
 
@@ -105,7 +105,7 @@ def compile_discharge_bill(ip_id):
 					"amount": item.amount,
 				}
 			)
-		total_billed += flt(bill.net_amount)
+		total_billed += flt(bill.payable_amount)
 		total_adjusted += flt(bill.advance_adjusted)
 		total_collected += flt(bill.amount_collected)
 

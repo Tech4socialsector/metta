@@ -33,7 +33,7 @@
   "dependent_relationship",
   "billing_section",
   "billing_category",
-  "discount_percent",
+  "charity_percent",
   "charity_amount",
   "default_currency"
  ],
@@ -158,11 +158,11 @@
    "options": "Category Price Adjustment"
   },
   {
-   "fetch_from": "billing_category.discount_percent",
-   "fieldname": "discount_percent",
+   "fetch_from": "billing_category.charity_percent",
+   "fieldname": "charity_percent",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Discount Percent"
+   "label": "Charity Percent"
   },
   {
    "depends_on": "eval:doc.billing_category=='General'",
