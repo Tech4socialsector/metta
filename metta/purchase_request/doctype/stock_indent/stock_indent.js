@@ -48,16 +48,20 @@ frappe.ui.form.on("Stock Indent", {
 });
 
 frappe.ui.form.on("Stock Indent Item", {
-	// The search widget's Add button already fills item_name in - this only
-	// covers rows added directly via the standard grid's "Add row" instead.
+	// The search widget's Add button already fills item_name/unit_of_measure
+	// in directly - this only covers rows added via the standard grid's own
+	// "Add row" instead. fetch_from alone doesn't reliably fire in that
+	// context, same reason item_name was already fetched explicitly here.
 	item(frm, cdt, cdn) {
 		const row = locals[cdt][cdn];
 		if (!row.item) {
 			frappe.model.set_value(cdt, cdn, "item_name", "");
+			frappe.model.set_value(cdt, cdn, "unit_of_measure", "");
 			return;
 		}
-		frappe.db.get_value("Item", row.item, "item_name", (r) => {
+		frappe.db.get_value("Item", row.item, ["item_name", "unit_of_measure"], (r) => {
 			frappe.model.set_value(cdt, cdn, "item_name", r.item_name || "");
+			frappe.model.set_value(cdt, cdn, "unit_of_measure", r.unit_of_measure || "");
 		});
 	},
 });
@@ -183,6 +187,7 @@ function render_item_search(frm) {
 			item: selected.item_code,
 			item_name: selected.name,
 			qty_requested: qty,
+			unit_of_measure: selected.unit_of_measure || "",
 		});
 		frm.refresh_field("items");
 
