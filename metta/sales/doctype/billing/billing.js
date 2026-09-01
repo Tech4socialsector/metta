@@ -205,6 +205,7 @@ frappe.ui.form.on("Billing", {
 		});
 		offer_pending_consultations(frm);
 		add_admission_charge_if_due(frm);
+		suggest_registration_charity(frm);
 		frappe.call({
 			method: "metta.sales.doctype.patient_advance.patient_advance.get_advance_balance",
 			args: { patient_visit: frm.doc.patient },
@@ -220,6 +221,13 @@ frappe.ui.form.on("Billing", {
 		calculate_totals(frm);
 	},
 	charity_amount(frm) {
+		// calculate_totals() itself writes this field on every recompute (to
+		// keep the preview live) - without this guard, that write would loop
+		// straight back here and get misread as the user just having typed a
+		// manual override, freezing Charity Amount instead of letting it keep
+		// tracking Charity % as the bill's items change.
+		if (frm._computing_totals) return;
+		frm.doc.charity_amount_is_manual = flt(frm.doc.charity_amount) ? 1 : 0;
 		calculate_totals(frm);
 	},
 	payment_mode(frm) {
@@ -233,6 +241,10 @@ frappe.ui.form.on("Billing", {
 	// so this catches it either way: picked by hand, or arriving via the
 	// patient fetch.
 	billing_category(frm) {
+		// A newly picked category always starts back at its own percent -
+		// any earlier manual override was for the previous category's
+		// figures and no longer applies here.
+		frm.doc.charity_amount_is_manual = 0;
 		if (!frm.doc.billing_category) {
 			frm._category_adjustment = null;
 			calculate_totals(frm);
@@ -243,6 +255,15 @@ frappe.ui.form.on("Billing", {
 			args: { billing_category: frm.doc.billing_category },
 			callback(r) {
 				frm._category_adjustment = r.message || null;
+				// A Corporate patient's bill normally goes on their employer's
+				// credit account - suggested here so Billing Staff don't have to
+				// remember to pick it by hand, but still just a starting point:
+				// a patient who says "bill me directly, I'll claim it myself
+				// later" just has Payment Mode changed back to Cash/UPI/Card,
+				// same as any other field this app auto-suggests.
+				if (frm.doc.billing_category === "Corporate" && !frm.doc.payment_mode) {
+					frm.set_value("payment_mode", "Credit - Corporate");
+				}
 				calculate_totals(frm);
 			},
 		});
@@ -420,7 +441,6 @@ function calculate_totals(frm) {
 	const adjustment_type =
 		adjustment && adjustment.charity_status === "Active" ? adjustment.adjustment_type : null;
 	const raw_percent = ["Charity", "Increase"].includes(adjustment_type) ? flt(frm.doc.charity_percent) : 0;
-	const signed_percent = adjustment_type === "Increase" ? -raw_percent : raw_percent;
 
 	let pharmacy_total = 0;
 	let service_total = 0;
@@ -461,8 +481,13 @@ function calculate_totals(frm) {
 
 	// Staff can hand-type a specific Charity Amount for this particular bill -
 	// it wins over the percentage-based one, same as the server's own
-	// validate().
-	const manual_charity_amount = flt(frm.doc.charity_amount);
+	// validate(). Gated on charity_amount_is_manual (set by the charity_amount
+	// change handler above, only for a real user edit) rather than just
+	// checking non-zero - this function itself writes Charity Amount below on
+	// every call, so a plain non-zero check would misread its own last output
+	// as a manual entry and freeze it instead of letting it keep tracking
+	// Charity % as items are added/edited.
+	const manual_charity_amount = frm.doc.charity_amount_is_manual ? flt(frm.doc.charity_amount) : 0;
 	let charity_amount;
 	if (manual_charity_amount) {
 		// Capped at Net Amount itself so the bill can never net negative.
@@ -474,14 +499,24 @@ function calculate_totals(frm) {
 	} else {
 		// Charity is applied only once, right here, against Net Amount - it
 		// reduces what the patient actually pays, never the real selling
-		// price or the real GST owed above.
-		charity_amount = flt((net_amount * signed_percent) / 100, 2);
+		// price or the real GST owed above. Always a plain non-negative
+		// magnitude - "Charity" vs "Increase" is only decided below, at
+		// Payable Amount, never baked into this figure itself.
+		charity_amount = flt((net_amount * raw_percent) / 100, 2);
 	}
-	const payable_amount = flt(net_amount - charity_amount, 2);
+	const payable_amount =
+		adjustment_type === "Increase" ? flt(net_amount + charity_amount, 2) : flt(net_amount - charity_amount, 2);
 	frm.set_value("total_pharmacy_amount", pharmacy_total);
 	frm.set_value("total_service_amount", service_total);
 	frm.set_value("net_amount", net_amount);
-	frm.set_value("charity_amount", charity_amount);
+	// This same function is what the charity_amount change handler calls
+	// right back into - without this guard, writing the field here would
+	// loop back and get misread as the user just having typed a manual
+	// override.
+	frm._computing_totals = true;
+	frm.set_value("charity_amount", charity_amount).then(() => {
+		frm._computing_totals = false;
+	});
 	frm.set_value("payable_amount", payable_amount);
 
 	// Mirrors validate_advance_adjustment() on the server - just a preview,
@@ -563,6 +598,25 @@ function ensure_bill_type_includes(frm, kind) {
 	const bt = frm.doc.bill_type;
 	if (bt === kind || bt === "Mixed") return;
 	frm.set_value("bill_type", bt ? "Mixed" : kind);
+}
+
+function suggest_registration_charity(frm) {
+	// A General patient can have a Charity Amount already hand-typed once,
+	// right at Patient Registration - offered here as this bill's starting
+	// Charity Amount so Billing Staff don't have to already know it or go
+	// look the registration up themselves. Only ever a starting point -
+	// never overwrites a value Billing Staff already typed into this bill.
+	if (flt(frm.doc.charity_amount)) return;
+	frappe.call({
+		method: "metta.sales.doctype.billing.billing.get_registration_charity_amount",
+		args: { patient: frm.doc.patient },
+		callback(r) {
+			const suggested = flt(r.message);
+			if (suggested && !flt(frm.doc.charity_amount)) {
+				frm.set_value("charity_amount", suggested);
+			}
+		},
+	});
 }
 
 function add_admission_charge_if_due(frm) {

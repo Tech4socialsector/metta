@@ -13,7 +13,6 @@
   "basic_info",
   "uhin_id",
   "registration_category",
-  "emergency_admission",
   "converted_from_registration",
   "registration_type",
   "appointment",
@@ -100,6 +99,7 @@
    "options": "fa fa-user"
   },
   {
+   "default": "OP",
    "fieldname": "registration_category",
    "fieldtype": "Select",
    "in_list_view": 1,
@@ -107,15 +107,6 @@
    "label": "Registration Category",
    "options": "\nOP\nIP",
    "reqd": 1
-  },
-  {
-   "default": "0",
-   "depends_on": "eval:doc.registration_category==\"IP\" && !doc.converted_from_registration",
-   "description": "Confirms this is a genuine emergency (accident, urgent delivery, etc.) admitted straight to IP without a prior OP visit.",
-   "fieldname": "emergency_admission",
-   "fieldtype": "Check",
-   "in_list_view": 1,
-   "label": "Emergency Admission"
   },
   {
    "depends_on": "eval:doc.registration_category==\"IP\"",

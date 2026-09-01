@@ -50,14 +50,17 @@ class Billing(Document):
 			if category and category.charity_status == "Active":
 				adjustment_type = category.adjustment_type
 
+		# Stored (not just used locally) so reports can tell an "Increase" bill
+		# apart from a real "Charity" one - an Increase is the hospital
+		# charging MORE for a Corporate patient, not a concession given to
+		# them, and must never be counted as charity given out, even though
+		# both share the same Charity Amount/% fields on this form.
+		self.adjustment_type = adjustment_type or ""
+
 		if adjustment_type not in ("Charity", "Increase"):
 			# No active adjustment applies - an Inactive category, or one with
 			# no adjustment_type set, contributes nothing to the bill.
 			self.charity_percent = 0
-
-		# Signed so "Charity" shrinks the taxable value and "Increase" grows
-		# it, using the same +/- formula either way.
-		signed_percent = -flt(self.charity_percent) if adjustment_type == "Increase" else flt(self.charity_percent)
 
 		# Rounded to currency precision at every step - an unrounded float
 		# (e.g. 0.07200000000000001) recomputed on a later re-save of an
@@ -107,8 +110,16 @@ class Billing(Document):
 		# Category Price Adjustment would otherwise apply. A hand-typed rupee
 		# figure wins over the percentage-based one - never both at once, so
 		# the two can't be stacked into an unintended double charity.
-		manual_charity_amount = flt(self.charity_amount)
-		if manual_charity_amount:
+		#
+		# charity_amount_is_manual (set by the client the moment the user
+		# actually types into Charity Amount, not just whenever it happens to
+		# be non-zero) is what decides this - the field also gets written by
+		# the auto branch below on every save, so a plain "is it non-zero"
+		# check would misread that stored auto-computed figure as a manual
+		# entry on the very next save and freeze it, instead of letting it
+		# keep tracking Charity % as the bill's items change.
+		if self.charity_amount_is_manual:
+			manual_charity_amount = flt(self.charity_amount)
 			if manual_charity_amount < 0:
 				frappe.throw(_("Charity Amount cannot be negative."))
 			# Capped at Net Amount itself so the bill can never net negative.
@@ -117,12 +128,15 @@ class Billing(Document):
 		else:
 			# Charity is applied only once, right here, against Net Amount - it
 			# reduces what the patient actually pays, never the real selling
-			# price or the real GST owed above. charity_amount stays signed
-			# too, so the same subtraction below works for both directions:
-			# positive shrinks payable_amount (Charity), negative grows it
-			# (Increase).
-			self.charity_amount = flt(self.net_amount * signed_percent / 100, 2)
-		self.payable_amount = flt(self.net_amount - self.charity_amount, 2)
+			# price or the real GST owed above. Always a plain non-negative
+			# magnitude - "Charity" vs "Increase" is only decided below, at
+			# Payable Amount, never baked into this figure itself.
+			self.charity_amount = flt(self.net_amount * flt(self.charity_percent) / 100, 2)
+
+		if adjustment_type == "Increase":
+			self.payable_amount = flt(self.net_amount + self.charity_amount, 2)
+		else:
+			self.payable_amount = flt(self.net_amount - self.charity_amount, 2)
 
 		self.validate_advance_adjustment()
 		self.validate_amount_collected()
@@ -280,6 +294,31 @@ def get_category_adjustment(billing_category):
 		"Category Price Adjustment", billing_category, ["adjustment_type", "charity_status"], as_dict=True
 	)
 	return category or {"adjustment_type": None, "charity_status": None}
+
+
+@frappe.whitelist()
+def get_registration_charity_amount(patient):
+	# A charity amount can be hand-typed once, right at Patient Registration,
+	# for a General patient who plainly can't afford full price - offered
+	# here as this bill's starting Charity Amount so Billing Staff don't have
+	# to already know it or go look the registration record up themselves.
+	# Still just a suggestion, same as any other Charity Amount entry - stays
+	# fully editable/removable, never forced.
+	frappe.has_permission("Billing", "read", throw=True)
+	if not patient:
+		return 0
+	uhin_id = frappe.db.get_value("Patient Visit", patient, "uhin_id")
+	if not uhin_id:
+		return 0
+	registration = frappe.db.get_value(
+		"Patient Registration", uhin_id, ["billing_category", "charity_amount"], as_dict=True
+	)
+	# Only for General - Staff/Staff Dependent/Corporate already get their
+	# adjustment automatically from Billing Category, so this would otherwise
+	# be a second, conflicting one stacked on top.
+	if not registration or registration.billing_category != "General":
+		return 0
+	return flt(registration.charity_amount)
 
 
 IP_ADMISSION_CHARGE_ITEM = "IP-ADMISSION-CHARGE"

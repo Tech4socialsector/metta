@@ -53,6 +53,13 @@ class PatientVisit(Document):
 			)
 			if category and category.charity_status == "Active":
 				adjustment_type = category.adjustment_type
+		# Overwrites whatever the client's own fetch_from last put here - that
+		# one just mirrors the category's raw value, not gated on
+		# charity_status, and reports need to know for certain whether this
+		# particular visit's Discount Amount was really "Charity" or an
+		# "Increase" (the hospital charging more, never counted as charity
+		# given out), so it's stored fresh here every time.
+		self.adjustment_type = adjustment_type or ""
 
 		raw_percent = flt(self.charity_percent) if adjustment_type in ("Charity", "Increase") else 0
 		# charity_percent isn't read-only, so this can't just trust the
@@ -63,10 +70,6 @@ class PatientVisit(Document):
 				_("Charity Percent cannot exceed 100% - that would make the bill negative."),
 				title=_("Invalid Charity"),
 			)
-		# "Increase" grows the bill instead of shrinking it, same sign flip
-		# Billing applies for the same two adjustment types.
-		signed_percent = -raw_percent if adjustment_type == "Increase" else raw_percent
-
 		if flt(self.charity_amount):
 			if flt(self.charity_amount) < 0:
 				frappe.throw(_("Charity Amount cannot be negative."))
@@ -82,8 +85,17 @@ class PatientVisit(Document):
 			# Capped at the fee itself so the visit can never net negative.
 			self.discount_amount = min(flt(self.charity_amount), flt(self.fee_amount))
 		else:
-			self.discount_amount = flt(self.fee_amount) * signed_percent / 100
-		self.net_amount = flt(self.fee_amount) - self.discount_amount
+			# Always a plain non-negative magnitude - "Charity" vs "Increase" is
+			# only decided below, at Net Amount, never baked into this figure
+			# itself (a negative Discount Amount here would misread as a manual
+			# entry below on the very next save, same bug Billing's own Charity
+			# Amount had).
+			self.discount_amount = flt(self.fee_amount) * raw_percent / 100
+
+		if adjustment_type == "Increase":
+			self.net_amount = flt(self.fee_amount) + self.discount_amount
+		else:
+			self.net_amount = flt(self.fee_amount) - self.discount_amount
 
 		# Recorded the first time a payment mode is actually picked - not
 		# reset on every subsequent edit, so it keeps showing who originally
@@ -96,22 +108,15 @@ class PatientVisit(Document):
 		# save, but that's only a convenience - this is the check an API call
 		# or import can't bypass.
 		if self.is_new():
-			# A brand-new IP registration is normally only ever valid coming
-			# from "Admit Patient" on an existing OP visit - converted_from_registration
-			# proves that. The one deliberate exception is a genuine emergency
-			# (accident, urgent delivery) where waiting to create an OP visit
-			# first would cost real time - emergency_admission is the explicit,
-			# audited confirmation that this is that case, not a shortcut
-			# anyone can tick by habit.
-			if (
-				self.registration_category == "IP"
-				and not self.converted_from_registration
-				and not self.emergency_admission
-			):
+			# Every patient starts as OP now, including a genuine emergency -
+			# there's no direct-to-IP path any more. IP is only ever reached
+			# afterwards, via "Admit Patient" on that OP visit, which is what
+			# sets converted_from_registration.
+			if self.registration_category == "IP" and not self.converted_from_registration:
 				frappe.throw(
 					_(
-						"A new registration must start as OP. Use \"Admit Patient\" on an existing OP visit to create an IP admission, "
-						"or check \"Emergency Admission\" if this patient genuinely needs to be admitted directly."
+						"A new registration must start as OP, even for an emergency. Use \"Admit Patient\" on that "
+						"OP visit to create the IP admission."
 					),
 					title=_("Invalid Registration Category"),
 				)

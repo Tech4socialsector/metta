@@ -27,7 +27,9 @@
   "total_service_amount",
   "net_amount",
   "charity_percent",
+  "adjustment_type",
   "charity_amount",
+  "charity_amount_is_manual",
   "payable_amount",
   "advance_collected",
   "advance_used",
@@ -186,11 +188,25 @@
    "label": "Charity %"
   },
   {
+   "fieldname": "adjustment_type",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Adjustment Type",
+   "options": "\nCharity\nIncrease"
+  },
+  {
    "description": "A hand-typed amount for this specific bill, capped at Net Amount, wins over Charity % - overrides whatever rate Category Price Adjustment would otherwise apply.",
    "fieldname": "charity_amount",
    "fieldtype": "Currency",
    "label": "Charity Amount",
    "precision": "2"
+  },
+  {
+   "default": "0",
+   "fieldname": "charity_amount_is_manual",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Charity Amount Is Manual"
   },
   {
    "description": "Net Amount minus Charity Amount - the real amount owed before any Advance is adjusted.",

@@ -126,6 +126,40 @@ class DailyCollectionReport {
 				font-weight: 700;
 				border-top: 1px solid #cfe1f4;
 			}
+			.dcr-page table.dcr-table td.dcr-clickable {
+				cursor: pointer;
+				text-decoration: underline dotted;
+				text-underline-offset: 3px;
+			}
+			.dcr-page table.dcr-table td.dcr-clickable:hover {
+				background: #eaf2fc;
+			}
+			.dcr-page .dcr-stats-row {
+				display: flex;
+				gap: 10px;
+				margin-bottom: 15px;
+			}
+			.dcr-page .dcr-stat-chip {
+				border: 1px solid var(--border-color);
+				border-radius: 8px;
+				padding: 8px 14px;
+				background: var(--card-bg, #fff);
+				cursor: pointer;
+				font-size: 13px;
+			}
+			.dcr-page .dcr-stat-chip:hover {
+				background: #eaf2fc;
+			}
+			.dcr-page .dcr-stat-chip b {
+				color: #2c5c8f;
+				font-size: 16px;
+			}
+			.dcr-docs-dialog .table-wrapper thead th {
+				position: sticky;
+				top: 0;
+				background: #fafcff;
+				z-index: 1;
+			}
 		</style>`).appendTo("head");
 	}
 
@@ -193,9 +227,79 @@ class DailyCollectionReport {
 	}
 
 	make_results_area() {
+		this.stats_row = $(`<div class="dcr-stats-row"></div>`).appendTo(this.page.body);
 		this.hint_area = $(`<div></div>`).appendTo(this.page.body);
 		this.hint_area.html(`<p class="text-muted">${__("Set a From Date and To Date, then click Generate.")}</p>`);
 		this.grid_area = $(`<div class="dcr-grid"></div>`).appendTo(this.page.body);
+	}
+
+	render_stats() {
+		this.stats_row.empty();
+		const count = (this.all_data && this.all_data.visited_patients_count) || 0;
+		$(`<div class="dcr-stat-chip">${__("Patients Visited")}: <b>${count}</b></div>`)
+			.appendTo(this.stats_row)
+			.on("click", () => this.show_visited_patients());
+	}
+
+	show_visited_patients() {
+		const from_date = this.from_date_field.get_value();
+		const to_date = this.to_date_field.get_value();
+		frappe.call({
+			method: "metta.sales.page.daily_collection_report.daily_collection_report.get_visited_patients",
+			args: { from_date, to_date },
+			freeze: true,
+			callback: (r) => {
+				const rows = (r.message || []).map((v) => ({
+					doctype: v.doctype,
+					name: v.docname,
+					detail: `${v.detail || ""} - ${v.registration_category}${v.department_name ? " - " + v.department_name : ""}`,
+					amount: null,
+				}));
+				this.show_docs_dialog(__("Patients Visited"), rows);
+			},
+		});
+	}
+
+	// Generic drill-down dialog - every table on this page ultimately opens
+	// one of these, listing the real documents (with a link to open each)
+	// that were added together to make the row/cell that was clicked. This
+	// is the one place that list actually gets rendered, so every section
+	// shows it exactly the same way.
+	show_docs_dialog(title, docs) {
+		if (!docs || !docs.length) {
+			frappe.show_alert({ message: __("No underlying records found for this."), indicator: "orange" });
+			return;
+		}
+		const rows = docs
+			.map(
+				(d) => `
+				<tr>
+					<td><a href="/app/${frappe.router.slug(d.doctype)}/${encodeURIComponent(d.name)}" target="_blank">${frappe.utils.escape_html(d.name)}</a></td>
+					<td>${frappe.utils.escape_html(d.detail || "")}</td>
+					<td class="text-right">${d.amount != null ? format_currency(d.amount) : ""}</td>
+				</tr>`
+			)
+			.join("");
+		const dialog = new frappe.ui.Dialog({
+			title,
+			size: "large",
+			centered: true,
+			fields: [
+				{
+					fieldtype: "HTML",
+					fieldname: "docs_html",
+					options: `
+						<div class="dcr-docs-dialog table-wrapper" style="max-height: 60vh; overflow-y: auto;">
+							<table class="table table-bordered dcr-table">
+								<thead><tr><th>${__("Document")}</th><th>${__("Detail")}</th><th class="text-right">${__("Amount")}</th></tr></thead>
+								<tbody>${rows}</tbody>
+							</table>
+						</div>
+					`,
+				},
+			],
+		});
+		dialog.show();
 	}
 
 	generate() {
@@ -226,6 +330,7 @@ class DailyCollectionReport {
 		this.all_data = data;
 		this.set_export_enabled(true);
 		this.hint_area.empty();
+		this.render_stats();
 		const rows = data.user_wise_details || [];
 		// The last row is Collection Report's own "Total" row - a real data
 		// row same as the others, just rendered with the highlighted style
@@ -307,12 +412,13 @@ class DailyCollectionReport {
 			`);
 			return;
 		}
+		const clickable = (r) => (r.docs && r.docs.length ? "dcr-clickable" : "");
 		const row_html = (r, sl) => `
 			<tr>
 				<td class="text-center">${sl}</td>
 				<td>${frappe.utils.escape_html(r.label || "")}</td>
-				<td class="text-center">${format_currency(r.op_amount)}</td>
-				<td class="text-center">${format_currency(r.ip_amount)}</td>
+				<td class="text-center ${clickable(r)}" data-sl="${sl}">${format_currency(r.op_amount)}</td>
+				<td class="text-center ${clickable(r)}" data-sl="${sl}">${format_currency(r.ip_amount)}</td>
 			</tr>`;
 		const total_html = `
 			<tr class="dcr-total">
@@ -330,6 +436,14 @@ class DailyCollectionReport {
 				</table>
 			</div>
 		`);
+		// Row-index based (not a data attribute holding the whole docs array) -
+		// simplest way to get back to the exact row object's own docs list
+		// from a plain click handler.
+		$target.find("td.dcr-clickable").on("click", (e) => {
+			const sl = Number($(e.currentTarget).data("sl"));
+			const row = rows[sl - 1];
+			if (row) this.show_docs_dialog(heading, row.docs);
+		});
 	}
 
 	render_charity_details(details) {
@@ -343,10 +457,16 @@ class DailyCollectionReport {
 		this.charity_details_boxes = [];
 		if (!details || !details.length) return;
 
+		// Each row here almost always resolves to just one real Billing/
+		// Patient Visit document, but it's still grouped through the same
+		// _op_ip_rows() every other table uses (two patients could share an
+		// identical label) - so this opens the same docs dialog as every
+		// other section, not a direct link, to stay correct either way.
+		const clickable = (r) => (r.docs && r.docs.length ? "dcr-clickable" : "");
 		const row_html = (r, sl) => `
 			<tr>
 				<td class="text-center">${sl}</td>
-				<td>${frappe.utils.escape_html(r.label || "")}</td>
+				<td class="${clickable(r)}" data-sl="${sl}">${frappe.utils.escape_html(r.label || "")}</td>
 				<td class="text-center">${format_currency(r.op_amount)}</td>
 				<td class="text-center">${format_currency(r.ip_amount)}</td>
 			</tr>`;
@@ -359,9 +479,10 @@ class DailyCollectionReport {
 					<td class="text-center">${format_currency(d.total.op_amount)}</td>
 					<td class="text-center">${format_currency(d.total.ip_amount)}</td>
 				</tr>`;
+			const box_title = `${__("Charity - Details")} - ${frappe.utils.escape_html(d.category)}`;
 			const $box = $(`
 				<div class="dcr-box dcr-cell">
-					<div class="dcr-box-title">${__("Charity - Details")} - ${frappe.utils.escape_html(d.category)}</div>
+					<div class="dcr-box-title">${box_title}</div>
 					<div class="table-wrapper">
 						<table class="table table-hover dcr-table">
 							<thead><tr><th>${__("Sl No")}</th><th>${__("Particulars")}</th><th>${__("OP Amount")}</th><th>${__("IP Amount")}</th></tr></thead>
@@ -370,6 +491,11 @@ class DailyCollectionReport {
 					</div>
 				</div>
 			`).appendTo(this.grid_area);
+			$box.find("td.dcr-clickable").on("click", (e) => {
+				const sl = Number($(e.currentTarget).data("sl"));
+				const row = d.rows[sl - 1];
+				if (row) this.show_docs_dialog(box_title, row.docs);
+			});
 			this.charity_details_boxes.push($box);
 		});
 	}
@@ -396,10 +522,11 @@ class DailyCollectionReport {
 			with_op_ip
 				? `<td class="text-center">${format_currency(r.op_amount)}</td><td class="text-center">${format_currency(r.ip_amount)}</td>`
 				: "";
+		const clickable = (r) => (r.docs && r.docs.length ? "dcr-clickable" : "");
 		const row_html = (r, sl) => `
 			<tr>
 				<td class="text-center">${sl}</td>
-				<td>${frappe.utils.escape_html(r.label || "")}</td>
+				<td class="${clickable(r)}" data-sl="${sl}">${frappe.utils.escape_html(r.label || "")}</td>
 				${extra_cells(r)}
 				<td class="text-center">${format_currency(r.amount)}</td>
 				<td class="text-center">${format_currency(r.tax_amount)}</td>
@@ -421,6 +548,11 @@ class DailyCollectionReport {
 				</table>
 			</div>
 		`);
+		$target.find("td.dcr-clickable").on("click", (e) => {
+			const sl = Number($(e.currentTarget).data("sl"));
+			const row = rows[sl - 1];
+			if (row) this.show_docs_dialog(heading, row.docs);
+		});
 	}
 
 	render_table(detail_rows, total_row) {
@@ -469,7 +601,14 @@ class DailyCollectionReport {
 			<tr>
 				<td class="text-center">${sl != null ? sl : ""}</td>
 				<td>${frappe.utils.escape_html(row.user_name || "")}</td>
-				${money_fields.map((f) => `<td class="text-center">${format_currency(row[f])}</td>`).join("")}
+				${money_fields
+					.map(
+						(f) =>
+							`<td class="text-center ${row.owner ? "dcr-clickable" : ""}" data-owner="${
+								row.owner ? frappe.utils.escape_html(row.owner) : ""
+							}">${format_currency(row[f])}</td>`
+					)
+					.join("")}
 			</tr>`;
 
 		const body = detail_rows.map((row, i) => row_html(row, i + 1)).join("");
@@ -486,6 +625,34 @@ class DailyCollectionReport {
 				</table>
 			</div>
 		`);
+		// One shared on-demand fetch per user (not embedded in the main
+		// payload) - a user's raw bill list could be long, and this table is
+		// the one place all of it is genuinely needed at once, so it's kept
+		// out of the normal render to keep the report's main load light.
+		$target.find("td.dcr-clickable").on("click", (e) => {
+			const owner = $(e.currentTarget).data("owner");
+			if (!owner) return;
+			this.show_user_bill_detail(owner);
+		});
+	}
+
+	show_user_bill_detail(owner) {
+		const from_date = this.from_date_field.get_value();
+		const to_date = this.to_date_field.get_value();
+		frappe.call({
+			method: "metta.sales.page.daily_collection_report.daily_collection_report.get_user_bill_detail",
+			args: { owner, from_date, to_date },
+			freeze: true,
+			callback: (r) => {
+				const rows = (r.message || []).map((v) => ({
+					doctype: v.doctype,
+					name: v.docname,
+					detail: `${v.detail || ""}${v.payment_mode ? " - " + v.payment_mode : ""}`,
+					amount: v.payable_amount,
+				}));
+				this.show_docs_dialog(__("User Wise Details"), rows);
+			},
+		});
 	}
 
 	render_user_wise_charity(data) {
@@ -510,7 +677,14 @@ class DailyCollectionReport {
 			<tr>
 				<td class="text-center">${sl != null ? sl : ""}</td>
 				<td>${frappe.utils.escape_html(row.user_name || "")}</td>
-				${categories.map((c) => `<td class="text-center">${format_currency(row[c] || 0)}</td>`).join("")}
+				${categories
+				.map(
+					(c) =>
+						`<td class="text-center ${row.owner && row[c] ? "dcr-clickable" : ""}" data-owner="${
+							row.owner ? frappe.utils.escape_html(row.owner) : ""
+						}" data-category="${frappe.utils.escape_html(c)}">${format_currency(row[c] || 0)}</td>`
+				)
+				.join("")}
 			</tr>`;
 
 		// Last row is the "Total" row the server already computed - same
@@ -529,6 +703,31 @@ class DailyCollectionReport {
 				</table>
 			</div>
 		`);
+		$target.find("td.dcr-clickable").on("click", (e) => {
+			const owner = $(e.currentTarget).data("owner");
+			const category = $(e.currentTarget).data("category");
+			if (!owner || !category) return;
+			this.show_user_charity_detail(owner, category);
+		});
+	}
+
+	show_user_charity_detail(owner, category) {
+		const from_date = this.from_date_field.get_value();
+		const to_date = this.to_date_field.get_value();
+		frappe.call({
+			method: "metta.sales.page.daily_collection_report.daily_collection_report.get_user_charity_detail",
+			args: { owner, category, from_date, to_date },
+			freeze: true,
+			callback: (r) => {
+				const rows = (r.message || []).map((v) => ({
+					doctype: v.doctype,
+					name: v.docname,
+					detail: `${v.detail || ""}${v.payment_mode ? " - " + v.payment_mode : ""}`,
+					amount: v.amount,
+				}));
+				this.show_docs_dialog(__("User Wise Charity Details") + " - " + category, rows);
+			},
+		});
 	}
 
 	get_export_data() {

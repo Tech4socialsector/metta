@@ -77,12 +77,12 @@ frappe.ui.form.on("Patient Visit", {
 				// it either.
 				frm.set_df_property("registration_category", "read_only", 1);
 			} else {
-				// A fresh registration normally only starts as OP - IP is
-				// usually only reached via "Admit Patient" on an existing OP
-				// visit - but IP is still offered here too for a genuine
-				// emergency (accident, urgent delivery), gated server-side by
-				// the "Emergency Admission" checkbox this reveals.
-				frm.set_df_property("registration_category", "options", "\nOP\nIP");
+				// Every patient starts as OP now, including a genuine emergency -
+				// there's no direct-to-IP path any more, not even for that.
+				// IP is only ever reached afterwards, via "Admit Patient" on
+				// that OP visit, which is the other branch here.
+				frm.set_value("registration_category", "OP");
+				frm.set_df_property("registration_category", "read_only", 1);
 			}
 		} else {
 			// Once saved, the category is locked for good - changing it after
@@ -392,6 +392,15 @@ frappe.ui.form.on("Patient Visit", {
 				frm._category_adjustment = adjustment;
 				frm.set_value("charity_percent", (adjustment && adjustment.charity_percent) || 0);
 				frm.set_value("adjustment_type", (adjustment && adjustment.adjustment_type) || "");
+				// A Corporate patient's fee normally goes on their employer's
+				// credit account - suggested here so Front Desk doesn't have to
+				// remember to pick it by hand, but still just a starting point:
+				// a patient who says "bill me directly, I'll claim it myself
+				// later" just has Payment Mode changed back to Cash/UPI/Card,
+				// same as any other field this app auto-suggests.
+				if (frm.doc.billing_category === "Corporate" && !frm.doc.payment_mode) {
+					frm.set_value("payment_mode", "Credit - Corporate");
+				}
 				calculate_billing_totals(frm);
 			},
 		});
@@ -659,14 +668,17 @@ function calculate_billing_totals(frm) {
 	const adjustment_type =
 		adjustment && adjustment.charity_status === "Active" ? adjustment.adjustment_type : null;
 	const raw_percent = ["Charity", "Increase"].includes(adjustment_type) ? flt(frm.doc.charity_percent) : 0;
-	const signed_percent = adjustment_type === "Increase" ? -raw_percent : raw_percent;
 
 	// A hand-typed Charity Amount wins over the percentage-based discount -
 	// never both at once - capped at the fee itself so it can't go negative.
+	// Always a plain non-negative magnitude either way - "Charity" vs
+	// "Increase" is only decided below, at Net Amount.
 	const discount_amount = flt(frm.doc.charity_amount) > 0
 		? Math.min(flt(frm.doc.charity_amount), flt(frm.doc.fee_amount))
-		: (flt(frm.doc.fee_amount) * signed_percent) / 100;
-	const net_amount = flt(frm.doc.fee_amount) - discount_amount;
+		: (flt(frm.doc.fee_amount) * raw_percent) / 100;
+	const net_amount = adjustment_type === "Increase"
+		? flt(frm.doc.fee_amount) + discount_amount
+		: flt(frm.doc.fee_amount) - discount_amount;
 	frm.set_value("discount_amount", discount_amount);
 	frm.set_value("net_amount", net_amount);
 }

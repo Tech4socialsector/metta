@@ -45,12 +45,22 @@ def get_data(filters):
 		f"""
 		SELECT
 			owner,
-			-- net_amount is already the real Subtotal+GST total, before Charity
-			-- is applied - a fully-charitied bill would otherwise show Gross Amt
-			-- as 0 despite genuinely having been billed for something, and Cash
-			-- Amt would go negative once Charity is subtracted from it below.
-			SUM(net_amount) AS gross_amt,
-			SUM(charity_amount) AS charity,
+			-- Gross Amt is the real, full amount billed to the patient - for a
+			-- Charity bill that's net_amount itself (before the discount is
+			-- taken off); for an Increase (Corporate) bill, the increase is
+			-- already part of what was billed, so Gross Amt has to include it
+			-- too, i.e. payable_amount, not the smaller pre-increase net_amount.
+			SUM(CASE WHEN COALESCE(adjustment_type, '') = 'Increase' THEN payable_amount ELSE net_amount END) AS gross_amt,
+			-- "Increase" (Corporate) is the hospital charging MORE, never a
+			-- concession given to the patient - it must never be counted as
+			-- charity given out, even though it shares the same Charity Amount
+			-- field on the bill.
+			SUM(CASE WHEN COALESCE(adjustment_type, '') != 'Increase' THEN charity_amount ELSE 0 END) AS charity,
+			-- The real amount actually owed on the bill, whichever way Charity
+			-- Percent pushed it - Cash Amt is reconciled against this below,
+			-- not against "gross_amt - charity" (which only holds true for a
+			-- real Charity discount, not an Increase).
+			SUM(payable_amount) AS payable_amt,
 			-- amount_collected, not net_amount - a bill fully (or partly)
 			-- covered by Advance Adjusted still keeps whatever Payment Mode
 			-- was picked, even though nothing (or only part) was actually
@@ -65,6 +75,36 @@ def get_data(filters):
 		GROUP BY owner
 		""",
 		bill_values,
+		as_dict=True,
+	)
+
+	# The OP registration/consultation fee is its own transaction on Patient
+	# Visit, not a Billing row at all (see Local Group Wise Details, which
+	# already pulls this in the same way) - IP has no fee_amount of its own,
+	# so nothing to add for IP here, its charges all flow through Billing.
+	reg_conditions, reg_values = _date_range_conditions(filters, "date")
+	registration_fees = frappe.db.sql(
+		f"""
+		SELECT
+			collected_by AS owner,
+			-- Same reasoning as Billing's own Gross Amt above - an Increase
+			-- bill's net_amount already has the increase baked into it, so
+			-- that's the real billed amount; a Charity (or unadjusted) bill's
+			-- real billed amount is fee_amount, before the discount comes off.
+			SUM(CASE WHEN COALESCE(adjustment_type, '') = 'Increase' THEN net_amount ELSE fee_amount END) AS gross_amt,
+			SUM(CASE WHEN COALESCE(adjustment_type, '') != 'Increase' THEN discount_amount ELSE 0 END) AS charity,
+			-- Patient Visit's own net_amount is already the real amount owed
+			-- (fee_amount adjusted for Charity or Increase, whichever applies) -
+			-- same role Billing's payable_amount plays above.
+			SUM(net_amount) AS payable_amt,
+			SUM(CASE WHEN payment_mode = 'Card' THEN net_amount ELSE 0 END) AS card,
+			SUM(CASE WHEN payment_mode = 'UPI' THEN net_amount ELSE 0 END) AS gpay,
+			SUM(CASE WHEN payment_mode = 'Credit - Corporate' THEN net_amount ELSE 0 END) AS credit_bills
+		FROM `tabPatient Visit`
+		WHERE registration_category = 'OP' AND net_amount > 0 {reg_conditions}
+		GROUP BY collected_by
+		""",
+		reg_values,
 		as_dict=True,
 	)
 
@@ -94,6 +134,13 @@ def get_data(filters):
 		entry = rows_by_user.setdefault(row.owner, frappe._dict())
 		entry.sales_ret = row.sales_ret
 		entry.credit_returns = row.credit_returns
+	# Additive, not a straight overwrite - the same person can easily have
+	# both Billing bills and OP registrations on the same day, and neither
+	# source is allowed to clobber the other's figures.
+	for row in registration_fees:
+		entry = rows_by_user.setdefault(row.owner, frappe._dict())
+		for field in ("gross_amt", "charity", "payable_amt", "card", "gpay", "credit_bills"):
+			entry[field] = flt(entry.get(field)) + flt(row.get(field))
 
 	full_names = _get_full_names(rows_by_user.keys())
 	amount_fields = (
@@ -111,18 +158,25 @@ def get_data(filters):
 	result = []
 	totals = dict.fromkeys(amount_fields, 0)
 	for owner, row in rows_by_user.items():
-		entry = {"user_name": full_names.get(owner, owner)}
+		# Kept alongside the display name (not shown as its own report
+		# column) so the Daily Collection Report page can drill a row down
+		# into its real bills/visits without a separate name-to-user lookup.
+		entry = {"user_name": full_names.get(owner, owner), "owner": owner}
 		# Credit Bills is net-of-returns - a return is that same day's
 		# transaction against whoever processes it, so it reduces that
 		# person's own collected-today figure, not the original bill's day.
 		net_credit_bills = flt(row.get("credit_bills")) - flt(row.get("credit_returns"))
 		# Cash Amt is never summed directly by payment_mode - it's whatever's
-		# left of Gross Amt after every other named column is accounted for,
-		# so the row always reconciles even when Payment Mode was left blank
-		# (e.g. a fully-discounted bill has no payment mode at all).
+		# left of the real amount owed (Payable Amt - the actual bill total
+		# after Charity or Increase, whichever applies) once every other named
+		# column is accounted for, so the row always reconciles even when
+		# Payment Mode was left blank (e.g. a fully-discounted bill has no
+		# payment mode at all). Reconciled against Payable Amt, not against
+		# "Gross Amt - Charity" - that only holds true for a real Charity
+		# discount, not an Increase, where the patient actually owes MORE
+		# than Gross Amt, not less.
 		net_cash_amt = (
-			flt(row.get("gross_amt"))
-			- flt(row.get("charity"))
+			flt(row.get("payable_amt"))
 			- flt(row.get("card"))
 			- flt(row.get("gpay"))
 			- net_credit_bills

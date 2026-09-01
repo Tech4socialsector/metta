@@ -180,27 +180,33 @@ function calculate_amount(frm, cdt, cdn) {
 	const free_qty = flt(row.free) * flt(row.packing);
 	const billable_qty = qty - free_qty;
 	const amount = flt(row.amount);
-	const purchase_rate = billable_qty ? amount / billable_qty : 0;
+	const purchase_rate = billable_qty ? flt(amount / billable_qty, 2) : 0;
 
 	// Discount is entered as a % of the Taxable Amount - the ₹ value is
 	// calculated from it, same as the supplier invoice shows both the % and
 	// the resulting amount.
-	const discount = (amount * flt(row.discount_percent)) / 100;
+	const discount = flt((amount * flt(row.discount_percent)) / 100, 2);
 
 	// GST is calculated on Amount net of Discount, same as the supplier
 	// invoice - Amount itself still shows the full gross value (matches the
 	// invoice's own Taxable Amount column), but the tax is worked out on
 	// what's actually being paid for it.
+	//
+	// Rounded to currency precision at every step below, mirroring
+	// validate() server-side exactly - this same function reruns on every
+	// refresh (including right after a save), so an unrounded float here
+	// would immediately re-dirty the form against the server's own cleanly
+	// rounded values, making "Not Saved" impossible to ever clear.
 	const taxable_value = amount - discount;
-	const gst_amount = (taxable_value * flt(row.gst_percent)) / 100;
-	const cgst_amount = gst_amount / 2;
-	const sgst_amount = gst_amount / 2;
+	const gst_amount = flt((taxable_value * flt(row.gst_percent)) / 100, 2);
+	const cgst_amount = flt(gst_amount / 2, 2);
+	const sgst_amount = flt(gst_amount / 2, 2);
 	const igst_amount = flt(row.igst_amount); // not wired up yet - inter-state, add later
 
 	// Landed cost per tablet/unit, net of discount, including GST.
 	const discount_per_unit = qty ? discount / qty : 0;
 	const net_rate = purchase_rate - discount_per_unit;
-	const purchase_cost = net_rate * (1 + flt(row.gst_percent) / 100);
+	const purchase_cost = flt(net_rate * (1 + flt(row.gst_percent) / 100), 2);
 
 	frappe.model.set_value(cdt, cdn, "purchase_rate", purchase_rate);
 	frappe.model.set_value(cdt, cdn, "discount", discount);
@@ -210,7 +216,7 @@ function calculate_amount(frm, cdt, cdn) {
 	frappe.model.set_value(cdt, cdn, "cgst_amount", cgst_amount);
 	frappe.model.set_value(cdt, cdn, "sgst_rate", flt(row.gst_percent) / 2);
 	frappe.model.set_value(cdt, cdn, "sgst_amount", sgst_amount);
-	frappe.model.set_value(cdt, cdn, "total_amount", taxable_value + cgst_amount + sgst_amount + igst_amount);
+	frappe.model.set_value(cdt, cdn, "total_amount", flt(taxable_value + cgst_amount + sgst_amount + igst_amount, 2));
 
 	// Selling side - what the hospital will charge the patient per
 	// tablet/unit, previewed here so Selling Rate never has to be typed a
@@ -224,18 +230,23 @@ function calculate_amount(frm, cdt, cdn) {
 	// Bill time, lands exactly back on MRP.
 	frappe.model.set_value(cdt, cdn, "selling_gst_percent", flt(row.gst_percent));
 	const pack_selling_price = flt(row.packing_mrp) / (1 + flt(row.gst_percent) / 100);
-	const single_tablet_price = flt(row.packing) ? pack_selling_price / flt(row.packing) : 0;
-	const selling_gst_amount = (single_tablet_price * flt(row.gst_percent)) / 100;
+	const single_tablet_price = flt(row.packing) ? flt(pack_selling_price / flt(row.packing), 2) : 0;
+	const selling_gst_amount = flt((single_tablet_price * flt(row.gst_percent)) / 100, 2);
 	frappe.model.set_value(cdt, cdn, "single_tablet_price", single_tablet_price);
 	frappe.model.set_value(cdt, cdn, "selling_gst_amount", selling_gst_amount);
-	frappe.model.set_value(cdt, cdn, "selling_cgst_amount", selling_gst_amount / 2);
-	frappe.model.set_value(cdt, cdn, "selling_sgst_amount", selling_gst_amount / 2);
-	frappe.model.set_value(cdt, cdn, "final_selling_price", single_tablet_price + selling_gst_amount);
+	frappe.model.set_value(cdt, cdn, "selling_cgst_amount", flt(selling_gst_amount / 2, 2));
+	frappe.model.set_value(cdt, cdn, "selling_sgst_amount", flt(selling_gst_amount / 2, 2));
+	frappe.model.set_value(cdt, cdn, "final_selling_price", flt(single_tablet_price + selling_gst_amount, 2));
 
 	calculate_totals(frm);
 }
 
 function calculate_totals(frm) {
+	// Rounded to currency precision at every step, mirroring validate()
+	// server-side exactly - this runs on every refresh (including right
+	// after a save), so an unrounded float here would immediately re-dirty
+	// the form against the server's own cleanly rounded values, making
+	// "Not Saved" impossible to ever clear.
 	let subtotal = 0;
 	let discount_total = 0;
 	let gst_total = 0;
@@ -244,12 +255,15 @@ function calculate_totals(frm) {
 		discount_total += flt(row.discount);
 		gst_total += flt(row.gst_amount);
 	});
+	subtotal = flt(subtotal, 2);
+	discount_total = flt(discount_total, 2);
+	gst_total = flt(gst_total, 2);
 	frm.set_value("subtotal", subtotal);
 	frm.set_value("discount", discount_total);
 	frm.set_value("gst_amount", gst_total);
 
-	const net_before_round = subtotal - discount_total + flt(frm.doc.tax_on_free) + gst_total;
-	const round_off = Math.round(net_before_round) - net_before_round;
+	const net_before_round = flt(subtotal - discount_total + flt(frm.doc.tax_on_free) + gst_total, 2);
+	const round_off = flt(Math.round(net_before_round) - net_before_round, 2);
 	frm.set_value("round_off", round_off);
-	frm.set_value("total_amount", net_before_round + round_off);
+	frm.set_value("total_amount", flt(net_before_round + round_off, 2));
 }
