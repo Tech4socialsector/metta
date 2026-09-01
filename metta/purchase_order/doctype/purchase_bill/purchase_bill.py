@@ -35,34 +35,41 @@ class PurchaseBill(Document):
 			# of Qty in the same units.
 			free_qty = flt(row.free) * flt(row.packing)
 			billable_qty = flt(row.qty) - free_qty
-			row.purchase_rate = flt(row.amount) / billable_qty if billable_qty else 0
+			row.purchase_rate = flt(flt(row.amount) / billable_qty, 2) if billable_qty else 0
 
 			# Discount is entered as a % of the Taxable Amount - the ₹ value
 			# is calculated from it, same as the supplier invoice shows both
 			# the % and the resulting amount.
-			row.discount = flt(row.amount) * flt(row.discount_percent) / 100
+			row.discount = flt(flt(row.amount) * flt(row.discount_percent) / 100, 2)
 
 			# GST is calculated on the Amount net of Discount, same as the
 			# supplier invoice - Amount itself still shows the full gross
 			# value (matches the invoice's own Taxable Amount column), but the
 			# tax is worked out on what's actually being paid for it.
-			taxable_value = row.amount - flt(row.discount)
-			row.gst_amount = taxable_value * flt(row.gst_percent) / 100
+			#
+			# Rounded to currency precision at every step below - an
+			# unrounded float (e.g. 63.699999999999996) recomputed on a later
+			# re-save of an already-submitted bill would otherwise differ
+			# from the originally stored value at the 17th decimal place,
+			# which Frappe treats as a real edit and blocks with "Cannot
+			# Update After Submit".
+			taxable_value = flt(row.amount) - flt(row.discount)
+			row.gst_amount = flt(taxable_value * flt(row.gst_percent) / 100, 2)
 			row.cgst_rate = flt(row.gst_percent) / 2
 			row.sgst_rate = flt(row.gst_percent) / 2
-			row.cgst_amount = row.gst_amount / 2
-			row.sgst_amount = row.gst_amount / 2
+			row.cgst_amount = flt(row.gst_amount / 2, 2)
+			row.sgst_amount = flt(row.gst_amount / 2, 2)
 			# IGST isn't wired up yet (inter-state purchases, add later) - kept
 			# at 0 so Total Amount's formula already accounts for it once it is.
 			row.igst_amount = flt(row.igst_amount)
-			row.total_amount = taxable_value + row.cgst_amount + row.sgst_amount + row.igst_amount
+			row.total_amount = flt(taxable_value + row.cgst_amount + row.sgst_amount + row.igst_amount, 2)
 
 			# Landed cost per tablet/unit, net of discount, including GST -
 			# same net taxable value the row's own GST was just computed on,
 			# divided back out to a per-unit figure.
 			discount_per_unit = flt(row.discount) / flt(row.qty) if row.qty else 0
 			net_rate = flt(row.purchase_rate) - discount_per_unit
-			row.purchase_cost = net_rate * (1 + flt(row.gst_percent) / 100)
+			row.purchase_cost = flt(net_rate * (1 + flt(row.gst_percent) / 100), 2)
 
 			subtotal += row.amount
 			discount_total += flt(row.discount)
@@ -79,26 +86,26 @@ class PurchaseBill(Document):
 			# the normal way at Sales Bill time, lands exactly back on MRP.
 			row.selling_gst_percent = flt(row.gst_percent)
 			pack_selling_price = flt(row.packing_mrp) / (1 + flt(row.selling_gst_percent) / 100)
-			row.single_tablet_price = pack_selling_price / flt(row.packing) if row.packing else 0
-			row.selling_gst_amount = row.single_tablet_price * flt(row.selling_gst_percent) / 100
-			row.selling_cgst_amount = row.selling_gst_amount / 2
-			row.selling_sgst_amount = row.selling_gst_amount / 2
-			row.final_selling_price = row.single_tablet_price + row.selling_gst_amount
+			row.single_tablet_price = flt(pack_selling_price / flt(row.packing), 2) if row.packing else 0
+			row.selling_gst_amount = flt(row.single_tablet_price * flt(row.selling_gst_percent) / 100, 2)
+			row.selling_cgst_amount = flt(row.selling_gst_amount / 2, 2)
+			row.selling_sgst_amount = flt(row.selling_gst_amount / 2, 2)
+			row.final_selling_price = flt(row.single_tablet_price + row.selling_gst_amount, 2)
 
-		self.subtotal = subtotal
-		self.discount = discount_total
-		self.gst_amount = gst_total
+		self.subtotal = flt(subtotal, 2)
+		self.discount = flt(discount_total, 2)
+		self.gst_amount = flt(gst_total, 2)
 
-		net_before_round = (
-			subtotal - discount_total + flt(self.tax_on_free) + gst_total
+		net_before_round = flt(
+			self.subtotal - self.discount + flt(self.tax_on_free) + self.gst_amount, 2
 		)
-		self.round_off = round(net_before_round) - net_before_round
-		self.total_amount = net_before_round + self.round_off
+		self.round_off = flt(round(net_before_round) - net_before_round, 2)
+		self.total_amount = flt(net_before_round + self.round_off, 2)
 
 		if self.supplier_invoice_date and self.payment_terms_days:
 			self.due_date = add_days(self.supplier_invoice_date, int(self.payment_terms_days))
 
-		self.balance_due = flt(self.total_amount) - flt(self.amount_paid)
+		self.balance_due = flt(flt(self.total_amount) - flt(self.amount_paid), 2)
 		if flt(self.amount_paid) <= 0:
 			self.payment_status = "Unpaid"
 		elif flt(self.amount_paid) < flt(self.total_amount):
@@ -236,6 +243,14 @@ class PurchaseBill(Document):
 		self.db_set("rejection_reason", reason, update_modified=False)
 		self.db_set("approved_by", frappe.session.user, update_modified=False)
 		self.db_set("approved_date_time", now_datetime(), update_modified=False)
+		# Rejected is a dead end otherwise - nothing on a submitted document
+		# is editable, so Store Staff would have no way to actually fix
+		# whatever was wrong and try again. Cancelling it here unlocks
+		# Frappe's own Amend flow, which opens an editable draft copy
+		# pre-filled with the same data instead. Safe to cancel outright -
+		# status is already "Rejected" (not "Approved"), so on_cancel()
+		# correctly skips reversing stock that was never added in the first place.
+		self.cancel()
 
 	def refresh_purchase_receipt_link(self):
 		# Keeps the Purchase Receipt list's "Linked Purchase Bill" column
@@ -276,8 +291,8 @@ def update_amount_paid(purchase_bill_name, delta):
 	# payment is made against it, so this writes the three affected fields
 	# directly rather than re-running the whole submitted-doc save pipeline.
 	bill = frappe.get_doc("Purchase Bill", purchase_bill_name)
-	new_amount_paid = flt(bill.amount_paid) + flt(delta)
-	balance_due = flt(bill.total_amount) - new_amount_paid
+	new_amount_paid = flt(flt(bill.amount_paid) + flt(delta), 2)
+	balance_due = flt(flt(bill.total_amount) - new_amount_paid, 2)
 
 	if new_amount_paid <= 0:
 		status = "Unpaid"
