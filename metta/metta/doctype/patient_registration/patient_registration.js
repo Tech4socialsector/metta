@@ -12,19 +12,16 @@ frappe.ui.form.on("Patient Registration", {
 	},
 	dob(frm) {
 		update_age_preview(frm);
-		update_billing_category_preview(frm);
+		check_dependent_aged_out_preview(frm);
 	},
 	age(frm) {
-		update_billing_category_preview(frm);
+		check_dependent_aged_out_preview(frm);
 	},
 	first_name(frm) {
 		update_patient_name_preview(frm);
 	},
 	last_name(frm) {
 		update_patient_name_preview(frm);
-	},
-	staff_status(frm) {
-		update_billing_category_preview(frm);
 	},
 	billing_category(frm) {
 		// Charity Amount only ever applies to a General patient - Staff/Staff
@@ -34,9 +31,18 @@ frappe.ui.form.on("Patient Registration", {
 		if (frm.doc.billing_category !== "General" && frm.doc.charity_amount) {
 			frm.set_value("charity_amount", 0);
 		}
+		// Staff Member/Relationship no longer apply once Billing Category
+		// moves away from Staff/Staff Dependent - cleared rather than left
+		// silently mismatched with what's shown (or hidden) right above.
+		if (frm.doc.billing_category !== "Staff" && frm.doc.billing_category !== "Staff Dependent" && frm.doc.staff_member) {
+			frm.set_value("staff_member", "");
+		}
+		if (frm.doc.billing_category !== "Staff Dependent" && frm.doc.dependent_relationship) {
+			frm.set_value("dependent_relationship", "");
+		}
 	},
 	dependent_relationship(frm) {
-		update_billing_category_preview(frm);
+		check_dependent_aged_out_preview(frm);
 	},
 	phone(frm) {
 		if (!frm.doc.phone) return;
@@ -120,29 +126,22 @@ function update_age_preview(frm) {
 	frm.set_value("age", age);
 }
 
-// Mirrors CHILD_RELATIONSHIPS / DEPENDENT_CHILD_AGE_LIMIT / calculate_billing_category()
-// in patient_registration.py exactly - a live preview so Front Desk sees
-// Billing Category fill in as they pick Staff Status, without having to Save
-// first; validate() on the server is still the authoritative value.
+// Mirrors CHILD_RELATIONSHIPS / DEPENDENT_CHILD_AGE_LIMIT / check_dependent_aged_out()
+// in patient_registration.py exactly - a live preview so Front Desk sees a
+// Staff Dependent who's just crossed 21 downgrade to General without having
+// to Save first; validate() on the server is still the authoritative value.
 const CHILD_RELATIONSHIPS = ["Son", "Daughter"];
 const DEPENDENT_CHILD_AGE_LIMIT = 21;
 
-function update_billing_category_preview(frm) {
-	let category = null;
-	if (frm.doc.staff_status === "Staff") {
-		category = "Staff";
-	} else if (frm.doc.staff_status === "Staff Dependent") {
-		const aged_out =
-			CHILD_RELATIONSHIPS.includes(frm.doc.dependent_relationship) &&
-			frm.doc.age != null &&
-			frm.doc.age !== "" &&
-			frm.doc.age >= DEPENDENT_CHILD_AGE_LIMIT;
-		category = aged_out ? "General" : "Staff Dependent";
-	}
-	// Not Staff-related - Billing Category stays exactly whatever Front Desk
-	// picked by hand, same as the server-side rule this mirrors.
-	if (category) {
-		frm.set_value("billing_category", category);
+function check_dependent_aged_out_preview(frm) {
+	if (frm.doc.billing_category !== "Staff Dependent") return;
+	const aged_out =
+		CHILD_RELATIONSHIPS.includes(frm.doc.dependent_relationship) &&
+		frm.doc.age != null &&
+		frm.doc.age !== "" &&
+		frm.doc.age >= DEPENDENT_CHILD_AGE_LIMIT;
+	if (aged_out) {
+		frm.set_value("billing_category", "General");
 	}
 }
 

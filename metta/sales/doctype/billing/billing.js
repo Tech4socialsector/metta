@@ -880,6 +880,7 @@ function load_consultation_items(frm, consultation) {
 				row.rate = i.rate;
 				row.gst_percent = i.gst_percent;
 				row.amount = i.amount;
+				row.batch_no = i.batch_no;
 			};
 			data.pharmacy_items.forEach((i) => fill_row("pharmacy_items", i));
 			data.service_items.forEach((i) => fill_row("service_items", i));

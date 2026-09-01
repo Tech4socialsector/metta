@@ -29,7 +29,6 @@
   "district",
   "address",
   "staff_dependent_section",
-  "staff_status",
   "staff_member",
   "dependent_relationship",
   "billing_section",
@@ -133,20 +132,14 @@
    "label": "Staff / Dependent"
   },
   {
-   "fieldname": "staff_status",
-   "fieldtype": "Select",
-   "label": "Staff Status",
-   "options": "\nStaff\nStaff Dependent"
-  },
-  {
-   "depends_on": "eval:doc.staff_status",
+   "depends_on": "eval:doc.billing_category==\"Staff\" || doc.billing_category==\"Staff Dependent\"",
    "fieldname": "staff_member",
    "fieldtype": "Link",
    "label": "Staff Member",
    "options": "Staff Member"
   },
   {
-   "depends_on": "eval:doc.staff_status=='Staff Dependent'",
+   "depends_on": "eval:doc.billing_category==\"Staff Dependent\"",
    "fieldname": "dependent_relationship",
    "fieldtype": "Select",
    "label": "Relationship to Staff Member",
@@ -162,8 +155,7 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Billing Category",
-   "options": "Category Price Adjustment",
-   "read_only_depends_on": "eval:doc.staff_status"
+   "options": "Category Price Adjustment"
   },
   {
    "fetch_from": "billing_category.discount_percent",

@@ -62,24 +62,23 @@ class PatientRegistration(Document):
 			)
 
 	def validate_staff_dependent(self):
-		auto_category = calculate_billing_category(
-			self.staff_status, self.dependent_relationship, self.age
-		)
-		# Only Staff/Dependent registrations are auto-assigned a category this
-		# way - an ordinary patient's Billing Category stays exactly whatever
-		# Front Desk picked by hand.
-		if not auto_category:
+		# Billing Category is picked directly now (Staff/Staff Dependent/
+		# General/...) - the only thing still enforced here is downgrading a
+		# Staff Dependent who's aged out of it, same rule the daily
+		# age_out_staff_dependents() job re-checks passively over time.
+		if self.billing_category != STAFF_DEPENDENT_CATEGORY:
 			return
-		if self.billing_category != auto_category:
-			self.billing_category = auto_category
-			# discount_percent is normally kept correct by the client's own
-			# fetch_from - but this can also run with no client involved (the
-			# daily age-out job), so it's resynced here directly rather than
-			# trusting whatever discount_percent happened to already be on
-			# the document.
-			self.discount_percent = (
-				frappe.db.get_value("Category Price Adjustment", auto_category, "discount_percent") or 0
-			)
+		if not check_dependent_aged_out(self.dependent_relationship, self.age):
+			return
+		self.billing_category = GENERAL_CATEGORY
+		# discount_percent is normally kept correct by the client's own
+		# fetch_from - but this can also run with no client involved (the
+		# daily age-out job), so it's resynced here directly rather than
+		# trusting whatever discount_percent happened to already be on
+		# the document.
+		self.discount_percent = (
+			frappe.db.get_value("Category Price Adjustment", GENERAL_CATEGORY, "discount_percent") or 0
+		)
 
 
 @frappe.whitelist()
@@ -153,16 +152,11 @@ def calculate_age(dob):
 	return current.year - dob.year - ((current.month, current.day) < (dob.month, dob.day))
 
 
-def calculate_billing_category(staff_status, dependent_relationship, age):
-	# Returns the Billing Category this Staff Status implies, or None if the
-	# patient isn't Staff-related at all (in which case the caller must leave
-	# Billing Category exactly as manually set).
-	if staff_status == "Staff":
-		return STAFF_CATEGORY
-	if staff_status == "Staff Dependent":
-		aged_out = dependent_relationship in CHILD_RELATIONSHIPS and age is not None and age >= DEPENDENT_CHILD_AGE_LIMIT
-		return GENERAL_CATEGORY if aged_out else STAFF_DEPENDENT_CATEGORY
-	return None
+def check_dependent_aged_out(dependent_relationship, age):
+	# Only a Son/Daughter ages out - Husband/Wife/Father/Mother never do,
+	# since a spouse or parent's own age has no bearing on their dependent
+	# status (see CHILD_RELATIONSHIPS above).
+	return dependent_relationship in CHILD_RELATIONSHIPS and age is not None and age >= DEPENDENT_CHILD_AGE_LIMIT
 
 
 def ensure_default_billing_categories():
@@ -196,7 +190,7 @@ def age_out_staff_dependents():
 	# Dependent charity. Re-saving every dependent lets validate_staff_dependent()
 	# recompute the same rule it already applies on every manual save.
 	names = frappe.get_all(
-		"Patient Registration", filters={"staff_status": "Staff Dependent"}, pluck="name"
+		"Patient Registration", filters={"billing_category": STAFF_DEPENDENT_CATEGORY}, pluck="name"
 	)
 	for name in names:
 		doc = frappe.get_doc("Patient Registration", name)

@@ -381,12 +381,19 @@ def _billing_row(item_code, item_name, qty):
 		["unit_of_measure", "standard_selling_rate", "gst_percent", "has_batch", "item_type"],
 		as_dict=True,
 	) or frappe._dict()
-	# Medicine/Consumable pricing lives on the Batch, not the Item - rate is
-	# resolved client-side once a warehouse is known and batches can be
-	# allocated (see billing.js). Service items aren't batch-tracked, so
-	# Service Rate still applies directly, same as before.
+	# Medicine/Consumable pricing lives on the Batch, not the Item - resolved
+	# right here from whichever batch was just allocated below, the same
+	# lookup batch_no's own change-handler does for a manually-picked batch
+	# in billing.js. Service items aren't batch-tracked, so Service Rate
+	# still applies directly, same as before.
 	is_batched = item_details.item_type in ("Medicine", "Consumable")
-	rate = 0 if is_batched else flt(item_details.standard_selling_rate)
+	batch_no = get_fefo_batch(item_code) if item_details.has_batch else None
+	if is_batched and batch_no:
+		rate = flt(frappe.db.get_value("Batch", batch_no, "selling_rate"))
+	elif is_batched:
+		rate = 0
+	else:
+		rate = flt(item_details.standard_selling_rate)
 	return {
 		"item": item_code,
 		"item_name": item_name,
@@ -396,7 +403,7 @@ def _billing_row(item_code, item_name, qty):
 		"rate": rate,
 		"gst_percent": flt(item_details.gst_percent),
 		"amount": rate * flt(qty),
-		"batch_no": get_fefo_batch(item_code) if item_details.has_batch else None,
+		"batch_no": batch_no,
 	}
 
 
