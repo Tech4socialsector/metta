@@ -41,9 +41,8 @@
   {
    "fetch_from": "item.unit_of_measure",
    "fieldname": "unit_of_measure",
-   "fieldtype": "Link",
+   "fieldtype": "Data",
    "label": "Unit of Measure",
-   "options": "Unit of Measure",
    "reqd": 1
   },
   {
