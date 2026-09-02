@@ -23,6 +23,7 @@
   "emergency_contact_name",
   "emergency_phone_number",
   "relationship_to_the_patient",
+  "relationship_other",
   "email",
   "pin_code",
   "state",
@@ -219,7 +220,14 @@
    "fieldname": "relationship_to_the_patient",
    "fieldtype": "Select",
    "label": "Relationship to the Patient ",
-   "options": "\nHusband\nMother\nFather"
+   "options": "\nHusband\nWife\nMother\nFather\nSon\nDaughter\nBrother\nSister\nGuardian\nFriend\nOther"
+  },
+  {
+   "depends_on": "eval:doc.relationship_to_the_patient==\"Other\"",
+   "fieldname": "relationship_other",
+   "fieldtype": "Data",
+   "label": "Specify Relationship",
+   "mandatory_depends_on": "eval:doc.relationship_to_the_patient==\"Other\""
   },
   {
    "fieldname": "column_break_fchc",
