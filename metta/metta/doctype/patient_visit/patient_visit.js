@@ -421,13 +421,22 @@ frappe.ui.form.on("Patient Visit", {
 				frm._category_adjustment = adjustment;
 				frm.set_value("charity_percent", (adjustment && adjustment.charity_percent) || 0);
 				frm.set_value("adjustment_type", (adjustment && adjustment.adjustment_type) || "");
-				// A Corporate patient's fee normally goes on their employer's
-				// credit account - suggested here so Front Desk doesn't have to
-				// remember to pick it by hand, but still just a starting point:
-				// a patient who says "bill me directly, I'll claim it myself
-				// later" just has Payment Mode changed back to Cash/UPI/Card,
-				// same as any other field this app auto-suggests.
-				if (frm.doc.billing_category === "Corporate" && !frm.doc.payment_mode) {
+				// Any patient who belongs to a company at all (Corporate
+				// Customer set - regardless of whether that company's own
+				// category happens to charge extra, like Woodstock, or not,
+				// like most others) normally goes on their employer's credit
+				// account - suggested here so Front Desk doesn't have to
+				// remember to pick it by hand, but still just a starting
+				// point: a patient who says "bill me directly, I'll claim it
+				// myself later" just has Payment Mode changed back to
+				// Cash/UPI/Card, same as any other field this app auto-suggests.
+				// company_name's own fetch_from (uhin_id.corporate_customer)
+				// resolves in the same batch as billing_category's, both off
+				// the same uhin_id link, so it's already on frm.doc here. Not
+				// the same field as this doctype's own "Corporate Customer"
+				// (which is only ever set when this visit's OWN registration
+				// fee is itself paid Credit - Corporate).
+				if (frm.doc.company_name && !frm.doc.payment_mode) {
 					frm.set_value("payment_mode", "Credit - Corporate");
 				}
 				calculate_billing_totals(frm);

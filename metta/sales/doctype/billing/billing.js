@@ -255,13 +255,19 @@ frappe.ui.form.on("Billing", {
 			args: { billing_category: frm.doc.billing_category },
 			callback(r) {
 				frm._category_adjustment = r.message || null;
-				// A Corporate patient's bill normally goes on their employer's
-				// credit account - suggested here so Billing Staff don't have to
-				// remember to pick it by hand, but still just a starting point:
-				// a patient who says "bill me directly, I'll claim it myself
-				// later" just has Payment Mode changed back to Cash/UPI/Card,
-				// same as any other field this app auto-suggests.
-				if (frm.doc.billing_category === "Corporate" && !frm.doc.payment_mode) {
+				// Any patient who belongs to a company at all (Corporate
+				// Customer set - regardless of whether that company's own
+				// category happens to charge extra, like Woodstock, or not,
+				// like most others) normally goes on their employer's credit
+				// account - suggested here so Billing Staff don't have to
+				// remember to pick it by hand, but still just a starting
+				// point: a patient who says "bill me directly, I'll claim it
+				// myself later" just has Payment Mode changed back to
+				// Cash/UPI/Card, same as any other field this app auto-suggests.
+				// corporate_customer's own fetch_from (patient.corporate_customer)
+				// resolves in the same batch as billing_category's, both off
+				// the same patient link, so it's already on frm.doc here.
+				if (frm.doc.corporate_customer && !frm.doc.payment_mode) {
 					frm.set_value("payment_mode", "Credit - Corporate");
 				}
 				calculate_totals(frm);

@@ -274,6 +274,7 @@
   },
   {
    "depends_on": "eval:doc.payment_mode==\"Credit - Corporate\"",
+   "fetch_from": "patient.company_name",
    "fieldname": "corporate_customer",
    "fieldtype": "Link",
    "label": "Corporate Customer",

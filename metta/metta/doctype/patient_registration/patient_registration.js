@@ -1,6 +1,11 @@
 // Copyright (c) 2026, tfss and contributors
 // For license information, please see license.txt
 
+// The only Billing Categories ever picked without a Company behind them -
+// everything else (Corporate, Woodstock Corporate, Wynbrg, any future
+// company's own record) is company-driven and tracks corporate_customer.
+const FIXED_BILLING_CATEGORIES = ["General", "Staff", "Staff Dependent"];
+
 frappe.ui.form.on("Patient Registration", {
 	refresh(frm) {
 		// Autocomplete's own validate() blanks out anything typed that isn't
@@ -23,7 +28,34 @@ frappe.ui.form.on("Patient Registration", {
 	last_name(frm) {
 		update_patient_name_preview(frm);
 	},
+	corporate_customer(frm) {
+		// Billing Category's own fetch_from (see the field's "fetch_from":
+		// "corporate_customer.billing_category" in the doctype) handles
+		// filling it in the moment a Company is picked - same mechanism as
+		// Pin Code -> State/District. That only ever fires on a real pick
+		// though, never on clearing one, so clearing Company back out still
+		// needs to be handled here by hand.
+		if (!frm.doc.corporate_customer) {
+			// Company Staff Code only ever means something against a real
+			// Company - stale otherwise, so cleared the same moment Company
+			// Name itself is.
+			if (frm.doc.staff_id) frm.set_value("staff_id", "");
+			// Every company has its own Billing Category record (e.g.
+			// "Woodstock Corporate", "Wynbrg") - not just one literally named
+			// "Corporate" - so anything other than the three fixed, no-company
+			// categories is company-driven and clears with it.
+			if (frm.doc.billing_category && !FIXED_BILLING_CATEGORIES.includes(frm.doc.billing_category)) {
+				frm.set_value("billing_category", "");
+			}
+		}
+	},
 	billing_category(frm) {
+		// A Billing Category change that didn't come from corporate_customer
+		// itself (e.g. picked back to General by hand) leaves a mismatched
+		// Company sitting there otherwise - cleared so the two can't disagree.
+		if (FIXED_BILLING_CATEGORIES.includes(frm.doc.billing_category) && frm.doc.corporate_customer) {
+			frm.set_value("corporate_customer", "");
+		}
 		// Charity Amount only ever applies to a General patient - Staff/Staff
 		// Dependent already gets its charity automatically, so any leftover
 		// hand-typed amount from before switching away from General is
@@ -31,12 +63,9 @@ frappe.ui.form.on("Patient Registration", {
 		if (frm.doc.billing_category !== "General" && frm.doc.charity_amount) {
 			frm.set_value("charity_amount", 0);
 		}
-		// Staff Member/Relationship no longer apply once Billing Category
-		// moves away from Staff/Staff Dependent - cleared rather than left
-		// silently mismatched with what's shown (or hidden) right above.
-		if (frm.doc.billing_category !== "Staff" && frm.doc.billing_category !== "Staff Dependent" && frm.doc.staff_member) {
-			frm.set_value("staff_member", "");
-		}
+		// Relationship no longer applies once Billing Category moves away from
+		// Staff Dependent - cleared rather than left silently mismatched with
+		// what's shown (or hidden) right above.
 		if (frm.doc.billing_category !== "Staff Dependent" && frm.doc.dependent_relationship) {
 			frm.set_value("dependent_relationship", "");
 		}

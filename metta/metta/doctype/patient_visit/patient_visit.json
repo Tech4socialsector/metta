@@ -62,6 +62,7 @@
   "default_currency",
   "column_break_24",
   "billing_category",
+  "company_name",
   "charity_percent",
   "adjustment_type",
   "charity_amount",
@@ -351,6 +352,7 @@
    "fieldtype": "Column Break"
   },
   {
+   "default": "Today",
    "fieldname": "admission_date",
    "fieldtype": "Date",
    "label": "Admission Date"
@@ -470,6 +472,13 @@
    "fieldtype": "Link",
    "label": "Billing Category",
    "options": "Category Price Adjustment"
+  },
+  {
+   "fetch_from": "uhin_id.corporate_customer",
+   "fieldname": "company_name",
+   "fieldtype": "Link",
+   "label": "Company Name",
+   "options": "Corporate Customer"
   },
   {
    "depends_on": "eval:doc.registration_category!='IP'",

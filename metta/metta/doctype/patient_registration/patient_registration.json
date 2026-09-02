@@ -17,9 +17,9 @@
   "age",
   "sex",
   "marital_status",
+  "phone",
   "column_break_isoy",
   "uid",
-  "phone",
   "emergency_contact_name",
   "emergency_phone_number",
   "relationship_to_the_patient",
@@ -28,11 +28,13 @@
   "state",
   "district",
   "address",
-  "staff_dependent_section",
-  "staff_member",
-  "dependent_relationship",
   "billing_section",
+  "corporate_customer",
+  "staff_id",
   "billing_category",
+  "dependent_relationship",
+  "column_break_fchc",
+  "gst_number",
   "charity_percent",
   "charity_amount",
   "default_currency"
@@ -127,22 +129,10 @@
    "label": "Village"
   },
   {
-   "fieldname": "staff_dependent_section",
-   "fieldtype": "Section Break",
-   "label": "Staff / Dependent"
-  },
-  {
-   "depends_on": "eval:doc.billing_category==\"Staff\" || doc.billing_category==\"Staff Dependent\"",
-   "fieldname": "staff_member",
-   "fieldtype": "Link",
-   "label": "Staff Member",
-   "options": "Staff Member"
-  },
-  {
    "depends_on": "eval:doc.billing_category==\"Staff Dependent\"",
    "fieldname": "dependent_relationship",
    "fieldtype": "Select",
-   "label": "Relationship to Staff Member",
+   "label": "Relationship to Staff",
    "options": "\nHusband\nWife\nSon\nDaughter\nFather\nMother"
   },
   {
@@ -151,11 +141,32 @@
    "label": "Billing Category"
   },
   {
+   "fieldname": "corporate_customer",
+   "fieldtype": "Link",
+   "label": "Company Name",
+   "options": "Corporate Customer"
+  },
+  {
+   "depends_on": "eval:doc.corporate_customer",
+   "fieldname": "staff_id",
+   "fieldtype": "Data",
+   "label": "Company Staff Code"
+  },
+  {
+   "fetch_from": "corporate_customer.billing_category",
    "fieldname": "billing_category",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Billing Category",
    "options": "Category Price Adjustment"
+  },
+  {
+   "depends_on": "eval:doc.corporate_customer",
+   "fetch_from": "corporate_customer.gst_number",
+   "fieldname": "gst_number",
+   "fieldtype": "Data",
+   "label": "GSTIN Number",
+   "read_only": 1
   },
   {
    "fetch_from": "billing_category.charity_percent",
@@ -209,6 +220,10 @@
    "fieldtype": "Select",
    "label": "Relationship to the Patient ",
    "options": "\nHusband\nMother\nFather"
+  },
+  {
+   "fieldname": "column_break_fchc",
+   "fieldtype": "Column Break"
   }
  ],
  "icon": "fa fa-user",
@@ -219,7 +234,7 @@
   }
  ],
  "max_attachments": 50,
- "modified": "2026-08-25 18:54:48.045698",
+ "modified": "2026-09-02 12:59:45.837059",
  "modified_by": "Administrator",
  "module": "metta",
  "name": "Patient Registration",

@@ -1,65 +1,37 @@
 {
  "actions": [],
+ "allow_rename": 1,
  "autoname": "field:customer_name",
- "creation": "2026-07-17 21:00:00.000000",
+ "creation": "2026-07-17 21:00:00",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "customer_name",
-  "contact_person",
-  "contact_number",
-  "email",
-  "address",
+  "billing_category",
   "gst_number",
-  "credit_limit",
-  "outstanding_amount",
   "is_active"
  ],
  "fields": [
   {
    "fieldname": "customer_name",
    "fieldtype": "Data",
-   "label": "Corporate Customer Name",
+   "label": "Company Name",
    "reqd": 1,
    "unique": 1
   },
   {
-   "fieldname": "contact_person",
-   "fieldtype": "Data",
-   "label": "Contact Person"
-  },
-  {
-   "fieldname": "contact_number",
-   "fieldtype": "Data",
-   "label": "Contact Number",
-   "length": 10
-  },
-  {
-   "fieldname": "email",
-   "fieldtype": "Data",
-   "label": "Email",
-   "options": "Email"
-  },
-  {
-   "fieldname": "address",
-   "fieldtype": "Small Text",
-   "label": "Address"
+   "fieldname": "billing_category",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Billing Category",
+   "options": "Category Price Adjustment",
+   "reqd": 1
   },
   {
    "fieldname": "gst_number",
    "fieldtype": "Data",
-   "label": "GST Number"
-  },
-  {
-   "fieldname": "credit_limit",
-   "fieldtype": "Currency",
-   "label": "Credit Limit"
-  },
-  {
-   "fieldname": "outstanding_amount",
-   "fieldtype": "Currency",
-   "label": "Outstanding Amount (Receivable)",
-   "read_only": 1
+   "label": "GSTN Number"
   },
   {
    "default": "1",
@@ -71,7 +43,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-12 10:00:00.000000",
+ "modified": "2026-09-02 12:26:57.350803",
  "modified_by": "Administrator",
  "module": "Sales",
  "name": "Corporate Customer",
