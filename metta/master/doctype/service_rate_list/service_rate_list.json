@@ -120,6 +120,13 @@
    "read": 1,
    "report": 1,
    "role": "Pharmacy Staff"
+  },
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Lab Staff"
   }
  ],
  "row_format": "Dynamic",

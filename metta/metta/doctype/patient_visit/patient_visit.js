@@ -70,6 +70,23 @@ frappe.ui.form.on("Patient Visit", {
 		});
 	},
 	refresh(frm) {
+		// billing_category can already be set when the form first loads (an
+		// existing, previously-saved visit) without the field's own change
+		// handler ever having fired to populate frm._category_adjustment -
+		// without this, typing straight into Charity Percent on a reopened
+		// visit silently computes against a null adjustment_type (Discount
+		// never recalculates) until billing_category is re-picked by hand.
+		if (frm.doc.billing_category && !frm._category_adjustment) {
+			frappe.call({
+				method: "metta.metta.doctype.patient_visit.patient_visit.get_category_adjustment",
+				args: { billing_category: frm.doc.billing_category },
+				callback(r) {
+					frm._category_adjustment = r.message || null;
+					calculate_billing_totals(frm);
+				},
+			});
+		}
+
 		if (frm.is_new()) {
 			if (frm.doc.converted_from_registration) {
 				// Opened by "Admit Patient" - already correctly set to IP, so
@@ -101,30 +118,42 @@ frappe.ui.form.on("Patient Visit", {
 		// Only meaningful once the registration is saved (frm.doc.name is a
 		// real document to render a receipt for).
 		if (!frm.is_new()) {
-			if (frm.doc.registration_category === "OP") {
-				frm.add_custom_button(__("Admit Patient"), () => {
-					frappe.call({
-						method:
-							"metta.metta.doctype.patient_visit.patient_visit.get_admission_defaults",
-						args: { op_registration: frm.doc.name },
-						callback(r) {
-							if (!r.message) return;
-							// The OP visit's own record (fee, receipt) is left untouched -
-							// this opens a brand-new IP registration instead of converting
-							// the current one in place.
-							frappe.new_doc("Patient Visit", {
-								registration_category: "IP",
-								uhin_id: r.message.uhin_id,
-								department_name: r.message.department_name,
-								doctor_name: r.message.doctor_name,
-								converted_from_registration: r.message.converted_from_registration,
-								billing_category: r.message.billing_category,
-								charity_percent: r.message.charity_percent,
-								adjustment_type: r.message.adjustment_type,
+			// Only offered on today's own OP visit, and only once - a patient
+			// coming in again later is a fresh visit of their own (with its own
+			// "Admit Patient"), not a reason to keep re-admitting off a stale
+			// one; and an OP visit that's already been converted to IP once
+			// shouldn't be re-admittable a second time from the same button.
+			if (frm.doc.registration_category === "OP" && frm.doc.date === frappe.datetime.get_today()) {
+				frappe.call({
+					method: "metta.sales.doctype.billing.billing.get_ip_id_for_op",
+					args: { op_id: frm.doc.name },
+					callback(r) {
+						if (r.message) return; // already admitted once - button stays hidden
+						frm.add_custom_button(__("Admit Patient"), () => {
+							frappe.call({
+								method:
+									"metta.metta.doctype.patient_visit.patient_visit.get_admission_defaults",
+								args: { op_registration: frm.doc.name },
+								callback(res) {
+									if (!res.message) return;
+									// The OP visit's own record (fee, receipt) is left untouched -
+									// this opens a brand-new IP registration instead of converting
+									// the current one in place.
+									frappe.new_doc("Patient Visit", {
+										registration_category: "IP",
+										uhin_id: res.message.uhin_id,
+										department_name: res.message.department_name,
+										doctor_name: res.message.doctor_name,
+										converted_from_registration: res.message.converted_from_registration,
+										billing_category: res.message.billing_category,
+										charity_percent: res.message.charity_percent,
+										adjustment_type: res.message.adjustment_type,
+									});
+								},
 							});
-						},
-					});
-				}).addClass("btn-primary");
+						}).addClass("btn-primary");
+					},
+				});
 			}
 
 			frm.add_custom_button(__("Receipt Preview"), () => {

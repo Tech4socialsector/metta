@@ -202,3 +202,39 @@ def search_items_for_order(search_term=""):
 			}
 		)
 	return result
+
+
+def get_permission_query_conditions(user=None):
+	# Purchase Approver's own job is the pending queue - not a browsable
+	# history of every Purchase Order ever raised, approved, or rejected.
+	# Store Staff/Warehouse Staffs/System Manager still need the full list
+	# (raising, receiving, oversight), so this only ever narrows what
+	# Purchase Approver itself sees, never anyone else's own DocPerm access.
+	user = user or frappe.session.user
+	roles = frappe.get_roles(user)
+	if (
+		"System Manager" in roles
+		or "Store Staff" in roles
+		or "Warehouse Staffs" in roles
+		or "Purchase Approver" not in roles
+	):
+		return ""
+	return "`tabPurchase Order`.status = 'Pending Approval'"
+
+
+def has_permission(doc, ptype, user):
+	# Mirrors get_permission_query_conditions() - a Purchase Approver opening
+	# an already-decided PO directly by its URL shouldn't see it either, not
+	# just have it filtered out of the list view.
+	roles = frappe.get_roles(user)
+	if (
+		"System Manager" in roles
+		or "Store Staff" in roles
+		or "Warehouse Staffs" in roles
+		or "Purchase Approver" not in roles
+	):
+		return True
+
+	if isinstance(doc, (str, int)):
+		doc = frappe.get_doc("Purchase Order", doc)
+	return doc.status == "Pending Approval"

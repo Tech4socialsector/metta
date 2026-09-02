@@ -476,6 +476,15 @@ def get_admission_defaults(op_registration):
 	op.check_permission("read")
 	if op.registration_category != "OP":
 		frappe.throw(_("Only an OP registration can be converted into an admission."))
+	# The client already hides "Admit Patient" once this OP visit has been
+	# converted once - this is the check an already-open page or a direct API
+	# call can't bypass, so the same OP visit can never end up admitted twice.
+	existing_ip = frappe.db.get_value("Patient Visit", {"converted_from_registration": op.name}, "name")
+	if existing_ip:
+		frappe.throw(
+			_("{0} has already been admitted to IP as {1}.").format(op.name, existing_ip),
+			title=_("Already Admitted"),
+		)
 	return {
 		"uhin_id": op.uhin_id,
 		"department_name": op.department_name,

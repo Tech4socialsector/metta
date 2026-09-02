@@ -41,6 +41,7 @@ class DischargeBill(Document):
 		if not compiled:
 			self.total_billed = 0
 			self.advance_paid = 0
+			self.advance_balance = 0
 			self.advance_adjusted = 0
 			self.amount_collected = 0
 			self.balance_due = 0
@@ -50,6 +51,7 @@ class DischargeBill(Document):
 			self.append("bill_items", row)
 		self.total_billed = compiled["total_billed"]
 		self.advance_paid = compiled["advance_paid"]
+		self.advance_balance = compiled["advance_balance"]
 		self.advance_adjusted = compiled["advance_adjusted"]
 		self.amount_collected = compiled["amount_collected"]
 		self.balance_due = compiled["balance_due"]
@@ -117,6 +119,11 @@ def compile_discharge_bill(ip_id):
 		"bill_items": items,
 		"total_billed": total_billed,
 		"advance_paid": flt(advance["total_collected"], 2),
+		# What's left of the advance after this admission's own bills already
+		# adjusted their share against it - get_advance_balance() itself is
+		# already scoped to just this one ip_id, same as advance_adjusted
+		# below, so the two agree by construction.
+		"advance_balance": flt(advance["balance"], 2),
 		"advance_adjusted": advance_adjusted,
 		"amount_collected": amount_collected,
 		# Whatever's left unpaid after both the advance and what's already

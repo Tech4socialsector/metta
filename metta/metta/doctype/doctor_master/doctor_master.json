@@ -122,6 +122,27 @@
    "print": 1,
    "read": 1,
    "role": "Front Desk"
+  },
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Nurse"
+  },
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Lab Staff"
+  },
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Billing Staff"
   }
  ],
  "row_format": "Dynamic",

@@ -19,6 +19,7 @@
   "totals_section",
   "total_billed",
   "advance_paid",
+  "advance_balance",
   "column_break_totals",
   "advance_adjusted",
   "amount_collected",
@@ -111,6 +112,13 @@
    "fieldname": "advance_paid",
    "fieldtype": "Currency",
    "label": "Advance Paid",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "advance_balance",
+   "fieldtype": "Currency",
+   "label": "Advance Balance",
    "precision": "2",
    "read_only": 1
   },

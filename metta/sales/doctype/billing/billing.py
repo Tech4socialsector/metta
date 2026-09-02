@@ -298,27 +298,37 @@ def get_category_adjustment(billing_category):
 
 @frappe.whitelist()
 def get_registration_charity_amount(patient):
-	# A charity amount can be hand-typed once, right at Patient Registration,
-	# for a General patient who plainly can't afford full price - offered
-	# here as this bill's starting Charity Amount so Billing Staff don't have
-	# to already know it or go look the registration record up themselves.
+	# A charity amount can be hand-typed for a General patient who plainly
+	# can't afford full price at either of two earlier points - once, at
+	# Patient Registration, or again at this particular Patient Visit -
+	# offered here as this bill's starting Charity Amount so Billing Staff
+	# don't have to already know it or go look either record up themselves.
 	# Still just a suggestion, same as any other Charity Amount entry - stays
 	# fully editable/removable, never forced.
 	frappe.has_permission("Billing", "read", throw=True)
 	if not patient:
 		return 0
-	uhin_id = frappe.db.get_value("Patient Visit", patient, "uhin_id")
-	if not uhin_id:
+	visit = frappe.db.get_value(
+		"Patient Visit", patient, ["uhin_id", "billing_category", "charity_amount"], as_dict=True
+	)
+	if not visit:
 		return 0
-	registration = frappe.db.get_value(
-		"Patient Registration", uhin_id, ["billing_category", "charity_amount"], as_dict=True
+
+	registration = (
+		frappe.db.get_value("Patient Registration", visit.uhin_id, ["billing_category", "charity_amount"], as_dict=True)
+		if visit.uhin_id
+		else None
 	)
 	# Only for General - Staff/Staff Dependent/Corporate already get their
 	# adjustment automatically from Billing Category, so this would otherwise
-	# be a second, conflicting one stacked on top.
-	if not registration or registration.billing_category != "General":
-		return 0
-	return flt(registration.charity_amount)
+	# be a second, conflicting one stacked on top. Registration's own figure
+	# wins when both exist - it's the earlier, more considered one; Visit's
+	# is only a fallback for whenever Registration never got one.
+	if registration and registration.billing_category == "General" and flt(registration.charity_amount):
+		return flt(registration.charity_amount)
+	if visit.billing_category == "General" and flt(visit.charity_amount):
+		return flt(visit.charity_amount)
+	return 0
 
 
 IP_ADMISSION_CHARGE_ITEM = "IP-ADMISSION-CHARGE"

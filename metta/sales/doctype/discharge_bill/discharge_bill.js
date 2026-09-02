@@ -78,8 +78,8 @@ frappe.ui.form.on("Discharge Bill", {
 		if (!frm.doc.ip_id) {
 			frm.clear_table("bill_items");
 			frm.refresh_field("bill_items");
-			["total_billed", "advance_paid", "advance_adjusted", "amount_collected", "balance_due"].forEach((f) =>
-				frm.set_value(f, 0)
+			["total_billed", "advance_paid", "advance_balance", "advance_adjusted", "amount_collected", "balance_due"].forEach(
+				(f) => frm.set_value(f, 0)
 			);
 			return;
 		}
@@ -104,6 +104,7 @@ frappe.ui.form.on("Discharge Bill", {
 				frm.refresh_field("bill_items");
 				frm.set_value("total_billed", data.total_billed);
 				frm.set_value("advance_paid", data.advance_paid);
+				frm.set_value("advance_balance", data.advance_balance);
 				frm.set_value("advance_adjusted", data.advance_adjusted);
 				frm.set_value("amount_collected", data.amount_collected);
 				frm.set_value("balance_due", data.balance_due);

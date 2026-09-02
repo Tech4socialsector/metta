@@ -261,6 +261,8 @@ permission_query_conditions = {
 	"Diagnostic Test": "metta.metta.doctype.diagnostic_test.diagnostic_test.get_permission_query_conditions",
 	"Discharge Summary": "metta.metta.doctype.discharge_summary.discharge_summary.get_permission_query_conditions",
 	"Doctor Leave": "metta.metta.doctype.doctor_leave.doctor_leave.get_permission_query_conditions",
+	"Purchase Order": "metta.purchase_order.doctype.purchase_order.purchase_order.get_permission_query_conditions",
+	"Purchase Bill": "metta.purchase_order.doctype.purchase_bill.purchase_bill.get_permission_query_conditions",
 }
 
 has_permission = {
@@ -272,6 +274,8 @@ has_permission = {
 	"Discharge Summary": "metta.metta.doctype.discharge_summary.discharge_summary.has_permission",
 	"Doctor Leave": "metta.metta.doctype.doctor_leave.doctor_leave.has_permission",
 	"Doctor Master": "metta.metta.doctype.doctor_master.doctor_master.has_permission",
+	"Purchase Order": "metta.purchase_order.doctype.purchase_order.purchase_order.has_permission",
+	"Purchase Bill": "metta.purchase_order.doctype.purchase_bill.purchase_bill.has_permission",
 }
 
 # Document Events
