@@ -324,9 +324,25 @@ function render_prescription_item_search(frm) {
 					)}" autocomplete="off">
 					<div class="rx-item-results" style="display:none; position:absolute; z-index:50; background:var(--fg-color,#fff); border:1px solid var(--border-color,#d1d8dd); width:100%; max-height:260px; overflow:auto; box-shadow:0 2px 6px rgba(0,0,0,0.15);"></div>
 				</div>
-				<div style="width:100px;">
-					<label class="control-label" style="display:block; font-size:12px; margin-bottom:2px;">${__("Qty")}</label>
-					<input type="number" class="form-control rx-item-qty" min="1" step="1" value="1">
+				<div style="width:110px;">
+					<label class="control-label" style="display:block; font-size:12px; margin-bottom:2px;">${__("Dosage")}</label>
+					<select class="form-control rx-item-dosage">
+						<option value=""></option>
+						<option value="1-0-0">1-0-0</option>
+						<option value="0-1-0">0-1-0</option>
+						<option value="0-0-1">0-0-1</option>
+						<option value="1-0-1">1-0-1</option>
+						<option value="1-1-0">1-1-0</option>
+						<option value="0-1-1">0-1-1</option>
+						<option value="1-1-1">1-1-1</option>
+						<option value="2-0-0">2-0-0</option>
+						<option value="0-2-0">0-2-0</option>
+						<option value="0-0-2">0-0-2</option>
+						<option value="2-1-1">2-1-1</option>
+						<option value="1-1-2">1-1-2</option>
+						<option value="2-1-2">2-1-2</option>
+						<option value="2-2-2">2-2-2</option>
+					</select>
 				</div>
 				<div>
 					<button class="btn btn-primary btn-sm rx-item-add">${__("Add")}</button>
@@ -340,7 +356,7 @@ function render_prescription_item_search(frm) {
 	let current_rows = [];
 	const $search = wrapper.find(".rx-item-search");
 	const $results = wrapper.find(".rx-item-results");
-	const $qty = wrapper.find(".rx-item-qty");
+	const $dosage = wrapper.find(".rx-item-dosage");
 	const $selectedNote = wrapper.find(".rx-item-selected");
 
 	const select_row = (idx) => {
@@ -349,7 +365,7 @@ function render_prescription_item_search(frm) {
 		$search.val(selected.item_name);
 		$selectedNote.text(__("Selected: {0} ({1}) - Warehouse: {2}", [selected.item_name, selected.item_code, selected.warehouse]));
 		$results.hide();
-		$qty.trigger("focus").trigger("select");
+		$dosage.trigger("focus");
 	};
 
 	const render_results = (rows) => {
@@ -414,11 +430,6 @@ function render_prescription_item_search(frm) {
 			frappe.msgprint(__("Please search and select a medicine first."));
 			return;
 		}
-		const qty = cint($qty.val());
-		if (!qty || qty <= 0) {
-			frappe.msgprint(__("Please enter a Qty greater than 0."));
-			return;
-		}
 
 		// Frappe auto-adds one blank starter row to a new document's required
 		// Table field - remove it before adding the first real item, so it
@@ -431,13 +442,40 @@ function render_prescription_item_search(frm) {
 		const row = frm.add_child("prescribed_items");
 		row.item = selected.item_code;
 		row.item_name = selected.item_name;
-		row.qty = qty;
+		row.dosage = $dosage.val();
 		frm.refresh_field("prescribed_items");
+		// Quantity is auto-calculated from Dosage x Duration (see
+		// calculate_prescription_qty below) - Duration still needs filling in
+		// on the row itself, so Qty is left for that trigger to fill in.
 
 		selected = null;
 		$search.val("");
-		$qty.val("1");
+		$dosage.val("");
 		$selectedNote.text("");
 		$results.hide();
 	});
+}
+
+// A child table doctype's own .js file is never loaded by Frappe (istable
+// doctypes skip add_code() entirely) - this has to live in the parent's own
+// script instead, same as every other Prescription Item trigger above.
+frappe.ui.form.on("Prescription Item", {
+	dosage(frm, cdt, cdn) {
+		calculate_prescription_qty(cdt, cdn);
+	},
+	duration(frm, cdt, cdn) {
+		calculate_prescription_qty(cdt, cdn);
+	},
+});
+
+function calculate_prescription_qty(cdt, cdn) {
+	// Dosage is Morning-Afternoon-Night (e.g. "1-0-1") - doses per day is
+	// just those three numbers added up. Mirrors the server's own
+	// validate() exactly - a live preview only, save is what's authoritative.
+	const row = locals[cdt][cdn];
+	if (!row.dosage || !row.duration) return;
+	const doses_per_day = row.dosage
+		.split("-")
+		.reduce((total, part) => total + (cint(part) || 0), 0);
+	frappe.model.set_value(cdt, cdn, "qty", doses_per_day * cint(row.duration));
 }

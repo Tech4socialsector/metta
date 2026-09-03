@@ -6,9 +6,9 @@
  "field_order": [
   "item",
   "item_name",
-  "qty",
   "dosage",
   "duration",
+  "qty",
   "instructions"
  ],
  "fields": [
@@ -29,27 +29,28 @@
    "read_only": 1
   },
   {
-   "default": "1",
-   "description": "How many units to dispense - what Pharmacy actually hands over.",
+   "description": "Morning-Afternoon-Night, e.g. 1-0-1",
+   "fieldname": "dosage",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Dosage",
+   "options": "\n1-0-0\n0-1-0\n0-0-1\n1-0-1\n1-1-0\n0-1-1\n1-1-1\n2-0-0\n0-2-0\n0-0-2\n2-1-1\n1-1-2\n2-1-2\n2-2-2"
+  },
+  {
+   "description": "Number of days",
+   "fieldname": "duration",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Duration (Days)"
+  },
+  {
+   "description": "Auto-calculated as Dosage (doses per day) x Duration - not typed in directly.",
    "fieldname": "qty",
    "fieldtype": "Int",
    "in_list_view": 1,
    "label": "Quantity",
+   "read_only": 1,
    "reqd": 1
-  },
-  {
-   "description": "e.g. 1-0-1",
-   "fieldname": "dosage",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Dosage"
-  },
-  {
-   "description": "e.g. 5 days",
-   "fieldname": "duration",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Duration"
   },
   {
    "fieldname": "instructions",

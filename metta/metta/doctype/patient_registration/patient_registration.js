@@ -127,6 +127,13 @@ frappe.ui.form.on("Patient Registration", {
 			},
 		});
 	},
+	relationship_to_the_patient(frm) {
+		// Stale free-text from a previous "Other" pick shouldn't silently
+		// survive once a real relationship from the list is chosen instead.
+		if (frm.doc.relationship_to_the_patient !== "Other" && frm.doc.relationship_other) {
+			frm.set_value("relationship_other", "");
+		}
+	},
 });
 
 function update_patient_name_preview(frm) {
