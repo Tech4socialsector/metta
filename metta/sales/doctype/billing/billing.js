@@ -112,12 +112,12 @@ frappe.ui.form.on("Billing", {
 		// Only IP admissions have a running stay of Billing entries worth
 		// consolidating into one final bill - an OP visit is always just this
 		// one bill on its own. Even then, the button only appears once the
-		// doctor has actually completed the Discharge Summary - the clinical
-		// sign-off has to come first, Billing can't hand over a "discharge"
-		// bill before that's on record.
+		// admission itself has actually been marked Discharged - Discharge
+		// Bill comes first in this workflow, before the Discharge Summary,
+		// not after it.
 		if (!frm.is_new() && frm.doc.registration_category === "IP") {
 			frappe.call({
-				method: "metta.sales.doctype.billing.billing.has_discharge_summary",
+				method: "metta.sales.doctype.billing.billing.is_ip_discharged",
 				args: { patient_visit: frm.doc.patient },
 				callback(r) {
 					if (r.message) add_discharge_bill_button(frm);

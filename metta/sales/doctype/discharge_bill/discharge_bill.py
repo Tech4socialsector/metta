@@ -18,7 +18,7 @@ class DischargeBill(Document):
 	def validate_is_ip_and_discharged(self):
 		if not self.ip_id:
 			return
-		validate_ip_discharged_with_summary(self.ip_id)
+		validate_ip_discharged(self.ip_id)
 
 	def validate_single_bill_per_admission(self):
 		existing = frappe.db.get_value(
@@ -57,7 +57,12 @@ class DischargeBill(Document):
 		self.balance_due = compiled["balance_due"]
 
 
-def validate_ip_discharged_with_summary(ip_id):
+def validate_ip_discharged(ip_id):
+	# The Discharge Bill now comes first in this workflow - it only ever
+	# needs the admission itself marked Discharged, not a completed Discharge
+	# Summary (see Discharge Summary's own validate_billing_is_completed(),
+	# which is what now runs the other way around: no Discharge Summary until
+	# this bill is submitted).
 	visit = frappe.db.get_value(
 		"Patient Visit", ip_id, ["registration_category", "admission_status"], as_dict=True
 	)
@@ -65,11 +70,6 @@ def validate_ip_discharged_with_summary(ip_id):
 		frappe.throw(
 			_("Discharge Bill can only be created for an IP admission that has already been marked Discharged."),
 			title=_("Not Discharged Yet"),
-		)
-	if not frappe.db.exists("Discharge Summary", {"patient_visit": ip_id}):
-		frappe.throw(
-			_("The doctor must complete the Discharge Summary before the Discharge Bill can be generated."),
-			title=_("Discharge Summary Required"),
 		)
 
 
@@ -145,6 +145,30 @@ def get_print_html(discharge_bill):
 
 
 @frappe.whitelist()
+def get_billing_status(ip_id):
+	# "Billing completed" means the patient doesn't owe anything more, not
+	# just that a Discharge Bill document happens to have been submitted - a
+	# submitted bill can still have a real Balance Due sitting on it. Used
+	# both to gate Discharge Summary (see Discharge Summary's own
+	# validate_billing_is_completed(), and Patient Visit's "Discharge
+	# Summary" button) and to show Front Desk/the Doctor a plain answer to
+	# "is this patient done with billing" - not just a hidden/shown button
+	# they have to guess the reason for.
+	frappe.has_permission("Discharge Bill", "read", throw=True)
+	if not ip_id:
+		return {"completed": False, "discharge_bill": None, "balance_due": 0}
+
+	bill = frappe.db.get_value(
+		"Discharge Bill", {"ip_id": ip_id, "docstatus": 1}, ["name", "balance_due"], as_dict=True
+	)
+	if not bill:
+		return {"completed": False, "discharge_bill": None, "balance_due": 0}
+
+	balance_due = flt(bill.balance_due)
+	return {"completed": balance_due <= 0, "discharge_bill": bill.name, "balance_due": balance_due}
+
+
+@frappe.whitelist()
 def preview_discharge_bill(ip_id):
 	# Live preview before the doc is actually saved, same reasoning as
 	# Billing's own quick-add/admission-charge previews - validate() on save
@@ -152,5 +176,5 @@ def preview_discharge_bill(ip_id):
 	frappe.has_permission("Discharge Bill", "read", throw=True)
 	if not ip_id:
 		return None
-	validate_ip_discharged_with_summary(ip_id)
+	validate_ip_discharged(ip_id)
 	return compile_discharge_bill(ip_id)

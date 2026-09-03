@@ -199,16 +199,40 @@ frappe.ui.form.on("Patient Visit", {
 			});
 
 			if (frm.doc.registration_category === "IP" && frm.doc.admission_status === "Discharged") {
-				frm.add_custom_button(__("Discharge Summary"), () => {
-					frappe.call({
-						method:
-							"metta.metta.doctype.patient_visit.patient_visit.get_discharge_defaults",
-						args: { patient_visit: frm.doc.name },
-						callback(r) {
-							if (!r.message) return;
-							frappe.new_doc("Discharge Summary", r.message);
-						},
-					});
+				// Discharge Bill comes first in this workflow now - the
+				// button only appears once that bill has actually been
+				// submitted AND fully paid (Balance Due 0), not just
+				// submitted. The indicator here is what tells the Doctor/
+				// Front Desk which of those is still missing, rather than
+				// leaving them to guess why the button isn't there.
+				frappe.call({
+					method: "metta.sales.doctype.discharge_bill.discharge_bill.get_billing_status",
+					args: { ip_id: frm.doc.name },
+					callback(r) {
+						const status = r.message || { completed: false, discharge_bill: null, balance_due: 0 };
+						if (!status.discharge_bill) {
+							frm.dashboard.add_indicator(__("Billing: Discharge Bill not yet generated"), "orange");
+						} else if (!status.completed) {
+							frm.dashboard.add_indicator(
+								__("Billing: {0} still due on {1}", [format_currency(status.balance_due), status.discharge_bill]),
+								"orange"
+							);
+						} else {
+							frm.dashboard.add_indicator(__("Billing: Completed"), "green");
+						}
+						if (!status.completed) return;
+						frm.add_custom_button(__("Discharge Summary"), () => {
+							frappe.call({
+								method:
+									"metta.metta.doctype.patient_visit.patient_visit.get_discharge_defaults",
+								args: { patient_visit: frm.doc.name },
+								callback(res) {
+									if (!res.message) return;
+									frappe.new_doc("Discharge Summary", res.message);
+								},
+							});
+						});
+					},
 				});
 			}
 

@@ -9,6 +9,7 @@ from frappe.model.document import Document
 class DischargeSummary(Document):
 	def validate(self):
 		self.validate_visit_is_discharged()
+		self.validate_billing_is_completed()
 		self.validate_single_summary_per_visit()
 		if not self.prepared_by:
 			self.prepared_by = frappe.session.user
@@ -23,6 +24,23 @@ class DischargeSummary(Document):
 			frappe.throw(
 				_("Discharge Summary can only be created for a Patient Visit that is an IP admission and has already been marked Discharged."),
 				title=_("Visit Not Discharged"),
+			)
+
+	def validate_billing_is_completed(self):
+		# Reversed from how this used to work - the Discharge Bill is now
+		# generated first, and only once the patient has actually paid it off
+		# in full (not just a submitted bill sitting there with a real
+		# Balance Due still on it) can the doctor's Discharge Summary be
+		# written, not the other way around.
+		from metta.sales.doctype.discharge_bill.discharge_bill import get_billing_status
+
+		status = get_billing_status(self.patient_visit)
+		if not status["completed"]:
+			frappe.throw(
+				_(
+					"The Discharge Bill for this admission must be submitted and fully paid (Balance Due {0}) before the Discharge Summary can be written."
+				).format(frappe.format(status["balance_due"], {"fieldtype": "Currency"})),
+				title=_("Billing Not Completed"),
 			)
 
 	def validate_single_summary_per_visit(self):

@@ -647,14 +647,16 @@ def get_billing_items_for_consultation(consultation):
 
 
 @frappe.whitelist()
-def has_discharge_summary(patient_visit):
-	# The final bill is only meaningful once the doctor has actually signed
-	# off clinically - Billing shouldn't be able to hand over a "discharge"
-	# bill before that's on record.
+def is_ip_discharged(patient_visit):
+	# The Discharge Bill button only ever needs the admission itself marked
+	# Discharged now - Discharge Bill comes first in this workflow, before
+	# the Discharge Summary, not after it (see Discharge Bill's own
+	# validate_ip_discharged() and Discharge Summary's
+	# validate_billing_is_completed(), which now runs the other way around).
 	frappe.has_permission("Billing", "read", throw=True)
 	if not patient_visit:
 		return False
-	return bool(frappe.db.exists("Discharge Summary", {"patient_visit": patient_visit}))
+	return frappe.db.get_value("Patient Visit", patient_visit, "admission_status") == "Discharged"
 
 
 def _visit_id_query(registration_category, txt, start, page_len):

@@ -519,6 +519,19 @@ def get_discharge_defaults(patient_visit):
 			_("Discharge Summary can only be created once this IP admission is marked Discharged."),
 			title=_("Not Discharged Yet"),
 		)
+	# Discharge Bill comes first in this workflow now - the same check
+	# Discharge Summary's own validate() enforces on save, checked here too so
+	# the client isn't handed a form that's guaranteed to fail once opened.
+	from metta.sales.doctype.discharge_bill.discharge_bill import get_billing_status
+
+	status = get_billing_status(patient_visit)
+	if not status["completed"]:
+		frappe.throw(
+			_(
+				"The Discharge Bill for this admission must be submitted and fully paid (Balance Due {0}) before the Discharge Summary can be written."
+			).format(frappe.format(status["balance_due"], {"fieldtype": "Currency"})),
+			title=_("Billing Not Completed"),
+		)
 	return {"patient_visit": doc.name}
 
 
