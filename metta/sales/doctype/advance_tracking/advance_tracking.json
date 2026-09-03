@@ -1,0 +1,62 @@
+{
+ "actions": [],
+ "creation": "2026-09-03 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "entry_date",
+  "type",
+  "amount",
+  "available_amount"
+ ],
+ "fields": [
+  {
+   "default": "Now",
+   "fieldname": "entry_date",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Date & Time",
+   "read_only": 1
+  },
+  {
+   "description": "\"Advance Collected\" for a deposit, or the Bill Number for a bill that used some of the advance.",
+   "fieldname": "type",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Type",
+   "read_only": 1
+  },
+  {
+   "description": "Positive for an advance collected, negative for a bill that used some of it.",
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Amount",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "description": "The running balance right after this entry.",
+   "fieldname": "available_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Available Amount",
+   "precision": "2",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-09-03 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Sales",
+ "name": "Advance Tracking",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

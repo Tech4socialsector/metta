@@ -108,6 +108,7 @@ frappe.ui.form.on("Billing", {
 			add_advance_button(frm);
 			set_advance_balance_fields(frm);
 		}
+		maybe_add_advance_ledger_button(frm);
 
 		// Only IP admissions have a running stay of Billing entries worth
 		// consolidating into one final bill - an OP visit is always just this
@@ -216,6 +217,10 @@ frappe.ui.form.on("Billing", {
 				calculate_totals(frm);
 			},
 		});
+		maybe_add_advance_ledger_button(frm);
+	},
+	charity_scope(frm) {
+		calculate_totals(frm);
 	},
 	charity_percent(frm) {
 		calculate_totals(frm);
@@ -446,7 +451,11 @@ function calculate_totals(frm) {
 	const adjustment = frm._category_adjustment;
 	const adjustment_type =
 		adjustment && adjustment.charity_status === "Active" ? adjustment.adjustment_type : null;
-	const raw_percent = ["Charity", "Increase"].includes(adjustment_type) ? flt(frm.doc.charity_percent) : 0;
+	// Charity % is never forced to 0 here just because the current Billing
+	// Category has no active Charity/Increase rate - staff can always
+	// hand-type a Charity % on any bill, same freedom Charity Amount already
+	// has. adjustment_type only decides the sign below.
+	const raw_percent = flt(frm.doc.charity_percent);
 
 	let pharmacy_total = 0;
 	let service_total = 0;
@@ -485,6 +494,16 @@ function calculate_totals(frm) {
 	// real, full amount owed before Charity is applied.
 	const net_amount = flt(pharmacy_total + service_total, 2);
 
+	// Apply Charity To decides which total Charity %/Amount actually works
+	// against - Pharmacy only, Service only, or both combined (Net Amount,
+	// the default).
+	let charity_base = net_amount;
+	if (frm.doc.charity_scope === "Pharmacy") {
+		charity_base = pharmacy_total;
+	} else if (frm.doc.charity_scope === "Service") {
+		charity_base = service_total;
+	}
+
 	// Staff can hand-type a specific Charity Amount for this particular bill -
 	// it wins over the percentage-based one, same as the server's own
 	// validate(). Gated on charity_amount_is_manual (set by the charity_amount
@@ -496,19 +515,20 @@ function calculate_totals(frm) {
 	const manual_charity_amount = frm.doc.charity_amount_is_manual ? flt(frm.doc.charity_amount) : 0;
 	let charity_amount;
 	if (manual_charity_amount) {
-		// Capped at Net Amount itself so the bill can never net negative.
-		charity_amount = Math.min(manual_charity_amount, net_amount);
-		const derived_percent = net_amount ? flt((charity_amount / net_amount) * 100, 2) : 0;
+		// Capped at whichever total this Charity is scoped to, so it can
+		// never net that section (or the whole bill) negative.
+		charity_amount = Math.min(manual_charity_amount, charity_base);
+		const derived_percent = charity_base ? flt((charity_amount / charity_base) * 100, 2) : 0;
 		if (derived_percent !== flt(frm.doc.charity_percent)) {
 			frm.set_value("charity_percent", derived_percent);
 		}
 	} else {
-		// Charity is applied only once, right here, against Net Amount - it
-		// reduces what the patient actually pays, never the real selling
-		// price or the real GST owed above. Always a plain non-negative
-		// magnitude - "Charity" vs "Increase" is only decided below, at
-		// Payable Amount, never baked into this figure itself.
-		charity_amount = flt((net_amount * raw_percent) / 100, 2);
+		// Charity is applied only once, right here, against whichever total
+		// it's scoped to - it reduces what the patient actually pays, never
+		// the real selling price or the real GST owed above. Always a plain
+		// non-negative magnitude - "Charity" vs "Increase" is only decided
+		// below, at Payable Amount, never baked into this figure itself.
+		charity_amount = flt((charity_base * raw_percent) / 100, 2);
 	}
 	const payable_amount =
 		adjustment_type === "Increase" ? flt(net_amount + charity_amount, 2) : flt(net_amount - charity_amount, 2);
@@ -588,6 +608,76 @@ function add_advance_button(frm) {
 			},
 		});
 	});
+}
+
+function maybe_add_advance_ledger_button(frm) {
+	// A single "Advance Collected" row is nothing worth a button for - the
+	// ledger only earns its own view once this patient's advance has
+	// actually been drawn against (or topped up) at least once more.
+	if (frm.doc.registration_category !== "IP" || !frm.doc.patient) return;
+	frappe.call({
+		method: "metta.metta.doctype.patient_visit.patient_visit.get_advance_tracking",
+		args: { patient_visit: frm.doc.patient },
+		callback(r) {
+			const rows = r.message || [];
+			if (rows.length > 1) add_advance_ledger_button(frm);
+		},
+	});
+}
+
+function add_advance_ledger_button(frm) {
+	frm.add_custom_button(__("View Advance Ledger"), () => {
+		frappe.call({
+			method: "metta.metta.doctype.patient_visit.patient_visit.get_advance_tracking",
+			args: { patient_visit: frm.doc.patient },
+			callback(r) {
+				show_advance_ledger_dialog(r.message || []);
+			},
+		});
+	});
+}
+
+function show_advance_ledger_dialog(rows) {
+	// Re-fetched fresh on click (not reusing the count check's own rows) -
+	// the same "never trust a cached figure for what's actually shown"
+	// reasoning as Apply Advance above, since time has passed since the
+	// button first appeared.
+	const body_rows = rows
+		.map(
+			(row, i) => `
+				<tr>
+					<td>${i + 1}</td>
+					<td>${frappe.datetime.str_to_user(row.entry_date)}</td>
+					<td>${frappe.utils.escape_html(row.type)}</td>
+					<td class="text-right">${format_currency(row.amount)}</td>
+					<td class="text-right">${format_currency(row.available_amount)}</td>
+				</tr>`
+		)
+		.join("");
+	const dialog = new frappe.ui.Dialog({
+		title: __("Advance Ledger"),
+		size: "large",
+		fields: [
+			{
+				fieldtype: "HTML",
+				fieldname: "ledger_html",
+				options: `
+					<table class="table table-bordered">
+						<thead>
+							<tr>
+								<th>${__("S.No")}</th>
+								<th>${__("Date & Time")}</th>
+								<th>${__("Type")}</th>
+								<th class="text-right">${__("Amount")}</th>
+								<th class="text-right">${__("Available Amount")}</th>
+							</tr>
+						</thead>
+						<tbody>${body_rows}</tbody>
+					</table>`,
+			},
+		],
+	});
+	dialog.show();
 }
 
 function set_advance_balance_fields(frm) {
@@ -969,6 +1059,7 @@ function load_consultation_items(frm, consultation) {
 			// here, using the already-cached balance rather than refetching it.
 			frm.clear_custom_buttons();
 			add_advance_button(frm);
+			maybe_add_advance_ledger_button(frm);
 			calculate_totals(frm);
 		},
 	});
