@@ -6,6 +6,8 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt
 
+from metta.metta.doctype.patient_visit.patient_visit import add_advance_tracking_entry
+
 
 class PatientAdvance(Document):
 	def validate(self):
@@ -20,6 +22,13 @@ class PatientAdvance(Document):
 
 		if not self.received_by:
 			self.received_by = frappe.session.user
+
+	def after_insert(self):
+		# Only on genuine creation - this doctype isn't submittable, so a
+		# later correction (e.g. fixing a typo'd Remarks) goes through
+		# validate() again but must never add a second "Advance Collected"
+		# entry for the same deposit.
+		add_advance_tracking_entry(self.patient_visit, "Advance Collected", self.amount)
 
 
 @frappe.whitelist()

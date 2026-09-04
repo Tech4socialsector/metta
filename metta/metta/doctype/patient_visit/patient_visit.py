@@ -352,6 +352,52 @@ class PatientVisit(Document):
 				title=_("Bed Already Occupied"),
 			)
 
+def add_advance_tracking_entry(patient_visit, type_label, signed_amount):
+	# Shared by Patient Advance (a deposit, positive) and Billing (a bill using
+	# some of it, negative) - one place building this running passbook, so the
+	# two can never drift out of step with each other.
+	#
+	# Available Amount is recomputed fresh from the actual Patient Advance and
+	# Billing records every time, not "previous row's balance plus this one's
+	# own signed amount" - a visit whose advance/billing history predates this
+	# feature has no earlier row to chain from, so a running total anchored at
+	# 0 would sit permanently negative from the very first tracked event
+	# onward. Recomputing from source instead means the balance shown here is
+	# always correct regardless of when tracking started for this visit.
+	total_collected = flt(
+		frappe.db.sql("select sum(amount) from `tabPatient Advance` where patient_visit=%s", patient_visit)[0][0]
+	)
+	total_used = flt(
+		frappe.db.sql(
+			"select sum(advance_adjusted) from `tabBilling` where patient=%s and docstatus=1", patient_visit
+		)[0][0]
+	)
+	visit = frappe.get_doc("Patient Visit", patient_visit)
+	visit.append(
+		"advance_tracking",
+		{
+			"type": type_label,
+			"amount": flt(signed_amount, 2),
+			"available_amount": flt(total_collected - total_used, 2),
+		},
+	)
+	visit.save(ignore_permissions=True)
+
+
+@frappe.whitelist()
+def get_advance_tracking(patient_visit):
+	# Billing's own "View Advance Ledger" button reads this - kept as a
+	# dedicated read-only lookup (not just "open the Patient Visit") so
+	# billing staff never have to leave the bill they're working on.
+	frappe.has_permission("Patient Visit", "read", throw=True)
+	return frappe.get_all(
+		"Advance Tracking",
+		filters={"parent": patient_visit, "parenttype": "Patient Visit"},
+		fields=["entry_date", "type", "amount", "available_amount"],
+		order_by="idx",
+	)
+
+
 def get_permission_query_conditions(user=None):
 	# A Doctor only ever needs their own patients in list/report views - System
 	# Manager and Front Desk keep seeing everyone, since their own DocPerm row

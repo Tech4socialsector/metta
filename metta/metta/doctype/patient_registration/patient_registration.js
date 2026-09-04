@@ -56,13 +56,6 @@ frappe.ui.form.on("Patient Registration", {
 		if (FIXED_BILLING_CATEGORIES.includes(frm.doc.billing_category) && frm.doc.corporate_customer) {
 			frm.set_value("corporate_customer", "");
 		}
-		// Charity Amount only ever applies to a General patient - Staff/Staff
-		// Dependent already gets its charity automatically, so any leftover
-		// hand-typed amount from before switching away from General is
-		// cleared rather than silently carried over.
-		if (frm.doc.billing_category !== "General" && frm.doc.charity_amount) {
-			frm.set_value("charity_amount", 0);
-		}
 		// Relationship no longer applies once Billing Category moves away from
 		// Staff Dependent - cleared rather than left silently mismatched with
 		// what's shown (or hidden) right above.

@@ -37,7 +37,6 @@
   "column_break_fchc",
   "gst_number",
   "charity_percent",
-  "charity_amount",
   "default_currency"
  ],
  "fields": [
@@ -170,17 +169,14 @@
    "read_only": 1
   },
   {
+   "description": "Editable only for Billing Category 'General' - a hand-typed rate for this specific patient's situation. Every other category's rate is fixed on Category Price Adjustment and only shown here, not typed in.",
    "fetch_from": "billing_category.charity_percent",
+   "fetch_if_empty": 1,
    "fieldname": "charity_percent",
-   "fieldtype": "Data",
+   "fieldtype": "Percent",
    "in_list_view": 1,
-   "label": "Charity Percent"
-  },
-  {
-   "depends_on": "eval:doc.billing_category=='General'",
-   "fieldname": "charity_amount",
-   "fieldtype": "Currency",
-   "label": "Charity Amount"
+   "label": "Charity Percent",
+   "read_only_depends_on": "eval:doc.billing_category!=\"General\""
   },
   {
    "default": "INR",

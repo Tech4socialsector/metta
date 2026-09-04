@@ -6,6 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt
 
+from metta.metta.doctype.patient_visit.patient_visit import add_advance_tracking_entry
 from metta.sales.doctype.patient_advance.patient_advance import get_advance_balance
 from metta.stock.doctype.stock_ledger_entry.stock_ledger_entry import (
 	create_stock_ledger_entry,
@@ -57,10 +58,12 @@ class Billing(Document):
 		# both share the same Charity Amount/% fields on this form.
 		self.adjustment_type = adjustment_type or ""
 
-		if adjustment_type not in ("Charity", "Increase"):
-			# No active adjustment applies - an Inactive category, or one with
-			# no adjustment_type set, contributes nothing to the bill.
-			self.charity_percent = 0
+		# Charity % is never forced to 0 here just because the current Billing
+		# Category has no active Charity/Increase rate - staff can always
+		# hand-type a Charity % on any bill, same freedom Charity Amount
+		# already has. adjustment_type only decides the sign below (Increase
+		# grows the bill, everything else - including no category at all -
+		# shrinks it, the sensible default for a hand-typed charity).
 
 		# Rounded to currency precision at every step - an unrounded float
 		# (e.g. 0.07200000000000001) recomputed on a later re-save of an
@@ -105,6 +108,16 @@ class Billing(Document):
 		# would be for a full-paying patient.
 		self.net_amount = flt(self.total_pharmacy_amount + self.total_service_amount, 2)
 
+		# Apply Charity To decides which total Charity %/Amount actually works
+		# against - Pharmacy only, Service only, or both combined (Net Amount,
+		# the default - same as this always behaved before this field existed).
+		if self.charity_scope == "Pharmacy":
+			charity_base = self.total_pharmacy_amount
+		elif self.charity_scope == "Service":
+			charity_base = self.total_service_amount
+		else:
+			charity_base = self.net_amount
+
 		# Staff can hand-type a specific Charity Amount for this particular
 		# bill/patient - a one-off judgment call, overriding whatever rate
 		# Category Price Adjustment would otherwise apply. A hand-typed rupee
@@ -122,16 +135,18 @@ class Billing(Document):
 			manual_charity_amount = flt(self.charity_amount)
 			if manual_charity_amount < 0:
 				frappe.throw(_("Charity Amount cannot be negative."))
-			# Capped at Net Amount itself so the bill can never net negative.
-			self.charity_amount = min(manual_charity_amount, self.net_amount)
-			self.charity_percent = flt(self.charity_amount / self.net_amount * 100, 2) if self.net_amount else 0
+			# Capped at whichever total this Charity is scoped to, so it can
+			# never net that section (or the whole bill) negative.
+			self.charity_amount = min(manual_charity_amount, charity_base)
+			self.charity_percent = flt(self.charity_amount / charity_base * 100, 2) if charity_base else 0
 		else:
-			# Charity is applied only once, right here, against Net Amount - it
-			# reduces what the patient actually pays, never the real selling
-			# price or the real GST owed above. Always a plain non-negative
-			# magnitude - "Charity" vs "Increase" is only decided below, at
-			# Payable Amount, never baked into this figure itself.
-			self.charity_amount = flt(self.net_amount * flt(self.charity_percent) / 100, 2)
+			# Charity is applied only once, right here, against whichever
+			# total it's scoped to - it reduces what the patient actually
+			# pays, never the real selling price or the real GST owed above.
+			# Always a plain non-negative magnitude - "Charity" vs "Increase"
+			# is only decided below, at Payable Amount, never baked into this
+			# figure itself.
+			self.charity_amount = flt(charity_base * flt(self.charity_percent) / 100, 2)
 
 		if adjustment_type == "Increase":
 			self.payable_amount = flt(self.net_amount + self.charity_amount, 2)
@@ -279,8 +294,24 @@ class Billing(Document):
 				qty_change=-row.stock_qty,
 			)
 
+		# One passbook entry for this bill's own use of the advance - only
+		# once it's actually final, not on every draft save (a draft's
+		# Advance Adjusted can still change hands several times before
+		# submit, and each of those must never leave its own stray entry
+		# behind).
+		if self.registration_category == "IP" and flt(self.advance_adjusted):
+			add_advance_tracking_entry(
+				self.patient, f"{self.name} · {self.bill_type}", -flt(self.advance_adjusted)
+			)
+
 	def on_cancel(self):
 		reverse_stock_ledger_entries("Billing", self.name)
+		# Reversed as its own new entry, not by deleting the original - same
+		# reasoning as Stock Ledger's own reversal-not-deletion approach, so
+		# the passbook stays a genuine, permanent record of what actually
+		# happened, cancellation included.
+		if self.registration_category == "IP" and flt(self.advance_adjusted):
+			add_advance_tracking_entry(self.patient, f"{self.name} (Cancelled)", flt(self.advance_adjusted))
 
 
 @frappe.whitelist()

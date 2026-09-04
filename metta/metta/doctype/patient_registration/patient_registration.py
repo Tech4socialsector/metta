@@ -38,27 +38,29 @@ class PatientRegistration(Document):
 		# separately - same reasoning as Age above.
 		self.patient_name = calculate_full_name(self.first_name, self.last_name)
 		self.validate_staff_dependent()
-		self.validate_charity_amount()
+		self.validate_charity_percent()
 
-	def validate_charity_amount(self):
-		# A hand-typed recommendation for a patient who can't afford full price
-		# right at Registration - independent of Billing Category, since it's
-		# a one-off judgment call for this specific person, not a standing
-		# rule. Patient Visit has its own separate Charity Amount for the same
-		# situation coming up again at a later visit - the two are deliberately
-		# independent, not one flowing into the other.
-		#
-		# Only for a General (i.e. not Staff-related) patient - Staff/Staff
-		# Dependent already gets its charity automatically from Billing
-		# Category, so a hand-typed amount on top of that would be a second,
-		# conflicting discount.
-		if not flt(self.charity_amount):
-			return
-		if flt(self.charity_amount) < 0:
-			frappe.throw(frappe._("Charity Amount cannot be negative."))
-		if self.billing_category != GENERAL_CATEGORY:
-			frappe.throw(
-				frappe._("Charity Amount can only be entered for Billing Category 'General'.")
+	def validate_charity_percent(self):
+		# Charity Percent is editable only for a General (i.e. not
+		# Staff-related) patient - a hand-typed rate for this specific
+		# person's situation, independent of Billing Category, since it's a
+		# one-off judgment call, not a standing rule. Staff/Staff Dependent
+		# already gets its charity automatically from Billing Category, so a
+		# hand-typed rate on top of that would be a second, conflicting one -
+		# the field is read-only for them in the UI, but that's only a
+		# convenience, so it's enforced here too for any API call/import.
+		if self.billing_category == GENERAL_CATEGORY:
+			if flt(self.charity_percent) < 0:
+				frappe.throw(frappe._("Charity Percent cannot be negative."))
+			if flt(self.charity_percent) > 100:
+				frappe.throw(frappe._("Charity Percent cannot exceed 100%."))
+		elif self.billing_category:
+			# Not trusted from whatever the client's own fetch_from last put
+			# here - re-fetched fresh so a read-only field being bypassed via
+			# the API can't smuggle in a rate that doesn't match this
+			# category's own current one.
+			self.charity_percent = (
+				frappe.db.get_value("Category Price Adjustment", self.billing_category, "charity_percent") or 0
 			)
 
 	def validate_staff_dependent(self):

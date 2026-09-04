@@ -71,6 +71,8 @@
   "payment_mode",
   "corporate_customer",
   "collected_by",
+  "advance_tracking_section",
+  "advance_tracking",
   "medical_history_tab",
   "personal_and_social_history",
   "occupation",
@@ -482,7 +484,8 @@
   },
   {
    "depends_on": "eval:doc.registration_category!='IP'",
-   "fetch_from": "billing_category.charity_percent",
+   "description": "Carries this patient's own Charity Percent forward from their Patient Registration - for General, that's a doctor's fixed, patient-specific rate; for every other category, it's just that category's own standing rate.",
+   "fetch_from": "uhin_id.charity_percent",
    "fetch_if_empty": 1,
    "fieldname": "charity_percent",
    "fieldtype": "Data",
@@ -537,6 +540,20 @@
    "fieldtype": "Link",
    "label": "Collected By",
    "options": "User",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.registration_category==\"IP\"",
+   "fieldname": "advance_tracking_section",
+   "fieldtype": "Section Break",
+   "label": "Advance Tracking"
+  },
+  {
+   "description": "Builds itself automatically - one row every time an advance is collected, and one row every time a Billing document uses some of it. Never edited by hand.",
+   "fieldname": "advance_tracking",
+   "fieldtype": "Table",
+   "label": "Advance Tracking",
+   "options": "Advance Tracking",
    "read_only": 1
   },
   {
