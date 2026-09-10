@@ -30,9 +30,9 @@
   "district",
   "address",
   "billing_section",
+  "billing_category",
   "corporate_customer",
   "staff_id",
-  "billing_category",
   "dependent_relationship",
   "column_break_fchc",
   "gst_number",
@@ -141,6 +141,15 @@
    "label": "Billing Category"
   },
   {
+   "fetch_from": "corporate_customer.billing_category",
+   "fieldname": "billing_category",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Billing Category",
+   "options": "Category Price Adjustment"
+  },
+  {
+   "depends_on": "eval:doc.billing_category && !([\"General\",\"Staff\",\"Staff Dependent\"].includes(doc.billing_category))",
    "fieldname": "corporate_customer",
    "fieldtype": "Link",
    "label": "Company Name",
@@ -151,14 +160,6 @@
    "fieldname": "staff_id",
    "fieldtype": "Data",
    "label": "Company Staff Code"
-  },
-  {
-   "fetch_from": "corporate_customer.billing_category",
-   "fieldname": "billing_category",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Billing Category",
-   "options": "Category Price Adjustment"
   },
   {
    "depends_on": "eval:doc.corporate_customer",

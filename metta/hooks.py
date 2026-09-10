@@ -101,10 +101,16 @@ fixtures = [
 					"Account Staff",
 					"Doctor",
 					"Lab Staff",
+					"CHW Coordinator",
 				],
 			]
 		],
 	},
+	# Scopes the CHW Coordinator role to only the chw app's own doctypes -
+	# layered on via Custom DocPerm rather than editing chw's own doctype
+	# JSON files directly, so this stays a local permission on top of the
+	# third-party app instead of a fork of it.
+	{"doctype": "Custom DocPerm", "filters": [["role", "=", "CHW Coordinator"]]},
 	{
 		"doctype": "Notification",
 		"filters": [

@@ -72,22 +72,32 @@ frappe.ui.form.on("Billing", {
 			}
 		}
 
-		// billing_category can already be set when the form first loads (an
-		// existing bill, or one prefilled by the Pharmacy Dashboard's Dispense
-		// action) without the field's own change handler ever having fired to
-		// populate frm._category_adjustment - fetch it now so the charity
-		// preview isn't stuck showing zero until the user re-touches the field.
-		if (frm.doc.billing_category && !frm._category_adjustment) {
-			frappe.call({
-				method: "metta.sales.doctype.billing.billing.get_category_adjustment",
-				args: { billing_category: frm.doc.billing_category },
-				callback(r) {
-					frm._category_adjustment = r.message || null;
-					calculate_totals(frm);
-				},
-			});
-		} else {
-			calculate_totals(frm);
+		// Only a draft bill's totals are still live - a submitted one is
+		// locked in and can never be re-saved anyway (Frappe blocks editing
+		// after submit), so recomputing it here would just recheck it
+		// against whatever the Category Price Adjustment master says *today*.
+		// If that category's rate was edited any time after this particular
+		// bill was submitted, the recompute comes out different from what's
+		// actually stored, and the form wrongly shows "Not Saved" the moment
+		// it's opened even though nothing was touched.
+		if (frm.doc.docstatus === 0) {
+			// billing_category can already be set when the form first loads (an
+			// existing bill, or one prefilled by the Pharmacy Dashboard's Dispense
+			// action) without the field's own change handler ever having fired to
+			// populate frm._category_adjustment - fetch it now so the charity
+			// preview isn't stuck showing zero until the user re-touches the field.
+			if (frm.doc.billing_category && !frm._category_adjustment) {
+				frappe.call({
+					method: "metta.sales.doctype.billing.billing.get_category_adjustment",
+					args: { billing_category: frm.doc.billing_category },
+					callback(r) {
+						frm._category_adjustment = r.message || null;
+						calculate_totals(frm);
+					},
+				});
+			} else {
+				calculate_totals(frm);
+			}
 		}
 
 		// Same reasoning as billing_category above - an existing bill loads
