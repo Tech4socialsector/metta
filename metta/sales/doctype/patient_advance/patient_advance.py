@@ -8,6 +8,11 @@ from frappe.utils import flt
 
 from metta.metta.doctype.patient_visit.patient_visit import add_advance_tracking_entry
 
+# Once this much of a patient's collected advance has been used against
+# bills, billing staff get a warning to ask the patient's relative for a
+# top-up, rather than only finding out once the balance is fully exhausted.
+ADVANCE_LOW_BALANCE_THRESHOLD = 80
+
 
 class PatientAdvance(Document):
 	def validate(self):
@@ -47,8 +52,11 @@ def get_advance_balance(patient_visit):
 			"select sum(advance_adjusted) from `tabBilling` where patient=%s and docstatus != 2", patient_visit
 		)[0][0]
 	)
+	percent_used = (total_adjusted / total_collected * 100) if total_collected else 0
 	return {
 		"total_collected": total_collected,
 		"total_adjusted": total_adjusted,
 		"balance": total_collected - total_adjusted,
+		"percent_used": percent_used,
+		"is_low": percent_used >= ADVANCE_LOW_BALANCE_THRESHOLD,
 	}

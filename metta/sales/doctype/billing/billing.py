@@ -561,16 +561,11 @@ def search_items_for_billing(search_term="", table="pharmacy_items"):
 			if it.has_batch:
 				fefo_batch = get_fefo_batch(it.item_code)
 				rate = flt(frappe.db.get_value("Batch", fefo_batch, "selling_rate")) if fefo_batch else 0
-		# Staff pick items by what they'll actually collect from the patient,
-		# not the pre-GST rate that then quietly grows once added - show the
-		# final, GST-inclusive amount here. The row itself still stores the
-		# base rate separately and computes GST on it the same way as always.
-		final_rate = flt(rate * (1 + flt(it.gst_percent) / 100), 2)
 		result.append(
 			{
 				"item_code": it.item_code,
 				"name": it.item_name,
-				"rate": final_rate,
+				"rate": flt(rate, 2),
 				"avail_qty": avail_qty,
 			}
 		)

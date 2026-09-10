@@ -695,6 +695,23 @@ function set_advance_balance_fields(frm) {
 	frm.set_value("advance_collected", balance ? flt(balance.total_collected) : 0);
 	frm.set_value("advance_used", balance ? flt(balance.total_adjusted) : 0);
 	frm.set_value("advance_available", balance ? flt(balance.balance) : 0);
+	show_advance_low_balance_indicator(frm, balance);
+}
+
+function show_advance_low_balance_indicator(frm, balance) {
+	// Shown as the "Advance Available" field's own description, right under
+	// it, rather than a page-level indicator - re-set on every balance
+	// refetch (including outside a full form refresh, e.g. Apply Advance or
+	// editing Advance Adjusted) so a top-up that clears the warning also
+	// removes the text right away.
+	const warning =
+		balance && balance.is_low
+			? `<span class="text-danger"><strong>${__("Advance {0}% used — ask the patient's relative to pay more advance.", [
+					Math.round(balance.percent_used),
+			  ])}</strong></span>`
+			: "";
+	frm.set_df_property("advance_available", "description", warning);
+	frm.refresh_field("advance_available");
 }
 
 function ensure_bill_type_includes(frm, kind) {
@@ -877,7 +894,7 @@ function render_item_search(frm, opts) {
 				<thead>
 					<tr>
 						<th>${__("Name")}</th>
-						<th class="text-right">${__("Rate (incl. GST)")}</th>
+						<th class="text-right">${__("Rate (excl. GST)")}</th>
 						${avail_col}
 					</tr>
 				</thead>

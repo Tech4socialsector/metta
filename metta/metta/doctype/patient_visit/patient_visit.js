@@ -252,19 +252,44 @@ frappe.ui.form.on("Patient Visit", {
 							// is owed - it never goes negative, since Billing's own
 							// validate_advance_adjustment() caps advance_adjusted at
 							// whatever's actually still available.
+							const warning = d.is_low
+								? `<br><b class="text-danger">${__(
+										"Advance {0}% used — ask the patient's relative to pay more advance.",
+										[Math.round(d.percent_used)]
+								  )}</b>`
+								: "";
 							frappe.msgprint({
 								title: __("Advance Summary"),
-								message: __(
-									"Total Collected: {0}<br>Total Adjusted Against Bills: {1}<br><b>Balance: {2}</b>",
-									[
-										format_currency(d.total_collected),
-										format_currency(d.total_adjusted),
-										format_currency(d.balance),
-									]
-								)
+								message:
+									__(
+										"Total Collected: {0}<br>Total Adjusted Against Bills: {1}<br><b>Balance: {2}</b>",
+										[
+											format_currency(d.total_collected),
+											format_currency(d.total_adjusted),
+											format_currency(d.balance),
+										]
+									) + warning,
 							});
 						},
 					});
+				});
+
+				// Eagerly fetched (not only on the button click above) so billing
+				// staff see the low-balance warning as soon as they open this visit,
+				// instead of only discovering it once they think to check.
+				frappe.call({
+					method: "metta.sales.doctype.patient_advance.patient_advance.get_advance_balance",
+					args: { patient_visit: frm.doc.name },
+					callback(r) {
+						if (!r.message || !r.message.is_low) return;
+						frm.dashboard.add_indicator(
+							__("Advance {0}% used — only {1} remaining. Ask the patient's relative to pay more advance.", [
+								Math.round(r.message.percent_used),
+								format_currency(r.message.balance),
+							]),
+							"red"
+						);
+					},
 				});
 			}
 		}
