@@ -131,6 +131,10 @@ def get_available_batches(item, warehouse):
 	# movements, same approach the Batch-wise Stock Listing report already
 	# uses. Ordered nearest-expiry-first (FEFO) - standard pharmacy practice,
 	# issues stock that would expire soonest before newer stock.
+	#
+	# expiry_date >= CURDATE(): a batch is still billable through its own
+	# expiry date, not past it - an already-expired batch must never be
+	# handed out here, even if it's the only one with stock left.
 	return frappe.db.sql(
 		"""
 		SELECT q.batch_no AS batch, b.expiry_date, q.available_qty, b.selling_rate
@@ -142,7 +146,7 @@ def get_available_batches(item, warehouse):
 			GROUP BY sle.batch_no
 		) q
 		INNER JOIN `tabBatch` b ON b.name = q.batch_no AND b.item = %(item)s
-		WHERE q.available_qty > 0 AND b.disabled != 1
+		WHERE q.available_qty > 0 AND b.disabled != 1 AND b.expiry_date >= CURDATE()
 		ORDER BY b.expiry_date ASC
 		""",
 		{"item": item, "warehouse": warehouse},

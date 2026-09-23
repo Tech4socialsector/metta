@@ -110,6 +110,7 @@ const TILE_LABELS = {
 	visited: __("Visited Today"),
 	ready: __("Ready to Consult"),
 	waiting: __("Waiting for Vitals"),
+	referred: __("Referred to Me"),
 	admitted: __("Admitted (IP)"),
 };
 const TILE_COLORS = {
@@ -117,6 +118,7 @@ const TILE_COLORS = {
 	visited: "#28a745",
 	ready: "#f0932d",
 	waiting: "#dc3545",
+	referred: "#8e44ad",
 	admitted: "#6c757d",
 };
 
@@ -194,7 +196,7 @@ function render_tiles(page) {
 	};
 
 	$wrapper.find(".dashboard-tiles").html(
-		["assigned", "waiting", "ready", "visited", "admitted"].map(tile_html).join("")
+		["assigned", "waiting", "ready", "visited", "referred", "admitted"].map(tile_html).join("")
 	);
 
 	$wrapper.find(".dashboard-tile").on("click", function () {
@@ -242,6 +244,13 @@ function visit_table(visits, kind) {
 		}
 		if (kind === "waiting") {
 			return `<span class="text-muted">${__("Waiting on nurse")}</span>`;
+		}
+		if (kind === "referred") {
+			// Already someone's active patient (referred in, not a fresh
+			// walk-in) - straight to Consult, no vitals-wait step like "ready".
+			return `<button class="btn btn-xs btn-primary consult-btn" data-visit="${frappe.utils.escape_html(
+				v.name
+			)}">${__("Consult")}</button>`;
 		}
 		if (kind === "visited") {
 			return v.consultation

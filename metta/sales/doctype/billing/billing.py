@@ -10,6 +10,7 @@ from metta.metta.doctype.patient_visit.patient_visit import add_advance_tracking
 from metta.sales.doctype.patient_advance.patient_advance import get_advance_balance
 from metta.stock.doctype.stock_ledger_entry.stock_ledger_entry import (
 	create_stock_ledger_entry,
+	get_available_batches,
 	reverse_stock_ledger_entries,
 	validate_sufficient_batch_stock,
 	validate_sufficient_stock,
@@ -442,6 +443,11 @@ def get_fefo_batch(item_code):
 	# not something a busy front desk should have to remember to apply by
 	# hand every time; still just a starting point, the field stays editable
 	# if a specific batch genuinely needs to be picked instead.
+	#
+	# b.expiry_date >= CURDATE(): a batch already past its own expiry date
+	# must never be picked, even if it's the soonest-expiring one with stock
+	# left - FEFO only ever orders among batches that are still valid to
+	# dispense today, it doesn't override that check.
 	frappe.has_permission("Billing", "read", throw=True)
 	if not item_code or not frappe.db.get_value("Item", item_code, "has_batch"):
 		return None
@@ -455,6 +461,7 @@ def get_fefo_batch(item_code):
 		inner join `tabBatch` b on b.name = sle.batch_no
 		where sle.item = %(item)s and sle.warehouse = %(warehouse)s
 			and sle.batch_no is not null and sle.batch_no != '' and b.disabled = 0
+			and b.expiry_date >= CURDATE()
 		group by sle.batch_no
 		having sum(sle.qty_change) > 0
 		order by b.expiry_date asc
@@ -548,12 +555,19 @@ def search_items_for_billing(search_term="", table="pharmacy_items"):
 		# actually apply, so this preview never disagrees with the real row.
 		rate = flt(it.standard_selling_rate)
 		if pharmacy_warehouse:
-			avail_qty = (
-				frappe.db.get_value(
-					"Stock Balance", {"item": it.item_code, "warehouse": pharmacy_warehouse}, "actual_qty"
+			if it.has_batch:
+				# Stock Balance is item-wide and doesn't know a batch has
+				# expired - an item whose only remaining stock is an expired
+				# batch must show as unavailable here, not just skip that
+				# batch during FEFO selection below.
+				avail_qty = sum(flt(b.available_qty) for b in get_available_batches(it.item_code, pharmacy_warehouse))
+			else:
+				avail_qty = (
+					frappe.db.get_value(
+						"Stock Balance", {"item": it.item_code, "warehouse": pharmacy_warehouse}, "actual_qty"
+					)
+					or 0
 				)
-				or 0
-			)
 			# Nothing to dispense if there's really none left - same rule
 			# pharmacy_item_query enforces for the Items table's own Link field.
 			if avail_qty <= 0:

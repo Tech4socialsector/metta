@@ -22,10 +22,19 @@ frappe.ui.form.on("Billing", {
 		}));
 		// Never let a row's batch belong to a different item - the field was
 		// completely unrestricted before, which is how a mismatched batch
-		// could accidentally get typed in.
+		// could accidentally get typed in. Also excludes disabled/expired
+		// batches - staff picking a batch by hand must be held to the same
+		// "never dispense an expired batch" rule FEFO auto-pick already
+		// follows, or this dropdown would be a way around it.
 		frm.set_query("batch_no", "pharmacy_items", (doc, cdt, cdn) => {
 			const row = locals[cdt][cdn];
-			return { filters: { item: row.item } };
+			return {
+				filters: {
+					item: row.item,
+					disabled: 0,
+					expiry_date: [">=", frappe.datetime.get_today()],
+				},
+			};
 		});
 		// Custom queries so the dropdown shows the patient's name as a small
 		// line under each ID - needed since Patient Visit's title (patient

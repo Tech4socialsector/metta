@@ -11,6 +11,31 @@ class DoctorConsultation(Document):
 		self.validate_doctor_matches_session_user()
 		self.validate_visit_assigned_to_doctor()
 
+	def on_update(self):
+		self.route_referral()
+
+	def route_referral(self):
+		# A doctor's dashboard queue is driven entirely by Patient Visit.doctor_name -
+		# reassigning it here is what actually routes the patient to the referred
+		# doctor's queue on Save, the same field change front desk would otherwise
+		# make by hand. Skipped for a self-referral (picking your own name), and
+		# skipped once the visit is already assigned there, so a later unrelated
+		# edit to this same note doesn't keep re-triggering it pointlessly.
+		if not self.referred_to or self.referred_to == self.doctor:
+			return
+		current_doctor = frappe.db.get_value("Patient Visit", self.patient_consultation, "doctor_name")
+		if current_doctor == self.referred_to:
+			return
+		frappe.db.set_value("Patient Visit", self.patient_consultation, "doctor_name", self.referred_to)
+
+		# Same signal Patient Visit.after_insert() uses for a fresh assignment -
+		# an already-open dashboard for the referred doctor picks up the new
+		# "Referred to Me" entry right away, instead of only on their next
+		# manual Refresh.
+		doctor_user = frappe.db.get_value("Doctor Master", self.referred_to, "user")
+		if doctor_user:
+			frappe.publish_realtime("doctor_dashboard_update", user=doctor_user, after_commit=True)
+
 	def validate_doctor_matches_session_user(self):
 		# Without this, a Doctor could set `doctor` to someone else's Doctor
 		# Master record and write a note that shows up as if that other
@@ -41,6 +66,14 @@ class DoctorConsultation(Document):
 		# Doctor could still open any patient's visit (read access to Patient
 		# Visit isn't restricted the same way) and write a consultation note
 		# for someone else's patient.
+		#
+		# Only enforced on creation - a referral (see route_referral below)
+		# reassigns the visit to another doctor right after this note is saved,
+		# so re-editing your own already-written note afterwards would
+		# otherwise start failing this check even though it's still your note.
+		if not self.is_new():
+			return
+
 		roles = frappe.get_roles(frappe.session.user)
 		if "System Manager" in roles:
 			return
@@ -258,11 +291,13 @@ def get_my_dashboard_stats():
 			"visited": 0,
 			"ready": 0,
 			"waiting": 0,
+			"referred": 0,
 			"admitted": 0,
 			"assigned_visits": [],
 			"visited_visits": [],
 			"ready_visits": [],
 			"waiting_visits": [],
+			"referred_visits": [],
 			"admitted_visits": [],
 			"discharge_pending_visits": [],
 			"appointments_today": [],
@@ -272,26 +307,51 @@ def get_my_dashboard_stats():
 	today = frappe.utils.today()
 
 	# Today's queue - the daily worklist, not an ever-growing all-time count.
-	assigned_visits = frappe.get_all(
+	assigned_visits_today = frappe.get_all(
 		"Patient Visit",
 		filters={"doctor_name": doctor, "creation": [">=", today]},
 		fields=["name", "patient_name", "registration_category"],
 		order_by="creation desc",
 	)
+
+	# Referred to this doctor by another doctor - never date-scoped like the
+	# queue above, since a referral nobody's actioned yet shouldn't just drop
+	# out of view after today. `doctor_name = doctor` confirms the referral
+	# actually took effect (and is still the current assignment, not since
+	# moved on again) - kept out of assigned/waiting/ready below so a referred
+	# patient shows in exactly one place, not double-counted in both.
+	referred_visit_names = set(
+		frappe.get_all("Doctor Consultation", filters={"referred_to": doctor}, pluck="patient_consultation")
+	)
+	referred_visits = []
+	if referred_visit_names:
+		referred_visits = frappe.get_all(
+			"Patient Visit",
+			filters={"name": ["in", list(referred_visit_names)], "doctor_name": doctor},
+			fields=["name", "patient_name", "registration_category"],
+			order_by="modified desc",
+		)
+	referred_names = {v.name for v in referred_visits}
+
+	assigned_visits = [v for v in assigned_visits_today if v.name not in referred_names]
 	assigned_names = [v.name for v in assigned_visits]
 
 	consultation_by_visit = {}
 	nurse_status_by_visit = {}
 	nurse_intervention_by_visit = {}
-	if assigned_names:
+	# Referred visits need to be checked too - once this doctor has actually
+	# written their own note for one, it's no longer a pending referral.
+	relevant_names = assigned_names + [n for n in referred_names if n not in assigned_names]
+	if relevant_names:
 		consultation_by_visit = {
 			c.patient_consultation: c.name
 			for c in frappe.get_all(
 				"Doctor Consultation",
-				filters={"patient_consultation": ["in", assigned_names], "doctor": doctor},
+				filters={"patient_consultation": ["in", relevant_names], "doctor": doctor},
 				fields=["name", "patient_consultation"],
 			)
 		}
+	if assigned_names:
 		# patient_registration on Nurse Interventions actually links to the
 		# visit (see the field's own comment) - a visit can in principle have
 		# more than one Nurse Interventions row, so "ready" means at least
@@ -315,6 +375,9 @@ def get_my_dashboard_stats():
 	ready_visits = [v for v in not_yet_visited if nurse_status_by_visit.get(v.name)]
 	waiting_visits = [v for v in not_yet_visited if not nurse_status_by_visit.get(v.name)]
 	visited_visits = [v for v in assigned_visits if v.name in visited_names]
+	# Drops off "Referred to Me" the moment this doctor finishes the
+	# consultation - same "visited" signal used above, nothing extra to track.
+	referred_visits = [v for v in referred_visits if v.name not in visited_names]
 
 	for v in ready_visits:
 		v["nurse_intervention"] = nurse_intervention_by_visit.get(v.name)
@@ -372,6 +435,7 @@ def get_my_dashboard_stats():
 		"visited": len(visited_names),
 		"ready": len(ready_visits),
 		"waiting": len(waiting_visits),
+		"referred": len(referred_visits),
 		"admitted": len(admitted_visits),
 		# Capped - this is a quick-glance dashboard, not a full report; the
 		# Patient Visit list (already filtered to this doctor) is where a
@@ -380,6 +444,7 @@ def get_my_dashboard_stats():
 		"visited_visits": visited_visits[:20],
 		"ready_visits": ready_visits[:20],
 		"waiting_visits": waiting_visits[:20],
+		"referred_visits": referred_visits[:20],
 		"admitted_visits": admitted_visits[:20],
 		"discharge_pending_visits": discharge_pending_visits[:20],
 		"appointments_today": appointments_today[:20],
