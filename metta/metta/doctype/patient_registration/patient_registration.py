@@ -101,6 +101,63 @@ def find_possible_duplicates(phone, exclude=None):
 
 
 @frappe.whitelist()
+def get_category_adjustment(billing_category):
+	# A dedicated copy rather than reusing Billing's version of this same
+	# lookup - that one gates on Billing read permission, which Front Desk
+	# (who registers the patient here, not the bill) was never granted.
+	frappe.has_permission("Patient Registration", "read", throw=True)
+	if not billing_category:
+		return {}
+	return frappe.db.get_value(
+		"Category Price Adjustment", billing_category, ["adjustment_type", "charity_status"], as_dict=True
+	) or {}
+
+
+# CHW's own Select options for gender don't line up one-to-one with Patient
+# Registration's (Male/Female/Others) - Transgender and "Not to specify" both
+# fall back to Others rather than being left blank, since sex is mandatory
+# on Patient Registration.
+CHW_GENDER_TO_SEX = {"Male": "Male", "Female": "Female"}
+
+
+@frappe.whitelist()
+def find_chw_field_matches(phone):
+	# "Family members" belongs to the chw app, not this one - queried directly
+	# since both apps share the same site database. Only unlinked rows are
+	# offered here - one already linked to a HIN means that person's already
+	# been through this flow once, so it's excluded rather than offered again.
+	frappe.has_permission("Patient Registration", "read", throw=True)
+	if not phone:
+		return []
+
+	rows = frappe.get_all(
+		"Family members",
+		filters={"phone_number": phone, "hmis_patient_registration": ["in", ["", None]]},
+		fields=["name", "family_member", "gender", "date_of_birth", "village", "relationship"],
+	)
+	for row in rows:
+		row["age"] = calculate_age(row.date_of_birth)
+	return rows
+
+
+@frappe.whitelist()
+def link_chw_field_record(patient_registration, family_member):
+	# Called only after the new Patient Registration is actually saved (never
+	# against an unsaved doc's temporary name) - Front Desk confirmed the
+	# match themselves in a picker dialog before this runs, so this is purely
+	# the write-back, not a fresh identity guess.
+	frappe.has_permission("Patient Registration", "write", throw=True)
+	already_linked = frappe.db.get_value("Family members", family_member, "hmis_patient_registration")
+	if already_linked:
+		frappe.throw(
+			frappe._("This Community Health record is already linked to {0}.").format(already_linked)
+		)
+	frappe.db.set_value(
+		"Family members", family_member, "hmis_patient_registration", patient_registration, update_modified=False
+	)
+
+
+@frappe.whitelist()
 def get_location_by_pincode(pincode):
 	# India Post's own official lookup - one pincode commonly covers several
 	# villages/post offices (confirmed true for this hospital's own 248179),

@@ -291,6 +291,7 @@ function render_extra_tiles(page) {
 	const stats = page._dashboard_stats;
 	const appointments = stats.appointments_today || [];
 	const discharge_pending = stats.discharge_pending_visits || [];
+	const referred_to_me = stats.referred_to_me || [];
 
 	const extra_tile = (count, label) => `
 		<div class="dashboard-extra-tile" style="
@@ -302,12 +303,106 @@ function render_extra_tiles(page) {
 
 	$wrapper.find(".dashboard-extra-tiles").html(
 		extra_tile(appointments.length, __("Today's Appointments")) +
-			extra_tile(discharge_pending.length, __("Discharge Summary Pending"))
+			extra_tile(discharge_pending.length, __("Discharge Summary Pending")) +
+			extra_tile(referred_to_me.length, __("Referred to Me"))
 	);
 
 	const $tiles = $wrapper.find(".dashboard-extra-tile");
 	$tiles.eq(0).on("click", () => open_appointments_dialog(appointments));
 	$tiles.eq(1).on("click", () => open_discharge_pending_dialog(page, discharge_pending));
+	$tiles.eq(2).on("click", () => open_referred_to_me_dialog(referred_to_me));
+}
+
+function open_referred_to_me_dialog(referrals) {
+	const rows = !referrals.length
+		? `<div class="text-muted">${__("No patients referred to you right now.")}</div>`
+		: `<table class="table table-bordered">
+			<thead><tr><th>${__("Patient")}</th><th>${__("Referred By")}</th><th>${__("Date")}</th><th>${__("Diagnosis")}</th></tr></thead>
+			<tbody>
+				${referrals
+					.map(
+						(r, i) => `
+					<tr class="referral-row" data-idx="${i}" style="cursor:pointer;">
+						<td>${frappe.utils.escape_html(r.patient_name || "")}</td>
+						<td>${frappe.utils.escape_html(r.doctor || "")}</td>
+						<td>${frappe.datetime.str_to_user(r.consultation_datetime)}</td>
+						<td>${frappe.utils.escape_html(r.diagnosis || "")}</td>
+					</tr>`
+					)
+					.join("")}
+			</tbody>
+		</table>
+		<p class="text-muted">${__("Click a row to see that patient's full history.")}</p>`;
+
+	const dialog = new frappe.ui.Dialog({
+		title: __("Patients Referred to Me"),
+		size: "large",
+		fields: [{ fieldtype: "HTML", fieldname: "content", options: rows }],
+	});
+	dialog.show();
+
+	dialog.$wrapper.find(".referral-row").on("click", function () {
+		const r = referrals[$(this).data("idx")];
+		open_referred_patient_history_dialog(r);
+	});
+}
+
+function open_referred_patient_history_dialog(referral) {
+	const dialog = new frappe.ui.Dialog({
+		title: __("History: {0}", [referral.patient_name || referral.patient_consultation]),
+		size: "large",
+		fields: [
+			{
+				fieldtype: "HTML",
+				fieldname: "content",
+				options: `<div class="text-muted">${__("Loading...")}</div>`,
+			},
+		],
+	});
+	dialog.show();
+
+	frappe.call({
+		method: "metta.metta.doctype.doctor_consultation.doctor_consultation.get_patient_history",
+		args: { patient_consultation: referral.patient_consultation },
+		callback(r) {
+			const rows = r.message || [];
+			const $content = dialog.$wrapper.find('[data-fieldname="content"]');
+			if (!rows.length) {
+				$content.html(`<div class="text-muted">${__("No visit history on record for this patient.")}</div>`);
+				return;
+			}
+			$content.html(
+				rows
+					.map((row) => {
+						const meds = (row.prescribed_items || [])
+							.map((p) => `${frappe.utils.escape_html(p.item_name || "")} (${frappe.utils.escape_html(p.dosage || "")}, ${frappe.utils.escape_html(p.duration || "")})`)
+							.join(", ");
+						const tests = (row.suggested_tests || [])
+							.map((t) => `${frappe.utils.escape_html(t.item_name || "")} (${frappe.utils.escape_html(t.test_type || "")})`)
+							.join(", ");
+						const diagnostic_tests = (row.diagnostic_tests || [])
+							.map((d) =>
+								d.status === "Reported"
+									? `${frappe.utils.escape_html(d.item_name || "")}: ${frappe.utils.escape_html(d.result || "")}`
+									: `${frappe.utils.escape_html(d.item_name || "")} (${frappe.utils.escape_html(d.status || "")})`
+							)
+							.join(", ");
+						return `
+							<div style="border-bottom:1px solid var(--border-color,#d1d8dd); padding:8px 0;">
+								<div><b>${frappe.datetime.str_to_user(row.consultation_datetime)}</b> - ${frappe.utils.escape_html(row.doctor)}
+									<a href="/app/doctor-consultation/${encodeURIComponent(row.name)}" target="_blank" style="margin-left:8px; font-size:12px;">${__("Open")}</a>
+								</div>
+								${row.diagnosis ? `<div><b>${__("Diagnosis")}:</b> ${frappe.utils.escape_html(row.diagnosis)}</div>` : ""}
+								${row.clinical_notes ? `<div><b>${__("Clinical Notes")}:</b> ${frappe.utils.escape_html(row.clinical_notes)}</div>` : ""}
+								${meds ? `<div class="text-muted">${__("Prescribed")}: ${meds}</div>` : ""}
+								${tests ? `<div class="text-muted">${__("Tests Suggested")}: ${tests}</div>` : ""}
+								${diagnostic_tests ? `<div class="text-muted">${__("Test Results")}: ${diagnostic_tests}</div>` : ""}
+							</div>`;
+					})
+					.join("")
+			);
+		},
+	});
 }
 
 function open_appointments_dialog(appointments) {

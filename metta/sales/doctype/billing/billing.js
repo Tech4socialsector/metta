@@ -463,6 +463,22 @@ function calculate_amount(frm, cdt, cdn) {
 	calculate_totals(frm);
 }
 
+// A Corporate category like Woodstock's own +10% is the hospital charging
+// MORE, not a concession - finance doesn't want it called "Charity"
+// anywhere they see it, "TDS" is their own term for this specific markup.
+// The stored value stays "Increase" everywhere in code/reports (renaming
+// that would mean touching every exact-match check across the app) - only
+// what a human actually reads switches to "TDS".
+function update_charity_field_labels(frm, adjustment_type) {
+	const is_increase = adjustment_type === "Increase";
+	frm.set_df_property("charity_amount", "label", is_increase ? __("TDS Amount") : __("Charity Amount"));
+	frm.set_df_property("charity_percent", "label", is_increase ? __("TDS %") : __("Charity %"));
+	frm.set_df_property("charity_scope", "label", is_increase ? __("Apply TDS To") : __("Apply Charity To"));
+	frm.refresh_field("charity_amount");
+	frm.refresh_field("charity_percent");
+	frm.refresh_field("charity_scope");
+}
+
 function calculate_totals(frm) {
 	// Mirrors the server's validate() exactly: an Inactive category (or one
 	// with no adjustment_type) contributes nothing, and "Increase" flips the
@@ -470,6 +486,7 @@ function calculate_totals(frm) {
 	const adjustment = frm._category_adjustment;
 	const adjustment_type =
 		adjustment && adjustment.charity_status === "Active" ? adjustment.adjustment_type : null;
+	update_charity_field_labels(frm, adjustment_type);
 	// Charity % is never forced to 0 here just because the current Billing
 	// Category has no active Charity/Increase rate - staff can always
 	// hand-type a Charity % on any bill, same freedom Charity Amount already

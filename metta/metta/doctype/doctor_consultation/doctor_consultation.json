@@ -17,6 +17,7 @@
   "prescription_item_search_area",
   "prescribed_items",
   "investigations_section",
+  "suggested_test_search_area",
   "suggested_tests",
   "column_break_dc",
   "follow_up_date",
@@ -98,6 +99,11 @@
    "label": "Suggested Investigations"
   },
   {
+   "fieldname": "suggested_test_search_area",
+   "fieldtype": "HTML"
+  },
+  {
+   "cannot_add_rows": 1,
    "fieldname": "suggested_tests",
    "fieldtype": "Table",
    "label": "Lab / X-Ray Tests Suggested",

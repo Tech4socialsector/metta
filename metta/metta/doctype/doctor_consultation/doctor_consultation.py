@@ -97,7 +97,12 @@ def get_permission_query_conditions(user=None):
 	doctor = frappe.db.get_value("Doctor Master", {"user": user}, "name")
 	if not doctor:
 		return "1=0"
-	return f"""`tabDoctor Consultation`.doctor = {frappe.db.escape(doctor)}"""
+	# A referral makes the note visible to the doctor it was referred to as
+	# well as its own author - without the OR, "Referred to Me" on the
+	# dashboard would link to a consultation the receiving doctor can't
+	# actually open.
+	escaped_doctor = frappe.db.escape(doctor)
+	return f"""(`tabDoctor Consultation`.doctor = {escaped_doctor} OR `tabDoctor Consultation`.referred_to = {escaped_doctor})"""
 
 
 def has_permission(doc, ptype, user):
@@ -112,7 +117,7 @@ def has_permission(doc, ptype, user):
 		doc = frappe.get_doc("Doctor Consultation", doc)
 
 	doctor = frappe.db.get_value("Doctor Master", {"user": user}, "name")
-	return bool(doctor) and doc.doctor == doctor
+	return bool(doctor) and (doc.doctor == doctor or doc.referred_to == doctor)
 
 
 # Returns just the prescription fragment so the client can show it in a dialog instead of navigating to Frappe's print view - mirrors get_receipt_html() on Patient Visit.
@@ -301,6 +306,7 @@ def get_my_dashboard_stats():
 			"admitted_visits": [],
 			"discharge_pending_visits": [],
 			"appointments_today": [],
+			"referred_to_me": [],
 			"leave": None,
 		}
 
@@ -411,6 +417,17 @@ def get_my_dashboard_stats():
 		)
 	discharge_pending_visits = [v for v in discharged_visits if v.name not in has_summary]
 
+	# Another doctor referred this patient to *this* doctor - `doctor` on
+	# these rows is the referring doctor, not this one, so this has to be its
+	# own frappe.get_all (bypassing the "doctor = own doctor" row filter),
+	# same continuity-of-care exception get_patient_history already relies on.
+	referred_to_me = frappe.get_all(
+		"Doctor Consultation",
+		filters={"referred_to": doctor},
+		fields=["name", "patient_consultation", "patient_name", "doctor", "consultation_datetime", "diagnosis"],
+		order_by="consultation_datetime desc",
+	)
+
 	appointments_today = frappe.get_all(
 		"Appointment",
 		filters={"doctor": doctor, "appointment_date": today, "status": ["!=", "Cancelled"]},
@@ -448,6 +465,7 @@ def get_my_dashboard_stats():
 		"admitted_visits": admitted_visits[:20],
 		"discharge_pending_visits": discharge_pending_visits[:20],
 		"appointments_today": appointments_today[:20],
+		"referred_to_me": referred_to_me[:20],
 		"leave": leave,
 	}
 
@@ -509,6 +527,33 @@ def prescribable_item_query(doctype, txt, searchfield, start, page_len, filters)
 		LIMIT %(page_len)s OFFSET %(start)s
 		""",
 		{"warehouse": warehouse, "txt": f"%{txt}%", "start": start, "page_len": page_len},
+	)
+
+
+@frappe.whitelist()
+def search_services_for_consultation(search_term=""):
+	# Same "must be a real, priced Service item" rule as suggested_tests' own
+	# Link query filter - services aren't stock-tracked like Medicine, so
+	# there's no warehouse/qty check here, just item_type and is_active.
+	frappe.has_permission("Doctor Consultation", "read", throw=True)
+
+	values = {"limit": 20}
+	search_condition = ""
+	if search_term:
+		search_condition = "AND item_name LIKE %(search_term)s"
+		values["search_term"] = f"%{search_term}%"
+
+	return frappe.db.sql(
+		f"""
+		SELECT name AS item_code, item_name
+		FROM `tabItem`
+		WHERE item_type = 'Service' AND is_active = 1
+		{search_condition}
+		ORDER BY item_name
+		LIMIT %(limit)s
+		""",
+		values,
+		as_dict=True,
 	)
 
 

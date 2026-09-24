@@ -14,6 +14,7 @@ frappe.ui.form.on("Patient Registration", {
 		// restriction, since Front Desk must still be able to type a village
 		// by hand when the lookup fails or simply wasn't used.
 		frm.fields_dict.address.df.ignore_validation = 1;
+		update_charity_percent_label(frm);
 	},
 	dob(frm) {
 		update_age_preview(frm);
@@ -62,6 +63,7 @@ frappe.ui.form.on("Patient Registration", {
 		if (frm.doc.billing_category !== "Staff Dependent" && frm.doc.dependent_relationship) {
 			frm.set_value("dependent_relationship", "");
 		}
+		update_charity_percent_label(frm);
 	},
 	dependent_relationship(frm) {
 		check_dependent_aged_out_preview(frm);
@@ -74,6 +76,18 @@ frappe.ui.form.on("Patient Registration", {
 			return;
 		}
 		check_duplicate_phone(frm);
+		check_chw_field_match(frm);
+	},
+	after_save(frm) {
+		// Set only when Front Desk actually confirmed a match in the picker
+		// below - the write-back happens now, against this record's real
+		// (now-saved) name, never against a new document's temporary one.
+		if (!frm._chw_match_family_member) return;
+		frappe.call({
+			method: "metta.metta.doctype.patient_registration.patient_registration.link_chw_field_record",
+			args: { patient_registration: frm.doc.name, family_member: frm._chw_match_family_member },
+		});
+		frm._chw_match_family_member = null;
 	},
 	emergency_phone_number(frm) {
 		if (!frm.doc.emergency_phone_number) return;
@@ -174,6 +188,29 @@ function check_dependent_aged_out_preview(frm) {
 	}
 }
 
+// A Corporate category like Woodstock's own +10% is the hospital charging
+// MORE, not a concession - finance doesn't want it called "Charity"
+// anywhere they see it, "TDS" is their own term for this specific markup.
+// The stored value stays "Increase" everywhere in code/reports - only what
+// a human actually reads switches to "TDS".
+function update_charity_percent_label(frm) {
+	if (!frm.doc.billing_category) {
+		frm.set_df_property("charity_percent", "label", __("Charity Percent"));
+		frm.refresh_field("charity_percent");
+		return;
+	}
+	frappe.call({
+		method: "metta.metta.doctype.patient_registration.patient_registration.get_category_adjustment",
+		args: { billing_category: frm.doc.billing_category },
+		callback(r) {
+			const adjustment = r.message || {};
+			const is_increase = adjustment.charity_status === "Active" && adjustment.adjustment_type === "Increase";
+			frm.set_df_property("charity_percent", "label", is_increase ? __("TDS Percent") : __("Charity Percent"));
+			frm.refresh_field("charity_percent");
+		},
+	});
+}
+
 function check_duplicate_phone(frm) {
 	if (!frm.doc.phone) return;
 	frappe.call({
@@ -193,5 +230,83 @@ function check_duplicate_phone(frm) {
 				message: __("A patient with this phone number is already registered:") + `<ul>${list}</ul>` + __("Please confirm this isn't the same person before continuing."),
 			});
 		},
+	});
+}
+
+// Mirrors CHW_GENDER_TO_SEX on the server (patient_registration.py) - kept
+// in sync there, not computed from it, since this only ever drives what's
+// shown/filled in a dialog, never anything actually saved on its own.
+const CHW_GENDER_TO_SEX = { Male: "Male", Female: "Female" };
+
+function check_chw_field_match(frm) {
+	// Only for a genuinely new registration - an existing patient's phone
+	// getting edited later isn't "someone walking in for the first time",
+	// so there's no walk-in match to look for.
+	if (!frm.is_new() || !frm.doc.phone) return;
+	frappe.call({
+		method: "metta.metta.doctype.patient_registration.patient_registration.find_chw_field_matches",
+		args: { phone: frm.doc.phone },
+		callback(r) {
+			const matches = r.message || [];
+			if (matches.length) show_chw_match_dialog(frm, matches);
+		},
+	});
+}
+
+function show_chw_match_dialog(frm, matches) {
+	const row_html = (m, i) => `
+		<div class="chw-match-row" data-idx="${i}" style="cursor:pointer; padding:10px 12px; border:1px solid var(--border-color,#d1d8dd); border-radius:6px; margin-bottom:8px;">
+			<div style="font-weight:600;">${frappe.utils.escape_html(m.family_member || "")}</div>
+			<div class="text-muted" style="font-size:12px;">
+				${m.age != null ? __("Age") + " " + m.age : ""}${m.village ? " · " + frappe.utils.escape_html(m.village) : ""}${m.relationship ? " · " + frappe.utils.escape_html(m.relationship) : ""}
+			</div>
+		</div>`;
+
+	const dialog = new frappe.ui.Dialog({
+		title: __("Found in Community Health Records"),
+		fields: [
+			{
+				fieldtype: "HTML",
+				fieldname: "matches_html",
+				options: `
+					<div class="text-muted" style="margin-bottom:10px;">${__(
+						"This phone number is already known to Community Health (CHW). Is this the same person?"
+					)}</div>
+					${matches.map(row_html).join("")}
+				`,
+			},
+		],
+		primary_action_label: __("None of these - new person"),
+		primary_action() {
+			dialog.hide();
+		},
+	});
+	dialog.show();
+
+	dialog.$wrapper.find(".chw-match-row").on("click", function () {
+		apply_chw_match(frm, matches[$(this).data("idx")]);
+		dialog.hide();
+	});
+}
+
+function apply_chw_match(frm, match) {
+	// Only fills what Front Desk hasn't already typed - a deliberate hand
+	// entry always wins over the CHW record, same fetch_if_empty reasoning
+	// used elsewhere on this form (e.g. Charity Percent).
+	const fill_if_empty = (fieldname, value) => {
+		if (!frm.doc[fieldname] && value) frm.set_value(fieldname, value);
+	};
+	fill_if_empty("first_name", match.family_member);
+	fill_if_empty("sex", CHW_GENDER_TO_SEX[match.gender] || "Others");
+	fill_if_empty("dob", match.date_of_birth);
+	fill_if_empty("address", match.village);
+
+	// Read on Save (see after_save above) - kept off the doc itself since
+	// there's no real field for it and the write-back only makes sense once
+	// this record actually has a permanent name.
+	frm._chw_match_family_member = match.name;
+	frappe.show_alert({
+		message: __("Will link to {0}'s Community Health record on save.", [match.family_member]),
+		indicator: "blue",
 	});
 }

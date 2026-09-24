@@ -748,12 +748,26 @@ function render_bed_transfer_history(frm) {
 	});
 }
 
+// A Corporate category like Woodstock's own +10% is the hospital charging
+// MORE, not a concession - finance doesn't want it called "Charity"
+// anywhere they see it, "TDS" is their own term for this specific markup.
+// The stored value stays "Increase" everywhere in code/reports - only what
+// a human actually reads switches to "TDS".
+function update_charity_field_labels(frm, adjustment_type) {
+	const is_increase = adjustment_type === "Increase";
+	frm.set_df_property("charity_amount", "label", is_increase ? __("TDS Amount") : __("Charity Amount"));
+	frm.set_df_property("charity_percent", "label", is_increase ? __("TDS %") : __("Charity %"));
+	frm.refresh_field("charity_amount");
+	frm.refresh_field("charity_percent");
+}
+
 function calculate_billing_totals(frm) {
 	// Mirrors the server's calculate_billing_totals() exactly - a live
 	// preview only, validate() on save is what's actually authoritative.
 	const adjustment = frm._category_adjustment;
 	const adjustment_type =
 		adjustment && adjustment.charity_status === "Active" ? adjustment.adjustment_type : null;
+	update_charity_field_labels(frm, adjustment_type);
 	const raw_percent = ["Charity", "Increase"].includes(adjustment_type) ? flt(frm.doc.charity_percent) : 0;
 
 	// A hand-typed Charity Amount wins over the percentage-based discount -

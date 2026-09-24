@@ -34,6 +34,7 @@ frappe.ui.form.on("Doctor Consultation", {
 		check_vitals_status(frm);
 		show_vitals_popup(frm);
 		render_prescription_item_search(frm);
+		render_suggested_test_search(frm);
 
 		if (!frm.is_new()) {
 			frm.add_custom_button(__("Print Prescription"), () => {
@@ -452,6 +453,121 @@ function render_prescription_item_search(frm) {
 		$search.val("");
 		$dosage.val("");
 		$selectedNote.text("");
+		$results.hide();
+	});
+}
+
+function render_suggested_test_search(frm) {
+	const wrapper = frm.fields_dict.suggested_test_search_area.$wrapper;
+	wrapper.html(`
+		<div class="test-item-search-widget" style="display:flex; gap:8px; align-items:flex-start; margin-bottom:10px;">
+			<div style="flex:2; min-width:220px; position:relative;">
+				<input type="text" class="form-control test-item-search" placeholder="${__(
+					"Search a test / investigation..."
+				)}" autocomplete="off">
+				<div class="test-item-results" style="display:none; position:absolute; z-index:50; background:var(--fg-color,#fff); border:1px solid var(--border-color,#d1d8dd); width:100%; max-height:260px; overflow:auto; box-shadow:0 2px 6px rgba(0,0,0,0.15);"></div>
+			</div>
+			<select class="form-control test-item-type" style="width:130px;">
+				<option value="">${__("Type")}</option>
+				<option value="Lab Test">${__("Lab Test")}</option>
+				<option value="X-Ray">${__("X-Ray")}</option>
+				<option value="Scan">${__("Scan")}</option>
+				<option value="Other">${__("Other")}</option>
+			</select>
+			<button class="btn btn-primary btn-sm test-item-add">${__("Add")}</button>
+		</div>
+	`);
+
+	let selected = null;
+	let current_rows = [];
+	const $search = wrapper.find(".test-item-search");
+	const $results = wrapper.find(".test-item-results");
+	const $type = wrapper.find(".test-item-type");
+
+	const select_row = (idx) => {
+		if (!current_rows[idx]) return;
+		selected = current_rows[idx];
+		$search.val(selected.item_name);
+		$results.hide();
+	};
+
+	const render_results = (rows) => {
+		current_rows = rows || [];
+		if (!current_rows.length) {
+			$results.html(`<div class="text-muted" style="padding:8px;">${__("No matching test/service found")}</div>`).show();
+			return;
+		}
+		$results
+			.html(
+				current_rows
+					.map(
+						(r, i) => `
+					<div class="test-item-row" data-idx="${i}" style="padding:6px 10px; cursor:pointer;">${frappe.utils.escape_html(
+							r.item_name
+						)}</div>`
+					)
+					.join("")
+			)
+			.show();
+		$results.find(".test-item-row").on("mouseenter", function () {
+			$(this).css("background", "var(--control-bg,#f5f7fa)");
+		});
+		$results.find(".test-item-row").on("mouseleave", function () {
+			$(this).css("background", "");
+		});
+		$results.find(".test-item-row").on("click", function () {
+			select_row($(this).data("idx"));
+		});
+	};
+
+	const do_search = frappe.utils.debounce((term) => {
+		frappe.call({
+			method: "metta.metta.doctype.doctor_consultation.doctor_consultation.search_services_for_consultation",
+			args: { search_term: term },
+			callback(r) {
+				render_results(r.message);
+			},
+		});
+	}, 300);
+
+	$search.on("input", () => {
+		selected = null;
+		do_search($search.val());
+	});
+	$search.on("focus", () => {
+		if (!$search.val()) do_search("");
+	});
+	$(document).on("click.test-item-search", (e) => {
+		if (!$(e.target).closest(".test-item-search-widget").length) $results.hide();
+	});
+
+	wrapper.find(".test-item-add").on("click", () => {
+		if (!selected) {
+			frappe.msgprint(__("Please search and select a test/investigation first."));
+			return;
+		}
+		if (!$type.val()) {
+			frappe.msgprint(__("Please pick a Type."));
+			return;
+		}
+
+		// Frappe auto-adds one blank starter row to a new document's required
+		// Table field - remove it before adding the first real item, so it
+		// doesn't linger as an empty Row 1 forever.
+		const existing_rows = frm.doc.suggested_tests || [];
+		if (existing_rows.length && existing_rows.every((r) => !r.item)) {
+			frm.clear_table("suggested_tests");
+		}
+
+		const row = frm.add_child("suggested_tests");
+		row.item = selected.item_code;
+		row.item_name = selected.item_name;
+		row.test_type = $type.val();
+		frm.refresh_field("suggested_tests");
+
+		selected = null;
+		$search.val("");
+		$type.val("");
 		$results.hide();
 	});
 }
