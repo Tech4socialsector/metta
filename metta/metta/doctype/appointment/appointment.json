@@ -2,13 +2,14 @@
  "actions": [],
  "allow_import": 1,
  "autoname": "autoname",
- "creation": "2026-08-13 00:00:00.000000",
+ "creation": "2026-08-13 00:00:00",
  "doctype": "DocType",
  "document_type": "Document",
  "engine": "InnoDB",
  "field_order": [
   "patient",
   "patient_name",
+  "age",
   "phone",
   "schedule_section",
   "appointment_date",
@@ -110,11 +111,16 @@
    "fieldname": "reason_for_visit",
    "fieldtype": "Small Text",
    "label": "Reason for Visit"
+  },
+  {
+   "fieldname": "age",
+   "fieldtype": "Int",
+   "label": "Age"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-14 00:00:00.000000",
+ "modified": "2026-09-24 09:31:23.289046",
  "modified_by": "Administrator",
  "module": "metta",
  "name": "Appointment",
