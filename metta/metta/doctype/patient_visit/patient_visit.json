@@ -476,6 +476,7 @@
    "options": "Category Price Adjustment"
   },
   {
+   "depends_on": "eval:doc.billing_category && !([\"General\",\"Staff\",\"Staff Dependent\"].includes(doc.billing_category))",
    "fetch_from": "uhin_id.corporate_customer",
    "fieldname": "company_name",
    "fieldtype": "Link",
