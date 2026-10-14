@@ -439,9 +439,11 @@ frappe.ui.form.on("Patient Visit", {
 		calculate_billing_totals(frm);
 	},
 	charity_percent(frm) {
+		if (sync_charity_amount_from_percent(frm)) return;
 		calculate_billing_totals(frm);
 	},
 	charity_amount(frm) {
+		if (sync_charity_percent_from_amount(frm)) return;
 		calculate_billing_totals(frm);
 	},
 	payment_mode(frm) {
@@ -759,6 +761,35 @@ function update_charity_field_labels(frm, adjustment_type) {
 	frm.set_df_property("charity_percent", "label", is_increase ? __("TDS %") : __("Charity %"));
 	frm.refresh_field("charity_amount");
 	frm.refresh_field("charity_percent");
+}
+
+// Charity Percent and Charity Amount are only both live-editable for a
+// General patient (every other category's percent is fixed from Category
+// Price Adjustment and Charity Amount isn't even shown) - typing either one
+// should fill in the other from Fee Amount, so Front Desk can enter whichever
+// figure they were actually given (a rate, or a rupee amount) and still see
+// both. frm._charity_syncing guards against the set_value below re-triggering
+// this same pair of handlers and looping forever.
+function sync_charity_amount_from_percent(frm) {
+	if (frm._charity_syncing || frm.doc.billing_category !== "General") return false;
+	frm._charity_syncing = true;
+	const amount = (flt(frm.doc.fee_amount) * flt(frm.doc.charity_percent)) / 100;
+	frm.set_value("charity_amount", amount).then(() => {
+		frm._charity_syncing = false;
+		calculate_billing_totals(frm);
+	});
+	return true;
+}
+
+function sync_charity_percent_from_amount(frm) {
+	if (frm._charity_syncing || frm.doc.billing_category !== "General" || !flt(frm.doc.fee_amount)) return false;
+	frm._charity_syncing = true;
+	const percent = (flt(frm.doc.charity_amount) / flt(frm.doc.fee_amount)) * 100;
+	frm.set_value("charity_percent", percent).then(() => {
+		frm._charity_syncing = false;
+		calculate_billing_totals(frm);
+	});
+	return true;
 }
 
 function calculate_billing_totals(frm) {

@@ -92,6 +92,18 @@ class PatientVisit(Document):
 			# Amount had).
 			self.discount_amount = flt(self.fee_amount) * raw_percent / 100
 
+		# General is the only category where either field can be hand-typed
+		# (every other category's percent is fixed from Category Price
+		# Adjustment and Charity Amount isn't even usable there, per the
+		# check above) - so this is also the only place a save should ever
+		# backfill one from the other, same live two-way sync the client
+		# does, but authoritative here regardless of what the client sent.
+		if self.billing_category == GENERAL_CATEGORY and flt(self.fee_amount):
+			if flt(self.charity_amount):
+				self.charity_percent = flt(self.charity_amount) / flt(self.fee_amount) * 100
+			elif flt(self.charity_percent):
+				self.charity_amount = flt(self.fee_amount) * flt(self.charity_percent) / 100
+
 		if adjustment_type == "Increase":
 			self.net_amount = flt(self.fee_amount) + self.discount_amount
 		else:

@@ -587,6 +587,16 @@ function calculate_totals(frm) {
 	const new_amount_due = flt(frm.doc.payable_amount) - flt(frm.doc.advance_adjusted);
 	frm.set_value("amount_due", new_amount_due);
 
+	// Advance Available has to keep tracking what's actually still left once
+	// THIS bill's own Advance Adjusted is accounted for too - otherwise it
+	// keeps showing the account's full balance even after some of it has
+	// just been earmarked for this very bill, and staff can't tell what's
+	// really left to offer the next one.
+	if (frm.doc.registration_category === "IP") {
+		const total_balance = frm._advance_balance ? flt(frm._advance_balance.balance) : 0;
+		frm.set_value("advance_available", total_balance - flt(frm.doc.advance_adjusted));
+	}
+
 	// Defaults to fully collected - staff reduce this by hand only for a
 	// genuine partial payment, as the LAST step before submitting. Only reset
 	// it when Amount Due itself actually changed (a real edit - items,

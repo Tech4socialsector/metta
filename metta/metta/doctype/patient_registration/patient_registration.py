@@ -41,19 +41,15 @@ class PatientRegistration(Document):
 		self.validate_charity_percent()
 
 	def validate_charity_percent(self):
-		# Charity Percent is editable only for a General (i.e. not
-		# Staff-related) patient - a hand-typed rate for this specific
-		# person's situation, independent of Billing Category, since it's a
-		# one-off judgment call, not a standing rule. Staff/Staff Dependent
-		# already gets its charity automatically from Billing Category, so a
-		# hand-typed rate on top of that would be a second, conflicting one -
-		# the field is read-only for them in the UI, but that's only a
-		# convenience, so it's enforced here too for any API call/import.
+		# For General, charity is a one-off judgment call made at Patient
+		# Visit time (once the doctor has actually seen the patient), not
+		# guessed at registration - so it's forced to 0 here regardless of
+		# whatever the field held before, same as the field being read-only
+		# is only a convenience in the UI, so it's enforced here too for any
+		# API call/import. Every other category still gets its own standing
+		# rate from Category Price Adjustment, unchanged.
 		if self.billing_category == GENERAL_CATEGORY:
-			if flt(self.charity_percent) < 0:
-				frappe.throw(frappe._("Charity Percent cannot be negative."))
-			if flt(self.charity_percent) > 100:
-				frappe.throw(frappe._("Charity Percent cannot exceed 100%."))
+			self.charity_percent = 0
 		elif self.billing_category:
 			# Not trusted from whatever the client's own fetch_from last put
 			# here - re-fetched fresh so a read-only field being bypassed via
@@ -73,14 +69,10 @@ class PatientRegistration(Document):
 		if not check_dependent_aged_out(self.dependent_relationship, self.age):
 			return
 		self.billing_category = GENERAL_CATEGORY
-		# charity_percent is normally kept correct by the client's own
-		# fetch_from - but this can also run with no client involved (the
-		# daily age-out job), so it's resynced here directly rather than
-		# trusting whatever charity_percent happened to already be on
-		# the document.
-		self.charity_percent = (
-			frappe.db.get_value("Category Price Adjustment", GENERAL_CATEGORY, "charity_percent") or 0
-		)
+		# General's charity is never a standing rate - validate_charity_percent()
+		# (which runs right after this) forces it back to 0 regardless, so
+		# nothing needs resyncing here.
+		self.charity_percent = 0
 
 
 @frappe.whitelist()
