@@ -31,10 +31,14 @@ class PurchaseBill(Document):
 			# Taxable Amount is entered directly, matching the supplier
 			# invoice's own Taxable Amount column - P Rate per single
 			# tablet/unit is worked out backward from it, not typed in.
-			# Free strips are converted to tablets so they can be netted out
-			# of Qty in the same units.
-			free_qty = flt(row.free) * flt(row.packing)
-			billable_qty = flt(row.qty) - free_qty
+			# Free is purely informational here - it never reduces Qty and
+			# never touches Taxable Amount, so P Rate is always worked out
+			# against the full ordered Qty, matching the JS live preview.
+			# The free units still land in stock at approval time (see
+			# approve_bill() below) and still inherit the same Batch-level
+			# selling price as the paid units - neither of those depends on
+			# this line, so removing the subtraction here doesn't touch them.
+			billable_qty = flt(row.qty)
 			row.purchase_rate = flt(flt(row.amount) / billable_qty, 2) if billable_qty else 0
 
 			# Discount is entered as a % of the Taxable Amount - the ₹ value
@@ -150,13 +154,29 @@ class PurchaseBill(Document):
 				title=_("Purchase Receipt Required"),
 			)
 
+		# Free is only ever entered on the Bill, against the same row as the
+		# paid units (e.g. No of Unit 50, Free 2) - it's not a separate line
+		# and the Bill's own numbers (Taxable Amount, Qty, Total) stay exactly
+		# as invoiced for the 50. But those 2 free units are still real stock
+		# on the shelf, so they need to land in the Ledger on top of what the
+		# Receipt recorded - keyed by item + batch since one bill can cover
+		# several batches of the same item.
+		free_stock_qty_by_key = {}
+		for bill_row in self.items:
+			if not bill_row.item or not bill_row.free:
+				continue
+			key = (bill_row.item, bill_row.batch_no)
+			free_stock_qty_by_key[key] = free_stock_qty_by_key.get(key, 0) + flt(bill_row.free) * flt(bill_row.packing)
+
 		receipt = frappe.get_doc("Purchase Receipt", self.purchase_receipt)
 		for row in receipt.items:
 			# The Receipt already knows exactly what physically arrived - which
 			# batch, how much in stock-UOM terms - so stock is added from its
 			# rows, not the Bill's (the Bill has no batch/conversion_factor of
-			# its own, only price).
+			# its own, only price) - topped up with any free units this Bill
+			# declares for the same item/batch.
 			batch_name = f"{row.item}-{row.batch_no}"
+			free_qty = free_stock_qty_by_key.get((row.item, row.batch_no), 0)
 			create_stock_ledger_entry(
 				item=row.item,
 				warehouse=receipt.receiving_warehouse,
@@ -164,7 +184,7 @@ class PurchaseBill(Document):
 				posting_datetime=receipt.receipt_date_time,
 				voucher_type="Purchase Bill",
 				voucher_no=self.name,
-				qty_change=row.stock_qty,
+				qty_change=flt(row.stock_qty) + free_qty,
 			)
 
 		self.db_set("status", "Approved", update_modified=False)

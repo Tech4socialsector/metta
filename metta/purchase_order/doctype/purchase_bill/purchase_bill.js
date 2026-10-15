@@ -175,10 +175,10 @@ function calculate_amount(frm, cdt, cdn) {
 
 	// Taxable Amount is entered directly, matching the supplier invoice's
 	// own Taxable Amount column - P Rate per single tablet/unit is worked
-	// out backward from it, not typed in. Free strips are converted to
-	// tablets so they can be netted out of Qty in the same units.
-	const free_qty = flt(row.free) * flt(row.packing);
-	const billable_qty = qty - free_qty;
+	// out backward from it, not typed in. Free doesn't affect this at all -
+	// it's purely informational, so it never reduces the divisor here,
+	// mirroring validate() server-side.
+	const billable_qty = qty;
 	const amount = flt(row.amount);
 	const purchase_rate = billable_qty ? flt(amount / billable_qty, 2) : 0;
 
