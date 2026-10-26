@@ -151,17 +151,46 @@ def get_item_defaults_for_order(item):
 	frappe.has_permission("Purchase Order", "read", throw=True)
 	if not item:
 		return {}
-	data = frappe.db.get_value("Item", item, ["unit_of_measure", "standard_purchase_rate"], as_dict=True) or {}
-	# Packing has no suggested default anymore - Purchase Order is raised
-	# directly in tablet/unit counts now, not supplier packaging (Box/Strip),
-	# so there's no per-item conversion factor left to suggest one from.
-	# Staff type it in themselves, same as always for any item with no
-	# suggestion available.
+	data = frappe.db.get_value(
+		"Item",
+		item,
+		["unit_of_measure", "standard_purchase_rate", "purchase_pack", "units_per_purchase_pack"],
+		as_dict=True,
+	) or {}
+	# Pack and Units per Pack come from the Item ("bought as Strip of 10"),
+	# else from how it last came (bill, receipt, order) - staff only change
+	# them when the supplier's packaging changes.
+	if data.get("purchase_pack") and data.get("units_per_purchase_pack"):
+		pack = {"pack_type": data.purchase_pack, "packing": data.units_per_purchase_pack}
+	else:
+		pack = get_last_pack(item)
 	return {
 		"unit_of_measure": data.get("unit_of_measure") or "",
 		"rate": flt(data.get("standard_purchase_rate")),
-		"packing": 0,
+		"packing": pack.get("packing") or 0,
+		"pack_type": pack.get("pack_type") or "",
 	}
+
+
+def get_last_pack(item):
+	for child, parent in (
+		("Purchase Bill Item", "Purchase Bill"),
+		("Purchase Receipt Item", "Purchase Receipt"),
+		("Purchase Order Item", "Purchase Order"),
+	):
+		rows = frappe.db.sql(
+			f"""
+			select c.pack_type, c.packing
+			from `tab{child}` c join `tab{parent}` p on p.name = c.parent
+			where c.item = %s and p.docstatus = 1 and c.packing > 1
+			order by p.creation desc limit 1
+			""",
+			item,
+			as_dict=True,
+		)
+		if rows:
+			return rows[0]
+	return {}
 
 
 @frappe.whitelist()

@@ -1,0 +1,134 @@
+{
+ "actions": [],
+ "creation": "2026-10-25 12:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "parameter",
+  "unit",
+  "value_type",
+  "normal_text",
+  "column_break_ltp1",
+  "male_low",
+  "male_high",
+  "female_low",
+  "female_high",
+  "column_break_ltp2",
+  "child_low",
+  "child_high",
+  "critical_low",
+  "critical_high"
+ ],
+ "fields": [
+  {
+   "columns": 3,
+   "fieldname": "parameter",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Parameter",
+   "reqd": 1
+  },
+  {
+   "columns": 1,
+   "fieldname": "unit",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Unit"
+  },
+  {
+   "columns": 1,
+   "default": "Number",
+   "fieldname": "value_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Value Type",
+   "options": "Number\nText\nPositive-Negative",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.value_type != 'Number'",
+   "fieldname": "normal_text",
+   "fieldtype": "Data",
+   "label": "Normal Value"
+  },
+  {
+   "fieldname": "column_break_ltp1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "columns": 1,
+   "depends_on": "eval:doc.value_type == 'Number'",
+   "fieldname": "male_low",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Male Low"
+  },
+  {
+   "columns": 1,
+   "depends_on": "eval:doc.value_type == 'Number'",
+   "fieldname": "male_high",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Male High"
+  },
+  {
+   "columns": 1,
+   "depends_on": "eval:doc.value_type == 'Number'",
+   "fieldname": "female_low",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Female Low"
+  },
+  {
+   "columns": 1,
+   "depends_on": "eval:doc.value_type == 'Number'",
+   "fieldname": "female_high",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Female High"
+  },
+  {
+   "fieldname": "column_break_ltp2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.value_type == 'Number'",
+   "fieldname": "child_low",
+   "fieldtype": "Float",
+   "label": "Child Low"
+  },
+  {
+   "depends_on": "eval:doc.value_type == 'Number'",
+   "fieldname": "child_high",
+   "fieldtype": "Float",
+   "label": "Child High"
+  },
+  {
+   "depends_on": "eval:doc.value_type == 'Number'",
+   "fieldname": "critical_low",
+   "fieldtype": "Float",
+   "label": "Critical Low"
+  },
+  {
+   "depends_on": "eval:doc.value_type == 'Number'",
+   "fieldname": "critical_high",
+   "fieldtype": "Float",
+   "label": "Critical High"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-10-25 12:00:00",
+ "modified_by": "Administrator",
+ "module": "Laboratory",
+ "name": "Lab Test Parameter",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "ASC",
+ "states": []
+}

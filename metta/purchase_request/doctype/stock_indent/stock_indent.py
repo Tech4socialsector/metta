@@ -15,6 +15,23 @@ class StockIndent(Document):
 	def validate(self):
 		self.validate_required_by()
 		self.validate_requesting_warehouse()
+		self.set_row_details()
+
+	def set_row_details(self):
+		# Unit and the two stock figures help Central Store decide how much to
+		# send. They are a snapshot taken while the indent is still a Draft -
+		# once submitted they stay as they were when the request was made.
+		refresh_stock = (self.status or "Draft") == "Draft"
+		for row in self.items:
+			if not row.item:
+				continue
+			if not row.unit_of_measure:
+				row.unit_of_measure = frappe.db.get_value("Item", row.item, "unit_of_measure")
+			if refresh_stock:
+				stock = get_indent_row_stock(row.item, self.requesting_warehouse)
+				row.stock_at_requesting_store = stock["at_requesting"]
+				row.usable_stock_at_central = stock["usable_at_central"]
+			row.qty_pending = flt(row.qty_requested) - flt(row.qty_issued)
 
 	def validate_requesting_warehouse(self):
 		# Central Store is who fulfils an indent (via Stock Transfer), never
@@ -66,6 +83,53 @@ def refresh_issuing_status(stock_indent_name):
 
 	if new_status != indent.status:
 		indent.db_set("status", new_status, update_modified=False)
+
+
+def get_indent_row_stock(item, requesting_warehouse=None):
+	at_requesting = 0
+	if requesting_warehouse:
+		at_requesting = flt(
+			frappe.db.get_value("Stock Balance", {"item": item, "warehouse": requesting_warehouse}, "actual_qty")
+		)
+	central = frappe.get_all("Warehouse", filters={"warehouse_type": "Central Store"}, pluck="name")
+	usable = 0
+	if central:
+		if frappe.db.get_value("Item", item, "has_batch"):
+			# Only batches Central Store can actually send: not disabled and not
+			# past expiry - the same rule Billing's FEFO pick uses.
+			usable = flt(
+				frappe.db.sql(
+					"""
+					select coalesce(sum(sle.qty_change), 0)
+					from `tabStock Ledger Entry` sle
+					inner join `tabBatch` b on b.name = sle.batch_no
+					where sle.item = %(item)s and sle.warehouse in %(central)s
+						and b.disabled = 0 and b.expiry_date >= CURDATE()
+					""",
+					{"item": item, "central": tuple(central)},
+				)[0][0]
+			)
+		else:
+			usable = sum(
+				flt(q)
+				for q in frappe.get_all(
+					"Stock Balance", filters={"item": item, "warehouse": ["in", central]}, pluck="actual_qty"
+				)
+			)
+	return {"at_requesting": at_requesting, "usable_at_central": max(usable, 0)}
+
+
+@frappe.whitelist()
+def get_indent_row_details(item, warehouse=None):
+	# For the item search's Add button, so the row shows its unit and stock
+	# figures straight away instead of only after Save.
+	frappe.has_permission("Stock Indent", "read", throw=True)
+	stock = get_indent_row_stock(item, warehouse)
+	return {
+		"unit_of_measure": frappe.db.get_value("Item", item, "unit_of_measure") or "",
+		"stock_at_requesting_store": stock["at_requesting"],
+		"usable_stock_at_central": stock["usable_at_central"],
+	}
 
 
 @frappe.whitelist()

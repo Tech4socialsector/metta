@@ -21,6 +21,8 @@
   "chemical_composition",
   "stock_pricing_section",
   "unit_of_measure",
+  "purchase_pack",
+  "units_per_purchase_pack",
   "column_break_stock_pricing",
   "has_batch",
   "has_expiry",
@@ -133,11 +135,24 @@
    "label": "Stock & Pricing"
   },
   {
-   "description": "One unit used everywhere - Purchase Order, Stock Indent, Stock Transfer, and Billing all show quantities in this same unit (e.g. Tablet, Sachet, Bottle). No separate buy-in-boxes conversion.",
+   "description": "One unit used everywhere - Purchase Order, Stock Indent, Stock Transfer, and Billing all show quantities in this same unit (e.g. Tablet, Sachet, Bottle).",
    "fieldname": "unit_of_measure",
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Unit of Measure"
+  },
+  {
+   "fieldname": "purchase_pack",
+   "fieldtype": "Link",
+   "label": "Purchase Pack",
+   "options": "Unit of Measure"
+  },
+  {
+   "depends_on": "eval:doc.purchase_pack",
+   "fieldname": "units_per_purchase_pack",
+   "fieldtype": "Int",
+   "label": "Units per Purchase Pack",
+   "non_negative": 1
   },
   {
    "fieldname": "column_break_stock_pricing",
@@ -229,7 +244,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-27 10:59:13.361587",
+ "modified": "2026-10-26 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "Master",
  "name": "Item",

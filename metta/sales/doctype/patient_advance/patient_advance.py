@@ -37,19 +37,23 @@ class PatientAdvance(Document):
 
 
 @frappe.whitelist()
-def get_advance_balance(patient_visit):
+def get_advance_balance(patient_visit, exclude_billing=None):
 	frappe.has_permission("Patient Advance", "read", throw=True)
 
 	total_collected = flt(
 		frappe.db.sql("select sum(amount) from `tabPatient Advance` where patient_visit=%s", patient_visit)[0][0]
 	)
-	# docstatus != 2 (not cancelled) - draft bills count too, so a second
-	# draft Billing against the same visit sees a balance that already
-	# accounts for the first draft's provisional adjustment, rather than
-	# letting both drafts independently think the full amount is available.
+	# Only submitted bills reduce the advance - a draft is still being worked
+	# on (and may never be submitted), so it must not show the patient's
+	# advance as used up. Billing's validate() re-checks the balance at
+	# submit, so two drafts both auto-applying the same advance can't both
+	# go through.
+	# exclude_billing leaves out the bill currently open in the form, so its
+	# own Advance Adjusted isn't counted here AND subtracted again by the form.
 	total_adjusted = flt(
 		frappe.db.sql(
-			"select sum(advance_adjusted) from `tabBilling` where patient=%s and docstatus != 2", patient_visit
+			"select sum(advance_adjusted) from `tabBilling` where patient=%s and docstatus = 1 and name != %s",
+			(patient_visit, exclude_billing or ""),
 		)[0][0]
 	)
 	percent_used = (total_adjusted / total_collected * 100) if total_collected else 0

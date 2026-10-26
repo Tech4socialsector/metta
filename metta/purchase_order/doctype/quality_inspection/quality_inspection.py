@@ -29,8 +29,31 @@ class QualityInspection(Document):
 	def on_update(self):
 		self.refresh_purchase_receipt_link()
 
+	def on_submit(self):
+		self.set_receipt_rows(self.name)
+
 	def on_cancel(self):
 		self.refresh_purchase_receipt_link()
+		self.set_receipt_rows("")
+
+	def set_receipt_rows(self, value):
+		# The inspection is done after the receipt is saved, so the receipt's
+		# own rows learn about it here (matched by item + batch) instead of
+		# only when someone re-picks the item or batch on the receipt.
+		if not self.purchase_receipt:
+			return
+		for row in self.items:
+			if not (row.item and row.batch_no):
+				continue
+			frappe.db.sql(
+				"""
+				update `tabPurchase Receipt Item` set quality_inspection = %(value)s
+				where parent = %(pr)s and parenttype = 'Purchase Receipt'
+					and item = %(item)s and batch_no = %(batch)s
+					and (%(value)s != '' or quality_inspection = %(me)s)
+				""",
+				{"value": value, "pr": self.purchase_receipt, "item": row.item, "batch": row.batch_no, "me": self.name},
+			)
 
 	def on_trash(self):
 		self.refresh_purchase_receipt_link()

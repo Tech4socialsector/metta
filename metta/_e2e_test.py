@@ -257,7 +257,7 @@ def run():
 			"patient": ip_visit.name, "customer_name": "E2E TestPatient", "billing_category": "General",
 			"pharmacy_items": [{"item": "TEST-PARA-500", "item_name": "Test Paracetamol 500mg", "item_type": "Medicine", "qty": 5, "rate": 3, "batch_no": batch_name}],
 			"service_items": [{"item": "TEST-CBC", "item_name": "Test CBC", "item_type": "Service", "qty": 1, "rate": 300}],
-			"payment_mode": "Cash", "advance_adjusted": 300,
+			"payment_mode": "Cash", "advance_adjusted": 300, "advance_adjusted_is_manual": 1,
 		}).insert(ignore_permissions=True))
 		if ip_bill:
 			step("Submit IP Billing", lambda: ip_bill.submit())

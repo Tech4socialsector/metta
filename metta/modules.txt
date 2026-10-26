@@ -4,3 +4,4 @@ Purchase Order
 Sales
 Stock
 Master
+Laboratory

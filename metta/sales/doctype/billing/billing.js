@@ -116,18 +116,20 @@ frappe.ui.form.on("Billing", {
 		if (frm.doc.patient && !frm._advance_balance) {
 			frappe.call({
 				method: "metta.sales.doctype.patient_advance.patient_advance.get_advance_balance",
-				args: { patient_visit: frm.doc.patient },
+				args: { patient_visit: frm.doc.patient, exclude_billing: advance_exclude_billing(frm) },
 				callback(r) {
 					frm._advance_balance = r.message || null;
 					add_advance_button(frm);
 					set_advance_balance_fields(frm);
+					// The first calculate_totals() above ran before this balance
+					// arrived, so auto-apply couldn't fill Advance Adjusted yet.
+					if (frm.doc.docstatus === 0) calculate_totals(frm);
 				},
 			});
 		} else {
 			add_advance_button(frm);
 			set_advance_balance_fields(frm);
 		}
-		maybe_add_advance_ledger_button(frm);
 
 		// Only IP admissions have a running stay of Billing entries worth
 		// consolidating into one final bill - an OP visit is always just this
@@ -210,6 +212,9 @@ frappe.ui.form.on("Billing", {
 	patient(frm) {
 		frm.clear_custom_buttons();
 		frm._advance_balance = null;
+		// A hand-typed Advance Adjusted was for the previous patient's
+		// advance - the new patient starts back on the automatic amount.
+		frm.doc.advance_adjusted_is_manual = 0;
 		if (!frm.doc.patient) {
 			frm.set_value("customer_name", "");
 			set_advance_balance_fields(frm);
@@ -228,7 +233,7 @@ frappe.ui.form.on("Billing", {
 		suggest_registration_charity(frm);
 		frappe.call({
 			method: "metta.sales.doctype.patient_advance.patient_advance.get_advance_balance",
-			args: { patient_visit: frm.doc.patient },
+			args: { patient_visit: frm.doc.patient, exclude_billing: advance_exclude_billing(frm) },
 			callback(r) {
 				frm._advance_balance = r.message || null;
 				add_advance_button(frm);
@@ -236,7 +241,6 @@ frappe.ui.form.on("Billing", {
 				calculate_totals(frm);
 			},
 		});
-		maybe_add_advance_ledger_button(frm);
 	},
 	charity_scope(frm) {
 		calculate_totals(frm);
@@ -258,6 +262,11 @@ frappe.ui.form.on("Billing", {
 		calculate_totals(frm);
 	},
 	advance_adjusted(frm) {
+		// Only fires on a real user edit - auto_apply_advance() writes the
+		// field directly, without triggering this. A typed figure means staff
+		// chose it on purpose (e.g. the relative pays this bill another way),
+		// so auto-apply must stop overriding it from here on.
+		frm.doc.advance_adjusted_is_manual = 1;
 		calculate_totals(frm);
 	},
 	// billing_category is itself a fetch_from off "patient" - its change event
@@ -583,8 +592,12 @@ function calculate_totals(frm) {
 
 	// Mirrors validate_advance_adjustment() on the server - just a preview,
 	// the save is what actually enforces the balance cap.
+	auto_apply_advance(frm);
 	const previous_amount_due = flt(frm.doc.amount_due);
-	const new_amount_due = flt(frm.doc.payable_amount) - flt(frm.doc.advance_adjusted);
+	// Rounded the same as the server - an unrounded float (e.g. 50.0499999)
+	// never matches the stored 50.05, which would mark the form "Not Saved"
+	// every time it's reopened.
+	const new_amount_due = flt(flt(frm.doc.payable_amount) - flt(frm.doc.advance_adjusted), 2);
 	frm.set_value("amount_due", new_amount_due);
 
 	// Advance Available has to keep tracking what's actually still left once
@@ -593,8 +606,7 @@ function calculate_totals(frm) {
 	// just been earmarked for this very bill, and staff can't tell what's
 	// really left to offer the next one.
 	if (frm.doc.registration_category === "IP") {
-		const total_balance = frm._advance_balance ? flt(frm._advance_balance.balance) : 0;
-		frm.set_value("advance_available", total_balance - flt(frm.doc.advance_adjusted));
+		set_display_value(frm, "advance_available", advance_available_for_bill(frm));
 	}
 
 	// Defaults to fully collected - staff reduce this by hand only for a
@@ -631,106 +643,71 @@ function add_discharge_bill_button(frm) {
 	});
 }
 
+// Same rule as the server's auto_apply_advance(): an IP bill uses the
+// patient's advance automatically, up to the Payable Amount, unless staff
+// typed their own figure. Written directly (not frm.set_value) so it doesn't
+// fire the advance_adjusted handler, which would misread it as a user edit.
+function auto_apply_advance(frm) {
+	if (frm.doc.docstatus !== 0 || frm.doc.advance_adjusted_is_manual) return;
+	const has_advance = frm.doc.registration_category === "IP" && frm.doc.patient;
+	// Balance not fetched yet - leave the current figure until it arrives.
+	if (has_advance && !frm._advance_balance) return;
+	const available = has_advance ? flt(frm._advance_balance.balance) : 0;
+	const amount = flt(Math.max(Math.min(available, flt(frm.doc.payable_amount)), 0), 2);
+	if (flt(frm.doc.advance_adjusted) === amount) return;
+	frm.doc.advance_adjusted = amount;
+	frm.refresh_field("advance_adjusted");
+}
+
 function add_advance_button(frm) {
-	// The cached balance is only used to decide whether the button is worth
-	// showing at all - the actual amount applied on click is always
-	// re-fetched fresh, since another bill for this same patient could have
-	// been submitted (in another tab, or by someone else) since this form
-	// was first opened, making the cached figure stale and too high. Applying
-	// a stale, too-high amount would silently show "Amount Due: 0" here and
-	// then get rejected by the server's own balance check on Save.
+	// Advance is applied automatically now - this button only matters once
+	// staff have typed their own Advance Adjusted and want to go back to the
+	// automatic amount. The balance is re-fetched fresh on click, since
+	// another bill for this patient could have been submitted (in another
+	// tab, or by someone else) since this form was first opened.
+	if (frm.doc.docstatus !== 0) return;
 	const cached_balance = frm._advance_balance && flt(frm._advance_balance.balance);
 	if (!cached_balance || cached_balance <= 0) return;
-	frm.add_custom_button(__("Apply Advance"), () => {
+	frm.add_custom_button(__("Auto-apply Advance"), () => {
 		frappe.call({
 			method: "metta.sales.doctype.patient_advance.patient_advance.get_advance_balance",
-			args: { patient_visit: frm.doc.patient },
+			args: { patient_visit: frm.doc.patient, exclude_billing: advance_exclude_billing(frm) },
 			callback(r) {
 				frm._advance_balance = r.message || null;
+				frm.doc.advance_adjusted_is_manual = 0;
 				set_advance_balance_fields(frm);
-				const balance = frm._advance_balance ? flt(frm._advance_balance.balance) : 0;
-				const amount = Math.min(balance, flt(frm.doc.payable_amount));
-				frm.set_value("advance_adjusted", amount);
+				calculate_totals(frm);
 			},
 		});
 	});
 }
 
-function maybe_add_advance_ledger_button(frm) {
-	// A single "Advance Collected" row is nothing worth a button for - the
-	// ledger only earns its own view once this patient's advance has
-	// actually been drawn against (or topped up) at least once more.
-	if (frm.doc.registration_category !== "IP" || !frm.doc.patient) return;
-	frappe.call({
-		method: "metta.metta.doctype.patient_visit.patient_visit.get_advance_tracking",
-		args: { patient_visit: frm.doc.patient },
-		callback(r) {
-			const rows = r.message || [];
-			if (rows.length > 1) add_advance_ledger_button(frm);
-		},
-	});
+// A saved bill is excluded from its own advance balance lookup - otherwise
+// its stored Advance Adjusted is counted by the server and subtracted again
+// by advance_available_for_bill(), so the figures shift after every Save.
+function advance_exclude_billing(frm) {
+	return frm.is_new() ? null : frm.doc.name;
 }
 
-function add_advance_ledger_button(frm) {
-	frm.add_custom_button(__("View Advance Ledger"), () => {
-		frappe.call({
-			method: "metta.metta.doctype.patient_visit.patient_visit.get_advance_tracking",
-			args: { patient_visit: frm.doc.patient },
-			callback(r) {
-				show_advance_ledger_dialog(r.message || []);
-			},
-		});
-	});
+function advance_available_for_bill(frm) {
+	const total_balance = frm._advance_balance ? flt(frm._advance_balance.balance) : 0;
+	return flt(total_balance - flt(frm.doc.advance_adjusted), 2);
 }
 
-function show_advance_ledger_dialog(rows) {
-	// Re-fetched fresh on click (not reusing the count check's own rows) -
-	// the same "never trust a cached figure for what's actually shown"
-	// reasoning as Apply Advance above, since time has passed since the
-	// button first appeared.
-	const body_rows = rows
-		.map(
-			(row, i) => `
-				<tr>
-					<td>${i + 1}</td>
-					<td>${frappe.datetime.str_to_user(row.entry_date)}</td>
-					<td>${frappe.utils.escape_html(row.type)}</td>
-					<td class="text-right">${format_currency(row.amount)}</td>
-					<td class="text-right">${format_currency(row.available_amount)}</td>
-				</tr>`
-		)
-		.join("");
-	const dialog = new frappe.ui.Dialog({
-		title: __("Advance Ledger"),
-		size: "large",
-		fields: [
-			{
-				fieldtype: "HTML",
-				fieldname: "ledger_html",
-				options: `
-					<table class="table table-bordered">
-						<thead>
-							<tr>
-								<th>${__("S.No")}</th>
-								<th>${__("Date & Time")}</th>
-								<th>${__("Type")}</th>
-								<th class="text-right">${__("Amount")}</th>
-								<th class="text-right">${__("Available Amount")}</th>
-							</tr>
-						</thead>
-						<tbody>${body_rows}</tbody>
-					</table>`,
-			},
-		],
-	});
-	dialog.show();
+// These advance figures are read-only info, refetched on every load - set
+// directly instead of via frm.set_value, which would mark the form dirty
+// and show "Not Saved" right after a successful Save with nothing edited.
+function set_display_value(frm, fieldname, value) {
+	if (flt(frm.doc[fieldname]) === flt(value)) return;
+	frm.doc[fieldname] = value;
+	frm.refresh_field(fieldname);
 }
 
 function set_advance_balance_fields(frm) {
 	const balance = frm._advance_balance;
-	frm.set_value("advance_collected", balance ? flt(balance.total_collected) : 0);
-	frm.set_value("advance_used", balance ? flt(balance.total_adjusted) : 0);
-	frm.set_value("advance_available", balance ? flt(balance.balance) : 0);
+	set_display_value(frm, "advance_collected", balance ? flt(balance.total_collected) : 0);
+	set_display_value(frm, "advance_used", balance ? flt(balance.total_adjusted) : 0);
+	set_display_value(frm, "advance_available", advance_available_for_bill(frm));
 	show_advance_low_balance_indicator(frm, balance);
 }
 
@@ -1122,8 +1099,7 @@ function load_consultation_items(frm, consultation) {
 			// here, using the already-cached balance rather than refetching it.
 			frm.clear_custom_buttons();
 			add_advance_button(frm);
-			maybe_add_advance_ledger_button(frm);
-			calculate_totals(frm);
+				calculate_totals(frm);
 		},
 	});
 }

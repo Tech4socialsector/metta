@@ -20,7 +20,6 @@
   "subtotal",
   "discount",
   "gst_amount",
-  "tax_on_free",
   "round_off",
   "total_amount",
   "payment_terms_days",
@@ -120,11 +119,6 @@
    "read_only": 1
   },
   {
-   "fieldname": "tax_on_free",
-   "fieldtype": "Currency",
-   "label": "Tax on Free"
-  },
-  {
    "description": "Rounds Net Amount to the nearest rupee.",
    "fieldname": "round_off",
    "fieldtype": "Currency",
@@ -183,7 +177,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-17 21:00:00.000000",
+ "modified": "2026-10-26 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "Purchase Order",
  "name": "Purchase Bill",

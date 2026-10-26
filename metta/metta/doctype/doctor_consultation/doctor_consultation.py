@@ -240,10 +240,110 @@ def get_patient_history(patient_consultation, exclude=None):
 		row["diagnostic_tests"] = frappe.get_all(
 			"Diagnostic Test",
 			filters={"doctor_consultation": row.name},
-			fields=["item_name", "test_type", "status", "result", "reported_on"],
+			fields=["name", "item_name", "test_type", "status", "result", "reported_on"],
 			order_by="creation",
 		)
+		# Template tests keep their values in result rows, not in `result` -
+		# give the history a one-line summary so every screen that prints
+		# `result` (Desk history, dashboard dialog, Vue history) shows them.
+		for t in row["diagnostic_tests"]:
+			if t.status == "Reported" and not t.result:
+				t.result = lab_result_summary(t.name)
 	return rows
+
+
+def lab_result_summary(test):
+	rows = frappe.get_all(
+		"Diagnostic Test Result",
+		filters={"parent": test, "parenttype": "Diagnostic Test"},
+		fields=["parameter", "result_value", "unit", "flag"],
+		order_by="idx",
+	)
+	parts = []
+	for r in rows:
+		text = f"{r.parameter} {r.result_value or '-'}{(' ' + r.unit) if r.unit else ''}"
+		parts.append(f"{text} ({r.flag})" if r.flag else text)
+	return ", ".join(parts)
+
+
+@frappe.whitelist()
+def get_consultation_lab_reports(consultation):
+	"""This consultation's tests for the doctor: status always, values only
+	once Reported - an unverified result must not reach the doctor."""
+	frappe.has_permission("Doctor Consultation", "read", doc=consultation, throw=True)
+	tests = frappe.get_all(
+		"Diagnostic Test",
+		filters={"doctor_consultation": consultation},
+		fields=["name", "item_name", "test_type", "status", "result", "result_attachment", "reported_on", "verified_by", "remarks"],
+		order_by="creation",
+	)
+	for t in tests:
+		t["rows"] = []
+		if t.status != "Reported":
+			t.result = None
+			t.result_attachment = None
+			continue
+		t["rows"] = frappe.get_all(
+			"Diagnostic Test Result",
+			filters={"parent": t.name, "parenttype": "Diagnostic Test"},
+			fields=["parameter", "result_value", "unit", "normal_range", "flag"],
+			order_by="idx",
+		)
+	return tests
+
+
+@frappe.whitelist()
+def get_consultation_lab_reports_html(consultation):
+	# One renderer for Desk's consultation form and dashboard dialog, so both
+	# show the report the same way without a separate Desk JS bundle.
+	from frappe.utils import escape_html, format_datetime
+
+	tests = get_consultation_lab_reports(consultation)
+	if not tests:
+		return ""
+	flag_style = {
+		"Low": "color:#c2410c;font-weight:600",
+		"High": "color:#c2410c;font-weight:600",
+		"Abnormal": "color:#c2410c;font-weight:600",
+		"Critical Low": "color:#b91c1c;font-weight:700",
+		"Critical High": "color:#b91c1c;font-weight:700",
+	}
+	out = []
+	for t in tests:
+		head = f"<b>{escape_html(t.item_name or t.name)}</b> <span class='text-muted'>· {escape_html(t.status)}</span>"
+		if t.status != "Reported":
+			out.append(f"<div style='padding:6px 0'>{head}</div>")
+			continue
+		when = format_datetime(t.reported_on) if t.reported_on else ""
+		body = ""
+		if t.rows:
+			trs = "".join(
+				"<tr><td>{}</td><td><b>{}</b> {}</td><td class='text-muted'>{}</td><td style='{}'>{}</td></tr>".format(
+					escape_html(r.parameter or ""),
+					escape_html(r.result_value or "-"),
+					escape_html(r.unit or ""),
+					escape_html(r.normal_range or ""),
+					flag_style.get(r.flag, ""),
+					escape_html(r.flag or ""),
+				)
+				for r in t.rows
+			)
+			body = (
+				"<table class='table table-bordered table-sm' style='margin:6px 0 0'>"
+				f"<thead><tr><th>{_('Parameter')}</th><th>{_('Result')}</th><th>{_('Normal Range')}</th><th>{_('Flag')}</th></tr></thead>"
+				f"<tbody>{trs}</tbody></table>"
+			)
+		if t.result:
+			body += f"<div style='white-space:pre-line;margin-top:4px'>{escape_html(t.result)}</div>"
+		if t.result_attachment:
+			body += f"<div><a href='{escape_html(t.result_attachment)}' target='_blank'>{_('Open attachment')}</a></div>"
+		if t.remarks:
+			body += f"<div class='text-muted'>{_('Remarks')}: {escape_html(t.remarks)}</div>"
+		out.append(
+			f"<div style='padding:8px 0;border-bottom:1px solid var(--border-color,#d1d8dd)'>{head}"
+			f" <span class='text-muted' style='font-size:12px'>{escape_html(when)}</span>{body}</div>"
+		)
+	return "".join(out)
 
 
 @frappe.whitelist()
@@ -298,6 +398,8 @@ def get_my_dashboard_stats():
 			"waiting": 0,
 			"referred": 0,
 			"admitted": 0,
+			"reports": 0,
+			"reports_visits": [],
 			"assigned_visits": [],
 			"visited_visits": [],
 			"ready_visits": [],
@@ -435,6 +537,50 @@ def get_my_dashboard_stats():
 		order_by="appointment_time asc",
 	)
 
+	# Lab reports back for this doctor's patients that the doctor hasn't
+	# reviewed yet - "reviewed" = this doctor wrote a consultation for the
+	# same visit after the report was released (the Follow-up Consultation).
+	reports_visits = []
+	reported = frappe.db.sql(
+		"""
+		select dt.name, dt.item_name, dt.reported_on, dc.patient_consultation as visit,
+			dc.name as consultation
+		from `tabDiagnostic Test` dt
+		join `tabDoctor Consultation` dc on dc.name = dt.doctor_consultation
+		where dc.doctor = %(doctor)s and dt.status = 'Reported' and dt.reported_on is not null
+			and not exists (
+				select 1 from `tabDoctor Consultation` later
+				where later.patient_consultation = dc.patient_consultation
+					and later.doctor = %(doctor)s
+					and later.consultation_datetime > dt.reported_on
+			)
+		order by dt.reported_on desc
+		""",
+		{"doctor": doctor},
+		as_dict=True,
+	)
+	by_visit = {}
+	for r in reported:
+		v = by_visit.get(r.visit)
+		if not v:
+			v = by_visit[r.visit] = {"name": r.visit, "consultation": r.consultation, "tests": []}
+			reports_visits.append(v)
+		v["tests"].append(r.item_name)
+	if reports_visits:
+		info = {
+			p.name: p
+			for p in frappe.get_all(
+				"Patient Visit",
+				filters={"name": ["in", list(by_visit)]},
+				fields=["name", "patient_name", "registration_category"],
+			)
+		}
+		for v in reports_visits:
+			p = info.get(v["name"]) or {}
+			v["patient_name"] = p.get("patient_name")
+			v["registration_category"] = p.get("registration_category")
+			v["tests"] = ", ".join(v["tests"])
+
 	# The nearest leave record that hasn't fully lapsed yet - covering today
 	# or still upcoming - so the banner only shows when it's actually relevant.
 	leave_rows = frappe.get_all(
@@ -454,6 +600,8 @@ def get_my_dashboard_stats():
 		"waiting": len(waiting_visits),
 		"referred": len(referred_visits),
 		"admitted": len(admitted_visits),
+		"reports": len(reports_visits),
+		"reports_visits": reports_visits[:20],
 		# Capped - this is a quick-glance dashboard, not a full report; the
 		# Patient Visit list (already filtered to this doctor) is where a
 		# long backlog should actually be worked through.

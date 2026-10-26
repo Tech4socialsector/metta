@@ -23,6 +23,15 @@ class PurchaseReceipt(Document):
 			# is already the real total) - kept in sync with Packing purely so
 			# Purchase Return's existing lookup still gets a sensible number.
 			row.conversion_factor = flt(row.packing) or 1
+			# Shown while still a draft too (submit sets the same value), so
+			# the row doesn't read "Stock Qty 0" before it's submitted.
+			row.stock_qty = row.qty_received
+			# An inspection submitted earlier for this item + batch, in case
+			# the row was added or changed after it.
+			if not row.quality_inspection and not self.is_new() and row.item and row.batch_no:
+				match = find_matching_quality_inspection(self.name, row.item, row.batch_no)
+				if match:
+					row.quality_inspection = match.name
 
 	def validate_receiving_warehouse(self):
 		# A supplier delivery always lands at Central Store first - sub-stores
@@ -126,14 +135,21 @@ def get_pending_items(purchase_order):
 		# the pending amount exact instead of a fractional strip count
 		# silently truncating away real stock on save.
 		packing = flt(po_row.packing) or 1
+		pack_type = po_row.pack_type
 		if pending_qty % packing != 0:
 			packing = 1
+			# Counted in single units now, so the order's Strip/Box no longer
+			# fits - the pack is the item's own unit (Tablet), when that is a
+			# Unit of Measure record the Link can point to.
+			uom = po_row.unit_of_measure
+			pack_type = uom if uom and frappe.db.exists("Unit of Measure", uom) else None
 		rows.append(
 			{
 				"item": po_row.item,
 				"item_name": frappe.db.get_value("Item", po_row.item, "item_name") or "",
 				"unit_of_measure": po_row.unit_of_measure,
 				"qty_ordered": po_row.qty_ordered,
+				"pack_type": pack_type,
 				"packing": packing,
 				"no_of_unit": pending_qty / packing,
 				"qty_received": pending_qty,

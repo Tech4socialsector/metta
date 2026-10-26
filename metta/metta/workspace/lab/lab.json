@@ -1,7 +1,7 @@
 {
  "app": "metta",
  "charts": [],
- "content": "[{\"id\":\"labHeader01\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Welcome to the Lab workspace</span>\",\"col\":12}},{\"id\":\"labShort01\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Diagnostic Test\",\"col\":4}}]",
+ "content": "[{\"id\": \"labHeader01\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\">Welcome to the Lab workspace</span>\", \"col\": 12}}, {\"id\": \"labShort01\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Diagnostic Test\", \"col\": 4}}, {\"id\": \"labShort2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Lab Sample\", \"col\": 4}}, {\"id\": \"labShort3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Lab Test Register\", \"col\": 4}}, {\"id\": \"labShort4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Lab Workload Summary\", \"col\": 4}}]",
  "creation": "2026-08-14 01:00:00.000000",
  "custom_blocks": [],
  "docstatus": 0,
@@ -13,7 +13,7 @@
  "label": "Lab",
  "link_type": "DocType",
  "links": [],
- "modified": "2026-08-14 01:00:00.000000",
+ "modified": "2026-10-26 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "metta",
  "name": "Lab",
@@ -24,6 +24,9 @@
  "roles": [
   {
    "role": "Lab Staff"
+  },
+  {
+   "role": "Lab Verifier"
   },
   {
    "role": "System Manager"
@@ -38,6 +41,28 @@
    "link_to": "Diagnostic Test",
    "stats_filter": "[]",
    "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "label": "Lab Sample",
+   "link_to": "Lab Sample",
+   "stats_filter": "[]",
+   "type": "DocType",
+   "doc_view": "List"
+  },
+  {
+   "color": "Grey",
+   "label": "Lab Test Register",
+   "link_to": "Lab Test Register",
+   "stats_filter": "[]",
+   "type": "Report"
+  },
+  {
+   "color": "Grey",
+   "label": "Lab Workload Summary",
+   "link_to": "Lab Workload Summary",
+   "stats_filter": "[]",
+   "type": "Report"
   }
  ],
  "title": "Lab",

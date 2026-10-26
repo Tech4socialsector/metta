@@ -5,3 +5,4 @@ metta.patches.fix_patient_registration_age
 
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated
+metta.patches.seed_pack_units

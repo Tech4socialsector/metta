@@ -119,11 +119,11 @@ def compile_discharge_bill(ip_id):
 		"bill_items": items,
 		"total_billed": total_billed,
 		"advance_paid": flt(advance["total_collected"], 2),
-		# What's left of the advance after this admission's own bills already
-		# adjusted their share against it - get_advance_balance() itself is
-		# already scoped to just this one ip_id, same as advance_adjusted
-		# below, so the two agree by construction.
-		"advance_balance": flt(advance["balance"], 2),
+		# What's left of the advance after the bills listed above adjusted
+		# their share - computed from those same bills (drafts included),
+		# not get_advance_balance()'s submitted-only balance, so the two
+		# figures on this bill always agree.
+		"advance_balance": flt(flt(advance["total_collected"]) - advance_adjusted, 2),
 		"advance_adjusted": advance_adjusted,
 		"amount_collected": amount_collected,
 		# Whatever's left unpaid after both the advance and what's already

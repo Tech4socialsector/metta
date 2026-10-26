@@ -1,0 +1,95 @@
+{
+ "actions": [],
+ "creation": "2026-10-25 12:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_rules",
+  "child_age_limit",
+  "pay_before_sample",
+  "column_break_ls1",
+  "allow_same_person_verify",
+  "section_break_report",
+  "signature_label",
+  "report_footer"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_rules",
+   "fieldtype": "Section Break",
+   "label": "Rules"
+  },
+  {
+   "default": "12",
+   "fieldname": "child_age_limit",
+   "fieldtype": "Int",
+   "label": "Child Age Limit (Years)",
+   "non_negative": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "pay_before_sample",
+   "fieldtype": "Check",
+   "label": "Pay Before Sample (OP & IP)"
+  },
+  {
+   "fieldname": "column_break_ls1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "allow_same_person_verify",
+   "fieldtype": "Check",
+   "label": "Same Person May Verify"
+  },
+  {
+   "fieldname": "section_break_report",
+   "fieldtype": "Section Break",
+   "label": "Report"
+  },
+  {
+   "default": "Lab Technician",
+   "fieldname": "signature_label",
+   "fieldtype": "Data",
+   "label": "Signature Label"
+  },
+  {
+   "fieldname": "report_footer",
+   "fieldtype": "Small Text",
+   "label": "Report Footer"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-10-26 10:05:00.000000",
+ "modified_by": "Administrator",
+ "module": "Laboratory",
+ "name": "Lab Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Lab Staff"
+  },
+  {
+   "read": 1,
+   "role": "Lab Verifier"
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

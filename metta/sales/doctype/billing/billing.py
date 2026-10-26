@@ -178,24 +178,50 @@ class Billing(Document):
 			)
 
 	def validate_advance_adjustment(self):
+		# Amount Collected Now defaults to the full Amount Due - remembered so
+		# that if the auto-applied advance shifts below (e.g. another bill for
+		# this patient was submitted meanwhile), a "fully collected" figure
+		# follows the new Amount Due instead of being misread as a partial
+		# payment, or exceeding it and blocking the submit.
+		previous_amount_due = flt(self.amount_due)
+		self.auto_apply_advance()
+
 		if not self.advance_adjusted:
 			self.amount_due = self.payable_amount
+		else:
+			if not self.patient:
+				frappe.throw(_("Select a Patient before adjusting an advance against this bill."))
+
+			if flt(self.advance_adjusted) > flt(self.payable_amount):
+				frappe.throw(
+					_("Advance Adjusted cannot exceed the Payable Amount."), title=_("Invalid Advance Adjustment")
+				)
+
+			self.validate_advance_balance()
+			self.amount_due = flt(flt(self.payable_amount) - flt(self.advance_adjusted), 2)
+
+		if flt(self.amount_collected) == previous_amount_due:
+			self.amount_collected = self.amount_due
+
+	def auto_apply_advance(self):
+		# IP bills use the patient's advance automatically, up to the Payable
+		# Amount - Billing Staff only type a figure when the relative wants to
+		# pay this bill some other way, which sets advance_adjusted_is_manual
+		# and stops this from overriding it. Recomputed on submit too, so it
+		# always reflects the advance actually left at that moment.
+		if self.advance_adjusted_is_manual:
 			return
+		if self.registration_category != "IP" or not self.patient:
+			# No advance account to draw from - clear any leftover auto figure.
+			self.advance_adjusted = 0
+			return
+		available = get_advance_balance(self.patient, exclude_billing=self.name)["balance"]
+		self.advance_adjusted = flt(max(min(available, flt(self.payable_amount)), 0), 2)
 
-		if not self.patient:
-			frappe.throw(_("Select a Patient before adjusting an advance against this bill."))
-
-		if flt(self.advance_adjusted) > flt(self.payable_amount):
-			frappe.throw(
-				_("Advance Adjusted cannot exceed the Payable Amount."), title=_("Invalid Advance Adjustment")
-			)
-
-		# Add back this same doc's own previous value - otherwise re-saving an
-		# already-adjusted bill would see its own prior adjustment as
-		# unavailable, since get_advance_balance() has no way to know to
-		# exclude what this same record already consumed.
-		previous = flt(frappe.db.get_value("Billing", self.name, "advance_adjusted")) if not self.is_new() else 0
-		balance = get_advance_balance(self.patient)["balance"] + previous
+	def validate_advance_balance(self):
+		# This bill itself is excluded from the balance - otherwise re-saving
+		# an already-submitted adjustment would count its own amount as used.
+		balance = get_advance_balance(self.patient, exclude_billing=self.name)["balance"]
 		if flt(self.advance_adjusted) > balance:
 			frappe.throw(
 				_("Only {0} is available in this patient's advance balance.").format(
@@ -203,8 +229,6 @@ class Billing(Document):
 				),
 				title=_("Advance Balance Exceeded"),
 			)
-
-		self.amount_due = flt(self.payable_amount) - flt(self.advance_adjusted)
 
 	def validate_has_items(self):
 		# Pharmacy Items and Service Items are two separate tables now (each

@@ -101,7 +101,7 @@ class PurchaseBill(Document):
 		self.gst_amount = flt(gst_total, 2)
 
 		net_before_round = flt(
-			self.subtotal - self.discount + flt(self.tax_on_free) + self.gst_amount, 2
+			self.subtotal - self.discount + self.gst_amount, 2
 		)
 		self.round_off = flt(round(net_before_round) - net_before_round, 2)
 		self.total_amount = flt(net_before_round + self.round_off, 2)
@@ -368,6 +368,7 @@ def get_items_from_receipt(purchase_receipt):
 				"item": pr_row.item,
 				"item_name": item_details.get("item_name") or "",
 				"batch_no": pr_row.batch_no,
+				"pack_type": pr_row.pack_type,
 				"packing": flt(pr_row.packing),
 				"no_of_unit": flt(pr_row.no_of_unit),
 				"free": 0,

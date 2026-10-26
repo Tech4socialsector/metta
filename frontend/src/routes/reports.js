@@ -1,0 +1,22 @@
+// Reports module: the hub plus one route per Desk report page / script report.
+export default [
+  { path: '/reports', name: 'ReportsHome', component: () => import('@/pages/Reports/ReportsHome.vue') },
+  { path: '/reports/daily-collection', name: 'ReportsDailyCollection', component: () => import('@/pages/Reports/DailyCollection.vue') },
+  { path: '/reports/collection-report', name: 'ReportsCollectionReport', component: () => import('@/pages/Reports/CollectionReport.vue') },
+  { path: '/reports/hospital-overview', name: 'ReportsHospitalOverview', component: () => import('@/pages/Reports/HospitalOverview.vue') },
+  { path: '/reports/grl-for-gst', name: 'ReportsGrlForGst', component: () => import('@/pages/Reports/GrlForGst.vue') },
+  { path: '/reports/date-wise-purchase-order', name: 'ReportsDateWisePurchaseOrder', component: () => import('@/pages/Reports/DateWisePurchaseOrder.vue') },
+  { path: '/reports/supplier-wise-purchase', name: 'ReportsSupplierWisePurchase', component: () => import('@/pages/Reports/SupplierWisePurchase.vue') },
+  { path: '/reports/purchase-return-summary', name: 'ReportsPurchaseReturnSummary', component: () => import('@/pages/Reports/PurchaseReturnSummary.vue') },
+  { path: '/reports/purchase-analysis', name: 'ReportsPurchaseAnalysis', component: () => import('@/pages/Reports/PurchaseAnalysis.vue') },
+  { path: '/reports/batch-wise-stock', name: 'ReportsBatchWiseStock', component: () => import('@/pages/Reports/BatchWiseStock.vue') },
+  { path: '/reports/fsn-analysis', name: 'ReportsFsnAnalysis', component: () => import('@/pages/Reports/FsnAnalysis.vue') },
+  { path: '/reports/material-analysis', name: 'ReportsMaterialAnalysis', component: () => import('@/pages/Reports/MaterialAnalysis.vue') },
+  { path: '/reports/outletwise-expiry', name: 'ReportsOutletwiseExpiry', component: () => import('@/pages/Reports/OutletwiseExpiry.vue') },
+  { path: '/reports/outletwise-stock-transfer', name: 'ReportsOutletwiseStockTransfer', component: () => import('@/pages/Reports/OutletwiseStockTransfer.vue') },
+  { path: '/reports/previous-day-stock', name: 'ReportsPreviousDayStock', component: () => import('@/pages/Reports/PreviousDayStock.vue') },
+  { path: '/reports/stock-sale', name: 'ReportsStockSale', component: () => import('@/pages/Reports/StockSale.vue') },
+  { path: '/reports/stock-ledger', name: 'ReportsStockLedger', component: () => import('@/pages/Reports/StockLedger.vue') },
+  { path: '/reports/lab-test-register', name: 'ReportsLabTestRegister', component: () => import('@/pages/Reports/LabTestRegister.vue') },
+  { path: '/reports/lab-workload-summary', name: 'ReportsLabWorkloadSummary', component: () => import('@/pages/Reports/LabWorkloadSummary.vue') },
+]

@@ -353,10 +353,14 @@ def get_credit_bills(from_date, to_date):
 	rows = frappe.db.sql(
 		"""
 		SELECT COALESCE(cc.customer_name, %(unassigned)s) AS label, b.registration_category AS registration_category,
-			b.payable_amount AS amount, 'Billing' AS doctype, b.name AS docname, b.customer_name AS detail
+			b.amount_collected AS amount, 'Billing' AS doctype, b.name AS docname, b.customer_name AS detail
 		FROM `tabBilling` b
 		LEFT JOIN `tabCorporate Customer` cc ON cc.name = b.corporate_customer
-		WHERE b.docstatus = 1 AND b.payment_mode = 'Credit - Corporate'
+		-- amount_collected, not payable_amount - an IP corporate bill partly
+		-- covered by the patient's advance would otherwise show that advance
+		-- portion here AND under IP Adjusted, counting the same money twice.
+		-- Same figure Collection Report's own Credit Bills column sums.
+		WHERE b.docstatus = 1 AND b.payment_mode = 'Credit - Corporate' AND b.amount_collected > 0
 			AND b.sale_datetime BETWEEN %(from_date)s AND %(to_date)s
 		""",
 		{

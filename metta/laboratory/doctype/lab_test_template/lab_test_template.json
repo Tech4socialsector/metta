@@ -1,0 +1,152 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:test_name",
+ "creation": "2026-10-25 12:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "test_name",
+  "item",
+  "department",
+  "column_break_ltt1",
+  "sample_type",
+  "result_type",
+  "turnaround_hours",
+  "column_break_ltt2",
+  "method",
+  "is_active",
+  "section_break_params",
+  "parameters"
+ ],
+ "fields": [
+  {
+   "fieldname": "test_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Test Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "item",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Billing Item",
+   "options": "Item",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Department",
+   "options": "Department"
+  },
+  {
+   "fieldname": "column_break_ltt1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sample_type",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Sample Type",
+   "options": "Lab Sample Type"
+  },
+  {
+   "default": "Parameters",
+   "fieldname": "result_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Result Type",
+   "options": "Parameters\nSingle value\nText only",
+   "reqd": 1
+  },
+  {
+   "fieldname": "turnaround_hours",
+   "fieldtype": "Int",
+   "label": "Turnaround (Hours)"
+  },
+  {
+   "fieldname": "column_break_ltt2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "method",
+   "fieldtype": "Data",
+   "label": "Method"
+  },
+  {
+   "default": "1",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Is Active"
+  },
+  {
+   "depends_on": "eval:doc.result_type != 'Text only'",
+   "fieldname": "section_break_params",
+   "fieldtype": "Section Break",
+   "label": "Parameters"
+  },
+  {
+   "depends_on": "eval:doc.result_type != 'Text only'",
+   "fieldname": "parameters",
+   "fieldtype": "Table",
+   "label": "Parameters",
+   "options": "Lab Test Parameter"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-10-25 12:00:00",
+ "modified_by": "Administrator",
+ "module": "Laboratory",
+ "name": "Lab Test Template",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Lab Staff"
+  },
+  {
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Lab Verifier"
+  },
+  {
+   "read": 1,
+   "role": "Doctor"
+  },
+  {
+   "read": 1,
+   "role": "Billing Staff"
+  }
+ ],
+ "row_format": "Dynamic",
+ "search_fields": "item,department",
+ "show_title_field_in_link": 0,
+ "sort_field": "test_name",
+ "sort_order": "ASC",
+ "states": [],
+ "title_field": "test_name"
+}

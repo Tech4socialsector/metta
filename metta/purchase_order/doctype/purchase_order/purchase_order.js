@@ -1,6 +1,15 @@
 // Copyright (c) 2026, tfss and contributors
 // For license information, please see license.txt
 
+// "50 Strip × 10 Tablet = 500 Tablet" - what one order line really means.
+// A pack that is the unit itself (Tablet × 1) needs no multiplication.
+function pack_sentence(pack, per_pack, packs, uom) {
+	if (!pack || !per_pack || !packs) return "";
+	const unit = uom || __("units");
+	if (per_pack === 1 || pack === uom) return `${packs * per_pack} ${unit}`;
+	return `${packs} ${__(pack)} × ${per_pack} ${unit} = ${packs * per_pack} ${unit}`;
+}
+
 frappe.ui.form.on("Purchase Order", {
 	setup(frm) {
 		// Services aren't bought from a supplier or held in stock - only
@@ -152,6 +161,7 @@ frappe.ui.form.on("Purchase Order Item", {
 				const defaults = r.message || {};
 				frappe.model.set_value(cdt, cdn, "unit_of_measure", defaults.unit_of_measure || "");
 				frappe.model.set_value(cdt, cdn, "packing", cint(defaults.packing));
+				frappe.model.set_value(cdt, cdn, "pack_type", defaults.pack_type || "");
 			},
 		});
 		// Store's balance specifically - can't be a plain fetch_from since it
@@ -209,15 +219,21 @@ function render_item_search(frm) {
 					)}" autocomplete="off">
 					<div class="po-item-results" style="display:none; position:absolute; z-index:50; background:var(--fg-color,#fff); border:1px solid var(--border-color,#d1d8dd); width:100%; max-height:260px; overflow:auto; box-shadow:0 2px 6px rgba(0,0,0,0.15);"></div>
 				</div>
-				<div style="width:100px;">
+				<div style="width:110px;">
 					<label class="control-label" style="display:block; font-size:12px; margin-bottom:2px;">${__(
-						"Packing"
+						"Pack"
+					)}</label>
+					<div class="po-item-pack-ctl"></div>
+				</div>
+				<div style="width:110px;">
+					<label class="control-label" style="display:block; font-size:12px; margin-bottom:2px;">${__(
+						"Units per Pack"
 					)}</label>
 					<input type="number" class="form-control po-item-packing" min="0" step="1">
 				</div>
 				<div style="width:120px;">
 					<label class="control-label" style="display:block; font-size:12px; margin-bottom:2px;">${__(
-						"No of Unit"
+						"No. of Packs"
 					)}</label>
 					<input type="number" class="form-control po-item-qty" min="0" step="1">
 				</div>
@@ -233,8 +249,33 @@ function render_item_search(frm) {
 	const $search = wrapper.find(".po-item-search");
 	const $results = wrapper.find(".po-item-results");
 	const $packing = wrapper.find(".po-item-packing");
+	// Pack picks from Unit of Measure (Strip, Box, Bottle...), so a new
+	// pack the admin adds there is offered here straight away.
+	const pack_ctl = frappe.ui.form.make_control({
+		df: { fieldtype: "Link", options: "Unit of Measure", fieldname: "po_item_pack", change: () => show_line() },
+		parent: wrapper.find(".po-item-pack-ctl"),
+		render_input: true,
+	});
+	pack_ctl.$wrapper.css("margin-bottom", 0);
+	const $pack = {
+		val(v) {
+			if (v === undefined) return pack_ctl.get_value() || "";
+			pack_ctl.set_value(v || "");
+		},
+	};
 	const $qty = wrapper.find(".po-item-qty");
 	const $selectedNote = wrapper.find(".po-item-selected");
+	let selected_uom = "";
+
+	// The line read as a sentence, so nobody has to guess what was counted:
+	// "50 Strip × 10 Tablet = 500 Tablet".
+	const show_line = () => {
+		if (!selected) return;
+		const text = pack_sentence($pack.val(), cint($packing.val()), cint($qty.val()), selected_uom);
+		$selectedNote.text(__("Selected: {0} ({1})", [selected.name, selected.item_code]) + (text ? ` · ${text}` : ""));
+	};
+	$packing.on("input", show_line);
+	$qty.on("input", show_line);
 
 	const render_results = (rows) => {
 		if (!rows || !rows.length) {
@@ -281,7 +322,11 @@ function render_item_search(frm) {
 				method: "metta.purchase_order.doctype.purchase_order.purchase_order.get_item_defaults_for_order",
 				args: { item: selected.item_code },
 				callback(r) {
-					$packing.val(cint((r.message || {}).packing) || "");
+					const d = r.message || {};
+					$packing.val(cint(d.packing) || "");
+					$pack.val(d.pack_type || "");
+					selected_uom = d.unit_of_measure || "";
+					show_line();
 				},
 			});
 		});
@@ -306,6 +351,7 @@ function render_item_search(frm) {
 		selected = null;
 		$selectedNote.text("");
 		$packing.val("");
+		$pack.val("");
 		do_search();
 	});
 
@@ -314,14 +360,18 @@ function render_item_search(frm) {
 			frappe.msgprint(__("Please search and select an item first."));
 			return;
 		}
+		if (!$pack.val()) {
+			frappe.msgprint(__("Please pick the Pack (Strip, Box, Bottle...) the supplier sends it in."));
+			return;
+		}
 		const packing_input = cint($packing.val());
 		if (!packing_input || packing_input <= 0) {
-			frappe.msgprint(__("Please enter a Packing greater than 0."));
+			frappe.msgprint(__("Please enter Units per Pack greater than 0."));
 			return;
 		}
 		const no_of_unit = cint($qty.val());
 		if (!no_of_unit || no_of_unit <= 0) {
-			frappe.msgprint(__("Please enter a No of Unit greater than 0."));
+			frappe.msgprint(__("Please enter No. of Packs greater than 0."));
 			return;
 		}
 
@@ -350,6 +400,7 @@ function render_item_search(frm) {
 					item: selected.item_code,
 					item_name: selected.name,
 					available_qty: selected.avail_qty,
+					pack_type: $pack.val(),
 					packing: packing,
 					no_of_unit: no_of_unit,
 					qty_ordered: qty_ordered,
@@ -361,6 +412,7 @@ function render_item_search(frm) {
 				selected = null;
 				$search.val("");
 				$packing.val("");
+				$pack.val("");
 				$qty.val("");
 				$selectedNote.text("");
 				$results.hide();

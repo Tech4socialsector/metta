@@ -210,6 +210,8 @@ frappe.ui.form.on("Purchase Receipt Item", {
 			args: { item: row.item },
 			callback(r) {
 				frappe.model.set_value(cdt, cdn, "packing", cint((r.message || {}).packing));
+				// How this item last came (Strip / Box...), same as on the order.
+				frappe.model.set_value(cdt, cdn, "pack_type", (r.message || {}).pack_type || "");
 			},
 		});
 		// If this Item already has a Batch on record, pre-fill it as a
@@ -253,6 +255,8 @@ frappe.ui.form.on("Purchase Receipt Item", {
 function calculate_qty_received(frm, cdt, cdn) {
 	const row = locals[cdt][cdn];
 	frappe.model.set_value(cdt, cdn, "qty_received", flt(row.packing) * flt(row.no_of_unit));
+	// Stock Qty follows it even in draft (the server sets the same on save).
+	frappe.model.set_value(cdt, cdn, "stock_qty", flt(row.packing) * flt(row.no_of_unit));
 }
 
 function find_and_fill_quality_inspection(frm, cdt, cdn) {

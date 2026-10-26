@@ -487,7 +487,11 @@ frappe.ui.form.on("Patient Visit", {
 				// the same field as this doctype's own "Corporate Customer"
 				// (which is only ever set when this visit's OWN registration
 				// fee is itself paid Credit - Corporate).
-				if (frm.doc.company_name && !frm.doc.payment_mode) {
+				// Skipped for IP: an admission has no registration fee, so
+				// Payment Mode and Corporate Customer are both hidden - setting
+				// Credit - Corporate here would make that hidden Corporate
+				// Customer mandatory and block saving the admission.
+				if (frm.doc.company_name && !frm.doc.payment_mode && frm.doc.registration_category !== "IP") {
 					frm.set_value("payment_mode", "Credit - Corporate");
 				}
 				calculate_billing_totals(frm);

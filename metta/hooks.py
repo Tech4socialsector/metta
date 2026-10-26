@@ -101,6 +101,7 @@ fixtures = [
 					"Account Staff",
 					"Doctor",
 					"Lab Staff",
+					"Lab Verifier",
 					"CHW Coordinator",
 				],
 			]
@@ -180,6 +181,15 @@ app_include_js = "report_export.bundle.js"
 # ------------------
 # include app icons in desk
 # app_include_icons = "metta/public/icons.svg"
+
+# Website Route Rules
+# --------------------
+# Every /hmis/... address renders the same www/hmis.html page (the built Vue
+# app from frontend/) - vue-router then picks the screen in the browser.
+
+website_route_rules = [
+	{"from_route": "/hmis/<path:app_path>", "to_route": "hmis"},
+]
 
 # Home Pages
 # ----------
@@ -288,13 +298,14 @@ has_permission = {
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+# Billing's own controller is untouched: submitting or cancelling a bill
+# just marks the matching lab / X-ray tests paid or unpaid.
+doc_events = {
+	"Billing": {
+		"on_submit": "metta.metta.doctype.diagnostic_test.diagnostic_test.update_paid_from_bill",
+		"on_cancel": "metta.metta.doctype.diagnostic_test.diagnostic_test.update_paid_from_bill",
+	}
+}
 
 # Scheduled Tasks
 # ---------------

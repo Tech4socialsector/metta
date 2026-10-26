@@ -396,20 +396,6 @@ def add_advance_tracking_entry(patient_visit, type_label, signed_amount):
 	visit.save(ignore_permissions=True)
 
 
-@frappe.whitelist()
-def get_advance_tracking(patient_visit):
-	# Billing's own "View Advance Ledger" button reads this - kept as a
-	# dedicated read-only lookup (not just "open the Patient Visit") so
-	# billing staff never have to leave the bill they're working on.
-	frappe.has_permission("Patient Visit", "read", throw=True)
-	return frappe.get_all(
-		"Advance Tracking",
-		filters={"parent": patient_visit, "parenttype": "Patient Visit"},
-		fields=["entry_date", "type", "amount", "available_amount"],
-		order_by="idx",
-	)
-
-
 def get_permission_query_conditions(user=None):
 	# A Doctor only ever needs their own patients in list/report views - System
 	# Manager and Front Desk keep seeing everyone, since their own DocPerm row

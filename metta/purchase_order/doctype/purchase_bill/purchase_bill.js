@@ -20,9 +20,6 @@ frappe.ui.form.on("Purchase Bill", {
 	purchase_receipt(frm) {
 		frm.refresh();
 	},
-	tax_on_free(frm) {
-		calculate_totals(frm);
-	},
 });
 
 frappe.ui.form.on("Purchase Bill Item", {
@@ -262,7 +259,7 @@ function calculate_totals(frm) {
 	frm.set_value("discount", discount_total);
 	frm.set_value("gst_amount", gst_total);
 
-	const net_before_round = flt(subtotal - discount_total + flt(frm.doc.tax_on_free) + gst_total, 2);
+	const net_before_round = flt(subtotal - discount_total + gst_total, 2);
 	const round_off = flt(Math.round(net_before_round) - net_before_round, 2);
 	frm.set_value("round_off", round_off);
 	frm.set_value("total_amount", flt(net_before_round + round_off, 2));

@@ -1,0 +1,83 @@
+/* frappe-ui's own Inter (bundled woff2, no internet needed). Its Tailwind
+   plugin already sets font-family: InterVar on the page, but the font face
+   has to be loaded, or every letter falls back to the system font. */
+@import '../node_modules/frappe-ui/src/fonts/Inter/inter.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Theme colours as "R G B" so Tailwind's /opacity still works.
+   brand = deep ocean blue (top bar, section bands, buttons, headings, icons);
+   700 #0B5B8C is the main shade - the clearer blue of the user's sample
+   screen (#0C4A6E was too dark). Same values data/theme.js generates.
+   accent = orange (OP tag, small highlights); 500 is the main shade. */
+:root {
+  --brand-50: 242 249 253;
+  --brand-100: 225 240 250;
+  --brand-200: 189 227 250;
+  --brand-300: 132 202 245;
+  --brand-400: 66 174 240;
+  --brand-500: 17 144 222;
+  --brand-600: 14 117 180;
+  --brand-700: 11 91 140;
+  --brand-800: 9 75 115;
+  --brand-900: 7 62 95;
+
+  --accent-50: 253 246 242;
+  --accent-100: 250 235 225;
+  --accent-200: 250 211 184;
+  --accent-300: 246 178 132;
+  --accent-400: 242 146 80;
+  --accent-500: 234 106 18;
+  --accent-600: 201 91 15;
+  --accent-700: 168 76 13;
+  --accent-800: 140 64 11;
+  --accent-900: 117 53 9;
+
+  --app-bg: 244 246 248;
+}
+
+body {
+  background-color: rgb(var(--app-bg));
+}
+
+/* The app always fits the screen width - never a sideways scroll (user,
+   2026-10-24). Dropdown panels, toasts and dialogs are placed outside the
+   page frame; one sitting past the right edge used to stretch the window.
+   clip (not hidden) also stops focus or scrollIntoView from shifting it. */
+html,
+body,
+#app {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+/* Frappe Desk's control look, for pages that build their own <input>,
+   <select> or <textarea> instead of TextField/SelectField/LinkField (same
+   classes as data/fieldLook.js, so every form matches).
+   .ctl = editable box, .ctl-ro = read-only box; add h-* for a different
+   height or py-2 for a textarea. */
+@layer components {
+  .ctl {
+    @apply h-8 w-full rounded-md border border-transparent bg-gray-100 px-3 text-sm text-gray-900
+      hover:bg-gray-200 focus:border-gray-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-100;
+  }
+  .ctl-ro {
+    @apply h-8 w-full rounded-md border border-transparent bg-gray-50 px-3 text-sm text-gray-600 focus:outline-none;
+  }
+  .ctl-label {
+    @apply text-[13px] font-medium text-gray-600;
+  }
+}
+
+/* Form rows of three (on a min-[1280px]:grid-cols-6 grid, each field two
+   tracks). Every field keeps the same width, like Desk's columns - leftover
+   fields on the last row stay in their column instead of stretching, so all
+   boxes line up from row to row (user, 2026-10-24: forms were misaligned).
+   A field that really needs the whole row gets .span-row. */
+@media (min-width: 1280px) {
+  .row-fit > * { grid-column: span 2; }
+  .row-fit > .span-row { grid-column: 1 / -1; }
+}
+.pair-fit > .span-row { grid-column: 1 / -1; }

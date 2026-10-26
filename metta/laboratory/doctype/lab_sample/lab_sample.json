@@ -1,0 +1,145 @@
+{
+ "actions": [],
+ "autoname": "LS-.YYYY.-.#####",
+ "creation": "2026-10-26 10:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "patient_visit",
+  "patient_name",
+  "column_break_ls1",
+  "sample_type",
+  "container",
+  "tube_colour",
+  "volume",
+  "column_break_ls2",
+  "collected_by",
+  "collected_on",
+  "remarks"
+ ],
+ "fields": [
+  {
+   "fieldname": "patient_visit",
+   "fieldtype": "Link",
+   "label": "Patient Visit",
+   "options": "Patient Visit",
+   "reqd": 1,
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fetch_from": "patient_visit.patient_name",
+   "fieldname": "patient_name",
+   "fieldtype": "Data",
+   "label": "Patient Name",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "column_break_ls1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sample_type",
+   "fieldtype": "Link",
+   "label": "Sample Type",
+   "options": "Lab Sample Type",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fetch_from": "sample_type.container",
+   "fieldname": "container",
+   "fieldtype": "Data",
+   "label": "Container",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "sample_type.tube_colour",
+   "fieldname": "tube_colour",
+   "fieldtype": "Data",
+   "label": "Tube Colour",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "sample_type.volume",
+   "fieldname": "volume",
+   "fieldtype": "Data",
+   "label": "Volume",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_ls2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "collected_by",
+   "fieldtype": "Link",
+   "label": "Collected By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "collected_on",
+   "fieldtype": "Datetime",
+   "label": "Collected On",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [
+  {
+   "link_doctype": "Diagnostic Test",
+   "link_fieldname": "lab_sample",
+   "group": "Tests"
+  }
+ ],
+ "modified": "2026-10-26 10:00:00",
+ "modified_by": "Administrator",
+ "module": "Laboratory",
+ "name": "Lab Sample",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "print": 1,
+   "report": 1,
+   "create": 1,
+   "write": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "share": 1
+  },
+  {
+   "role": "Lab Staff",
+   "read": 1,
+   "print": 1,
+   "report": 1,
+   "create": 1,
+   "write": 1
+  },
+  {
+   "role": "Lab Verifier",
+   "read": 1,
+   "print": 1,
+   "report": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "search_fields": "patient_name,sample_type",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "patient_name",
+ "track_changes": 1
+}

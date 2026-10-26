@@ -112,8 +112,10 @@ const TILE_LABELS = {
 	waiting: __("Waiting for Vitals"),
 	referred: __("Referred to Me"),
 	admitted: __("Admitted (IP)"),
+	reports: __("Lab Reports Ready"),
 };
 const TILE_COLORS = {
+	reports: "#0b5b8c",
 	assigned: "#2d95f0",
 	visited: "#28a745",
 	ready: "#f0932d",
@@ -196,7 +198,7 @@ function render_tiles(page) {
 	};
 
 	$wrapper.find(".dashboard-tiles").html(
-		["assigned", "waiting", "ready", "visited", "referred", "admitted"].map(tile_html).join("")
+		["assigned", "waiting", "ready", "reports", "visited", "referred", "admitted"].map(tile_html).join("")
 	);
 
 	$wrapper.find(".dashboard-tile").on("click", function () {
@@ -230,6 +232,35 @@ function render_list(page) {
 		// someone clicking a ready patient wants to take.
 		frappe.new_doc("Doctor Consultation", { patient_consultation: $(this).data("visit") });
 	});
+
+	$wrapper.find(".report-btn").on("click", function () {
+		open_lab_report_dialog($(this).data("consultation"), $(this).data("visit"), $(this).data("patient"));
+	});
+}
+
+// The verified report, with the next step (the review consultation) on the
+// dialog itself - writing it is what takes the patient off this tile.
+function open_lab_report_dialog(consultation, visit, patient) {
+	const dialog = new frappe.ui.Dialog({
+		title: __("Lab Report: {0}", [patient || visit]),
+		size: "large",
+		fields: [{ fieldtype: "HTML", fieldname: "content" }],
+		primary_action_label: __("Review Consultation"),
+		primary_action() {
+			dialog.hide();
+			frappe.new_doc("Doctor Consultation", { patient_consultation: visit });
+		},
+	});
+	dialog.show();
+	const $content = dialog.$wrapper.find('[data-fieldname="content"]');
+	$content.html(`<div class="text-muted">${__("Loading...")}</div>`);
+	frappe.call({
+		method: "metta.metta.doctype.doctor_consultation.doctor_consultation.get_consultation_lab_reports_html",
+		args: { consultation },
+		callback(r) {
+			$content.html(r.message || `<div class="text-muted">${__("No report found.")}</div>`);
+		},
+	});
 }
 
 function visit_table(visits, kind) {
@@ -259,6 +290,12 @@ function visit_table(visits, kind) {
 		}
 		if (kind === "admitted") {
 			return `<a href="/app/patient-visit/${encodeURIComponent(v.name)}" target="_blank">${__("View Visit")}</a>`;
+		}
+		if (kind === "reports") {
+			const esc = frappe.utils.escape_html;
+			return `<span class="text-muted">${esc(v.tests || "")}</span>
+				<button class="btn btn-xs btn-primary report-btn" style="margin-left:8px" data-consultation="${esc(v.consultation)}"
+					data-visit="${esc(v.name)}" data-patient="${esc(v.patient_name || "")}">${__("View Report")}</button>`;
 		}
 		// "assigned" - the raw overview, mixing all states - shows where each
 		// one currently stands instead of an action to take.

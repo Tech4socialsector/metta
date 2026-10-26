@@ -30,6 +30,7 @@ frappe.ui.form.on("Doctor Consultation", {
 		}
 	},
 	refresh(frm) {
+		render_lab_reports(frm);
 		render_patient_history(frm);
 		check_vitals_status(frm);
 		show_vitals_popup(frm);
@@ -256,6 +257,21 @@ function check_vitals_status(frm) {
 					7
 				);
 			}
+		},
+	});
+}
+
+// This consultation's own tests at the top of the form: status while pending,
+// the verified values once Reported (the server holds back unverified ones).
+function render_lab_reports(frm) {
+	if (frm.is_new()) return;
+	frappe.call({
+		method: "metta.metta.doctype.doctor_consultation.doctor_consultation.get_consultation_lab_reports_html",
+		args: { consultation: frm.doc.name },
+		callback(r) {
+			if (!r.message) return;
+			frm.dashboard.add_section(r.message, __("Lab Reports"));
+			frm.dashboard.show();
 		},
 	});
 }

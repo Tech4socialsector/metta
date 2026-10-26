@@ -1,0 +1,96 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:sample_name",
+ "creation": "2026-10-25 12:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "sample_name",
+  "container",
+  "column_break_lst1",
+  "tube_colour",
+  "volume",
+  "is_active"
+ ],
+ "fields": [
+  {
+   "fieldname": "sample_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Sample Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "container",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Container"
+  },
+  {
+   "fieldname": "column_break_lst1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "tube_colour",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Tube Colour"
+  },
+  {
+   "fieldname": "volume",
+   "fieldtype": "Data",
+   "label": "Volume"
+  },
+  {
+   "default": "1",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "in_standard_filter": 1,
+   "label": "Is Active"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-10-25 12:00:00",
+ "modified_by": "Administrator",
+ "module": "Laboratory",
+ "name": "Lab Sample Type",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Lab Staff"
+  },
+  {
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Lab Verifier"
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "search_fields": "container",
+ "sort_field": "sample_name",
+ "sort_order": "ASC",
+ "states": [],
+ "title_field": "sample_name"
+}
