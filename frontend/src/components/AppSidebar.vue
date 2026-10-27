@@ -17,7 +17,7 @@
           :aria-label="expanded ? undefined : item.label"
           :title="expanded ? undefined : item.label"
           class="flex h-10 shrink-0 items-center gap-2.5 rounded-lg px-2.5 text-sm"
-          :class="isActive(item) ? 'bg-brand-100 font-semibold text-brand-800' : 'font-medium text-gray-700 hover:bg-gray-100'"
+          :class="isActive(item) ? 'bg-brand-50 font-semibold text-brand-800 ring-1 ring-brand-100' : 'font-medium text-gray-700 hover:bg-gray-100'"
         >
           <LucideIcon :name="item.icon" class="h-[18px] w-[18px] shrink-0" :class="isActive(item) ? 'text-brand-700' : 'text-gray-500'" />
           <span v-if="expanded" class="flex-1 truncate">{{ item.label }}</span>

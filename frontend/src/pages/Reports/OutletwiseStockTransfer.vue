@@ -24,17 +24,17 @@
         <p v-if="!rows.length" class="px-4 py-6 text-center text-sm text-gray-600">No Stock Transfers found for this range.</p>
         <div v-else class="overflow-x-auto">
           <table class="w-full text-sm">
-            <thead class="border-b border-gray-200 bg-gray-50 text-left text-xs uppercase text-gray-600">
+            <thead class="border-b border-accent-100 bg-accent-50 text-left text-xs uppercase text-accent-900">
               <tr>
                 <th class="w-8 px-3 py-2"></th>
-                <th class="whitespace-nowrap px-3 py-2 font-semibold">Dispatch Date</th>
-                <th class="whitespace-nowrap px-3 py-2 font-semibold">Stock Transfer</th>
-                <th class="whitespace-nowrap px-3 py-2 font-semibold">From Warehouse</th>
-                <th class="whitespace-nowrap px-3 py-2 font-semibold">To Warehouse</th>
-                <th class="whitespace-nowrap px-3 py-2 text-center font-semibold">Items</th>
-                <th class="whitespace-nowrap px-3 py-2 text-right font-semibold">Qty Dispatched</th>
-                <th class="whitespace-nowrap px-3 py-2 text-right font-semibold">Qty Confirmed</th>
-                <th class="whitespace-nowrap px-3 py-2 font-semibold">Status</th>
+                <th class="whitespace-nowrap px-3 py-2 font-bold">Dispatch Date</th>
+                <th class="whitespace-nowrap px-3 py-2 font-bold">Stock Transfer</th>
+                <th class="whitespace-nowrap px-3 py-2 font-bold">From Warehouse</th>
+                <th class="whitespace-nowrap px-3 py-2 font-bold">To Warehouse</th>
+                <th class="whitespace-nowrap px-3 py-2 text-center font-bold">Items</th>
+                <th class="whitespace-nowrap px-3 py-2 text-right font-bold">Qty Dispatched</th>
+                <th class="whitespace-nowrap px-3 py-2 text-right font-bold">Qty Confirmed</th>
+                <th class="whitespace-nowrap px-3 py-2 font-bold">Status</th>
               </tr>
             </thead>
             <tbody>

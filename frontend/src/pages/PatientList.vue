@@ -29,7 +29,7 @@
       </button>
     </div>
 
-    <DataList :key="listKey" fill :doctype="current.doctype" :filters="current.filters" :row-route="current.rowRoute" />
+    <DataList :key="listKey" fill :doctype="current.doctype" :filters="current.filters" :row-route="current.rowRoute" :id-column="current.idLabel" />
   </AppLayout>
 </template>
 
@@ -59,12 +59,13 @@ const toVisit = (r) => ({ name: 'VisitView', params: { name: r.name } })
 // Each card: what its number counts and what the list shows when picked.
 // Registered and In-patients ignore the date filter (all patients ever /
 // who is in a bed now).
+// Visit lists show the visit's own ID as "OP ID" / "IP ID" (user, 2026-10-27).
 const CARD_DEFS = computed(() => {
   const r = range.value
   return {
     registered: { label: 'Registered', icon: 'users', doctype: 'Patient Registration', filters: [], rowRoute: toPatient },
-    op: { label: 'OP visits', icon: 'clipboard-list', doctype: 'Patient Visit', filters: [['registration_category', '=', 'OP'], ...rangeFilters('date', r)], rowRoute: toVisit },
-    ip: { label: 'In-patients', icon: 'bed-double', doctype: 'Patient Visit', filters: [['registration_category', '=', 'IP'], ['admission_status', '=', 'Admitted']], rowRoute: toVisit },
+    op: { label: 'OP visits', icon: 'clipboard-list', doctype: 'Patient Visit', filters: [['registration_category', '=', 'OP'], ...rangeFilters('date', r)], rowRoute: toVisit, idLabel: 'OP ID' },
+    ip: { label: 'In-patients', icon: 'bed-double', doctype: 'Patient Visit', filters: [['registration_category', '=', 'IP'], ['admission_status', '=', 'Admitted']], rowRoute: toVisit, idLabel: 'IP ID' },
   }
 })
 

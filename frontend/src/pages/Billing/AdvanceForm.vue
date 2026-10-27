@@ -12,7 +12,7 @@
       <template v-if="doc">
         <template v-if="!isNew">
           <button type="button" class="h-9 rounded-md border border-gray-300 bg-white px-3 text-sm font-semibold hover:bg-gray-50" @click="openPrint('Patient Advance', doc.name)">Print Receipt</button>
-          <button v-if="perms.delete" type="button" class="h-9 rounded-md px-3 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60" :disabled="busy" @click="remove">Delete</button>
+          <DeleteRecord v-if="perms.delete" :label="doc.name" :busy="busy" @delete="remove" />
         </template>
         <button v-if="canSave" type="button" class="h-9 rounded-lg bg-brand-700 px-5 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-60" :disabled="busy" @click="save">{{ busy ? 'Saving…' : 'Save' }}</button>
       </template>
@@ -67,6 +67,7 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { call } from 'frappe-ui'
 import AppLayout from '@/components/AppLayout.vue'
+import DeleteRecord from '@/components/DeleteRecord.vue'
 import TextField from '@/components/TextField.vue'
 import SelectField from '@/components/SelectField.vue'
 import StatusBadge from '@/components/StatusBadge.vue'
@@ -173,7 +174,6 @@ async function save() {
 }
 
 async function remove() {
-  if (!window.confirm(`Permanently delete ${doc.value.name}?`)) return
   busy.value = true
   try {
     await deleteDoc('Patient Advance', doc.value.name)

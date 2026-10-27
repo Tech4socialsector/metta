@@ -151,6 +151,30 @@ def search_patients(txt=""):
 
 
 @frappe.whitelist()
+def get_masters_overview(doctypes):
+	"""Record count and last update of each master, for the Vue Masters page
+	(one call instead of one count per card). Masters the user can't read are
+	left out, as on Desk. A settings (single) doctype has no records: it is
+	reported as set up once it has been saved."""
+	doctypes = frappe.parse_json(doctypes) if isinstance(doctypes, str) else doctypes
+	out = {}
+	for dt in doctypes or []:
+		if not frappe.db.exists("DocType", dt) or not frappe.has_permission(dt, "read"):
+			continue
+		if frappe.get_meta(dt).issingle:
+			# tabSingles has no creation column, so get_value's default
+			# ordering fails there - read it with plain SQL.
+			rows = frappe.db.sql("select field, value from `tabSingles` where doctype = %s", dt, as_dict=True)
+			modified = next((r.value for r in rows if r.field == "modified"), None)
+			out[dt] = {"count": None, "single": 1, "modified": modified, "set_up": bool(rows)}
+			continue
+		count = frappe.db.count(dt)
+		modified = frappe.db.get_value(dt, {}, "modified", order_by="modified desc") if count else None
+		out[dt] = {"count": count, "single": 0, "modified": modified, "set_up": count > 0}
+	return out
+
+
+@frappe.whitelist()
 def get_form_menu():
 	"""Every form of this app the user may open, for the Vue "All forms" page.
 

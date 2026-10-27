@@ -1,2 +1,0 @@
-import{_ as a}from"./Badge.vue_vue_type_script_setup_true_lang-C8RbA6gM.js";import{N as l,O as t,u as o,a1 as n}from"./index-eqsH793H.js";const s={__name:"Pill",props:{label:{type:String,default:""},color:{type:String,default:"gray"}},setup(e){const r={red:"red",orange:"orange",yellow:"orange",green:"green",blue:"blue",gray:"gray",darkgrey:"gray"};return(c,g)=>e.label?(l(),t(o(a),{key:0,theme:r[e.color]||"gray",label:e.label},null,8,["theme","label"])):n("",!0)}};export{s as _};
-//# sourceMappingURL=Pill-DU_PdoaH.js.map

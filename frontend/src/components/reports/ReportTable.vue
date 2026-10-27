@@ -1,12 +1,12 @@
 <template>
   <section class="overflow-hidden rounded-xl border border-gray-200 bg-white">
-    <h2 v-if="heading" class="border-b border-gray-200 bg-gray-50 px-4 py-2 text-xs font-bold uppercase tracking-wide text-gray-700">{{ heading }}</h2>
+    <h2 v-if="heading" class="border-b border-accent-100 bg-accent-50 px-4 py-2.5 text-[13px] font-extrabold uppercase tracking-wide text-accent-900">{{ heading }}</h2>
     <p v-if="!rows.length" class="px-4 py-6 text-center text-sm text-gray-600">{{ empty }}</p>
     <div v-else class="overflow-x-auto">
       <table class="w-full text-sm">
-        <thead class="border-b border-gray-200 bg-gray-50 text-left text-xs uppercase text-gray-600">
+        <thead class="border-b border-accent-100 bg-accent-50 text-left text-xs uppercase text-accent-900">
           <tr>
-            <th v-for="c in columns" :key="c.key" class="whitespace-nowrap px-3 py-2 font-semibold" :class="alignOf(c)">{{ c.label }}</th>
+            <th v-for="c in columns" :key="c.key" class="whitespace-nowrap px-3 py-2 font-bold" :class="alignOf(c)">{{ c.label }}</th>
           </tr>
         </thead>
         <tbody>

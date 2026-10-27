@@ -39,7 +39,10 @@
       <li v-else-if="!results.length" class="px-3 py-2 text-sm text-gray-500">No {{ doctype }} found</li>
       <li v-for="(r, i) in results" :key="r.value" role="option" :aria-selected="i === active" class="cursor-pointer rounded-md px-3 py-1.5" :class="i === active ? 'bg-brand-50' : 'hover:bg-gray-50'" @click="pick(r)">
         <div class="text-sm font-medium text-gray-900">{{ r.value }}</div>
-        <div v-if="r.description || (r.label && r.label !== r.value)" class="text-xs text-gray-600">{{ r.description || r.label }}</div>
+        <!-- The second line is the record's name (e.g. the patient), never
+        the ID again: newer Frappe puts the ID itself in "description" when
+        the doctype shows its title in links, and the name in "label". -->
+        <div v-if="subline(r)" class="text-xs text-gray-600">{{ subline(r) }}</div>
       </li>
     </ul>
   </div>
@@ -109,6 +112,14 @@ function move(step) {
   if (!results.value.length) return
   active.value = (active.value + step + results.value.length) % results.value.length
 }
+// Name under the ID: the label if it differs from the ID, else the
+// description if that differs (older Frappe / custom queries put it there).
+function subline(r) {
+  if (r.label && r.label !== r.value) return r.label
+  if (r.description && r.description !== r.value) return r.description
+  return ''
+}
+
 function pick(r) {
   if (!r) return
   open.value = false

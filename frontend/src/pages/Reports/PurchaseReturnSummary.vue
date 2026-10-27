@@ -32,9 +32,9 @@
         <p v-if="!rows.length" class="px-4 py-6 text-center text-sm text-gray-600">No Purchase Returns found for this range.</p>
         <div v-else class="overflow-x-auto">
           <table class="w-full text-sm">
-            <thead class="border-b border-gray-200 bg-gray-50 text-left text-xs uppercase text-gray-600">
+            <thead class="border-b border-accent-100 bg-accent-50 text-left text-xs uppercase text-accent-900">
               <tr>
-                <th v-for="hd in HEADER" :key="hd" class="whitespace-nowrap px-3 py-2 font-semibold" :class="(hd === 'Qty Returned' || hd === 'Amount') && 'text-right'">{{ hd }}</th>
+                <th v-for="hd in HEADER" :key="hd" class="whitespace-nowrap px-3 py-2 font-bold" :class="(hd === 'Qty Returned' || hd === 'Amount') && 'text-right'">{{ hd }}</th>
               </tr>
             </thead>
             <tbody>

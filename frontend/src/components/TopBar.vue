@@ -1,14 +1,16 @@
 <template>
-  <!-- Pattern from the Pathways app (MIT, Tech4socialsector): a solid brand
-  bar with the app name and the user menu; the hospital logo (same as the
-  CHW app) on a white tile so it reads on the brand colour. -->
-  <header class="flex h-14 shrink-0 items-center gap-4 bg-brand-700 px-4 text-white">
-    <router-link :to="{ name: 'Home' }" class="flex min-w-0 items-center gap-2.5">
-      <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white">
-        <img :src="theme.logo || logo" alt="" class="h-full w-full object-contain" />
+  <!-- The banner across the top: a little taller than the old bar, in the
+  CHW app's banner green (main colour, its Home banner), white text; the
+  hospital logo on its white tile so it reads on the green. -->
+  <header class="flex h-16 shrink-0 items-center gap-4 bg-brand-700 px-5 text-white">
+    <router-link :to="{ name: 'Home' }" class="flex min-w-0 items-center gap-3">
+      <!-- overflow-hidden: the logo file is a white square, so without it the
+      square's corners stick out past the tile's rounded corners. -->
+      <span class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white p-1">
+        <img :src="theme.logo || logo" alt="" class="h-full w-full rounded object-contain" />
       </span>
       <span class="flex min-w-0 flex-col leading-tight">
-        <span class="truncate text-lg font-bold tracking-tight">{{ theme.app_name }}</span>
+        <span class="truncate text-xl font-bold tracking-tight">{{ theme.app_name }}</span>
         <span v-if="theme.hospital_name" class="truncate text-xs text-white/80">{{ theme.hospital_name }}</span>
       </span>
     </router-link>
@@ -16,9 +18,9 @@
     <div class="flex-1" />
 
     <div ref="menuRoot" class="relative">
-      <button type="button" class="flex items-center gap-2 rounded-md px-1.5 py-1 hover:bg-white/10" :class="menuOpen && 'bg-white/10'" :aria-expanded="menuOpen" aria-haspopup="menu" @click="menuOpen = !menuOpen">
+      <button type="button" class="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-white/10" :class="menuOpen && 'bg-white/10'" :aria-expanded="menuOpen" aria-haspopup="menu" @click="menuOpen = !menuOpen">
         <Avatar :label="session.full_name || session.user || '?'" size="md" />
-        <span class="hidden max-w-[10rem] truncate text-sm font-medium sm:block">{{ session.full_name || session.user }}</span>
+        <span class="hidden max-w-[12rem] truncate text-[15px] font-medium sm:block">{{ session.full_name || session.user }}</span>
         <LucideIcon name="chevron-down" class="h-4 w-4 text-white/80" />
       </button>
       <div v-if="menuOpen" role="menu" class="absolute right-0 top-10 z-40 w-48 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 text-sm text-gray-800 shadow-lg">

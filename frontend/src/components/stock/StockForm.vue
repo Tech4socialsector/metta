@@ -21,9 +21,7 @@
       </template>
       <button v-if="!isNew && doc" type="button" :class="BTN_SECONDARY" @click="printDoc">Print</button>
       <button v-if="canCancel" type="button" :class="BTN_SECONDARY" :disabled="busy" @click="confirmThen(`Permanently Cancel ${name}?`, cancelDoc)">Cancel document</button>
-      <button v-if="canDelete" type="button" :class="[BTN_SECONDARY, 'flex items-center gap-1.5 text-red-700']" :disabled="busy" @click="confirmThen(`Permanently delete ${name}?`, deleteDoc)">
-        <LucideIcon name="trash-2" class="h-4 w-4" /> Delete
-      </button>
+      <DeleteRecord v-if="canDelete" :label="name" :busy="busy" @delete="deleteDoc" />
       <button v-if="showSave && meta && doc" type="button" :class="BTN_SECONDARY" @click="discard">{{ isNew ? 'Cancel' : 'Discard' }}</button>
       <button v-if="canAmend" type="button" :class="mainAction === 'Amend' ? BTN_PRIMARY : BTN_SECONDARY" :disabled="busy" @click="amend">Amend</button>
       <button v-if="canSubmit" type="button" :class="BTN_PRIMARY" :disabled="busy" @click="confirmThen(`Permanently Submit ${name}?`, submit)">Submit</button>
@@ -168,6 +166,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { call } from 'frappe-ui'
 import AppLayout from '@/components/AppLayout.vue'
+import DeleteRecord from '@/components/DeleteRecord.vue'
 import AppDialog from '@/components/AppDialog.vue'
 import FormField from '@/components/FormField.vue'
 import StatusBadge from '@/components/StatusBadge.vue'

@@ -77,7 +77,8 @@ const OP_ONLY = ['patient_registration', 'like', 'OP-%']
 const DEFS = computed(() => {
   const since = rangeFilters('date', range.value, true)
   return {
-    waiting: { filters: [OP_ONLY, ['status', '=', 'Pending'], ...since], sortDir: 'asc' },
+    // Newest first on every card (user, 2026-10-27: recent patients on top).
+    waiting: { filters: [OP_ONLY, ['status', '=', 'Pending'], ...since], sortDir: 'desc' },
     done: { filters: [OP_ONLY, ['status', '=', 'Completed'], ...since], sortDir: 'desc' },
     all: { filters: [OP_ONLY, ...since], sortDir: 'desc' },
   }

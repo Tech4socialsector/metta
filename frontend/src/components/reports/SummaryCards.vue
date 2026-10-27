@@ -9,8 +9,8 @@
       :class="[TONES[c.tone] || 'border-gray-200', c.click && 'hover:bg-gray-50']"
       @click="c.click && c.click()"
     >
-      <span class="text-xs font-semibold uppercase tracking-wide text-gray-600">{{ c.label }}</span>
-      <span class="text-xl font-semibold tabular-nums">{{ c.value }}</span>
+      <span class="text-xs font-bold uppercase tracking-wide text-gray-700">{{ c.label }}</span>
+      <span class="text-xl font-bold tabular-nums">{{ c.value }}</span>
       <span v-if="c.sub" class="text-xs text-gray-600">{{ c.sub }}</span>
       <span v-if="c.click" class="text-xs font-semibold text-brand-700">{{ c.clickLabel || 'View list' }} →</span>
     </component>

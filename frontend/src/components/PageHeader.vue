@@ -4,7 +4,7 @@
       <div class="flex min-w-0 items-start gap-3">
         <BackButton v-if="showBack" :fallback="backFallback" class="mt-0.5" />
         <div class="min-w-0">
-          <h1 class="text-2xl font-semibold text-gray-900">{{ title }}</h1>
+          <h1 class="text-2xl font-bold text-accent-900">{{ title }}</h1>
           <p v-if="subtitle" class="mt-0.5 text-sm text-gray-500">{{ subtitle }}</p>
           <slot name="meta" />
         </div>

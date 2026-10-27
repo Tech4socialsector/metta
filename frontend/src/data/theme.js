@@ -9,10 +9,34 @@ export const DEFAULT_THEME = {
   app_name: 'LCH HMIS',
   hospital_name: '',
   logo: '',
-  // The clearer blue of the user's sample screen (the first pick, #0C4A6E,
-  // came out too dark on real screens).
-  brand_color: '#0B5B8C',
-  accent_color: '#EA6A12',
+  // The CHW app's colours (chw/frontend/tailwind.config.js), so both apps of
+  // the hospital look like one family. Main is CHW's banner green (its Home
+  // banner, forest-700) for bars and headings; navy from the logo's cross is
+  // only the small accent (user, 2026-10-26: "don't need navy everywhere").
+  brand_color: '#245535',
+  accent_color: '#2E4B85',
+}
+
+// Hand-made scales for the CHW colours, copied from the CHW app. Generated
+// shades keep the colour's saturation, which turns a deep navy into bright
+// royal blue in the middle steps - these keep it a soft navy throughout.
+// brand-700 (top bar, buttons) is CHW's navy-900, the colour of its buttons.
+// brand-700 (bars, buttons) and accent-500 (tags) land on the picked colour.
+const CHW_FOREST = ['#eef6f0', '#d6eadb', '#aed4b8', '#7fb990', '#529a68', '#367d4d', '#2b6a3f', '#245535', '#1d4429', '#15321f']
+const CHW_NAVY = ['#eef2f9', '#d9e1f0', '#b3c2e0', '#7f97c6', '#4d6ca6', '#2e4b85', '#1f3769', '#152a54', '#0c1e40', '#031530']
+const FIXED_SCALES = {
+  brand: {
+    '#245535': CHW_FOREST,
+    '#031530': ['#eef2f9', '#d9e1f0', '#b3c2e0', '#7f97c6', '#4d6ca6', '#2e4b85', '#1f3769', '#031530', '#021026', '#010b1c'],
+  },
+  accent: {
+    '#2e4b85': CHW_NAVY,
+    '#367d4d': CHW_FOREST,
+  },
+}
+const hexRgb = (hex) => {
+  const n = parseInt(hex.slice(1), 16)
+  return [n >> 16, (n >> 8) & 255, n & 255]
 }
 
 // What the screens show right now (the saved theme, or a preview while
@@ -61,6 +85,8 @@ export function relightened(hex, change, maxL = 100) {
 }
 
 export function shades(hex, which = 'brand') {
+  const fixed = FIXED_SCALES[which]?.[hex.toLowerCase()]
+  if (fixed) return STEPS.map((step, i) => ({ step, rgb: hexRgb(fixed[i]) }))
   const [h, s, base] = toHsl(hex)
   const table = which === 'brand' ? BRAND_L : ACCENT_L
   return STEPS.map((step, i) => {

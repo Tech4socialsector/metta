@@ -15,7 +15,7 @@
         <button v-if="!isNew" type="button" :class="BTN_PLAIN" @click="openPrint('Billing', doc.name, 'Billing Receipt')">Print Receipt</button>
         <button v-if="doc.docstatus === 1 && perms.cancel" type="button" :class="BTN_PLAIN" :disabled="busy" @click="cancel">Cancel</button>
         <button v-if="doc.docstatus === 2 && perms.create && hasRole('Billing Staff')" type="button" :class="BTN_PLAIN" @click="amend">Amend</button>
-        <button v-if="!isNew && doc.docstatus === 0 && perms.delete" type="button" class="h-9 rounded-md px-3 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60" :disabled="busy" @click="remove">Delete</button>
+        <DeleteRecord v-if="!isNew && doc.docstatus === 0 && perms.delete" :label="doc.name" :busy="busy" @delete="remove" />
         <button v-if="mainAction" type="button" class="h-9 rounded-lg bg-brand-700 px-5 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-60" :disabled="busy" @click="mainAction.run">{{ busy ? 'Please wait…' : mainAction.label }}</button>
       </template>
     </template>
@@ -155,6 +155,7 @@ import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { call } from 'frappe-ui'
 import AppLayout from '@/components/AppLayout.vue'
+import DeleteRecord from '@/components/DeleteRecord.vue'
 import SubHeading from '@/components/SubHeading.vue'
 import AppDialog from '@/components/AppDialog.vue'
 import TextField from '@/components/TextField.vue'
@@ -672,7 +673,6 @@ function amend() {
 }
 
 async function remove() {
-  if (!window.confirm(`Permanently delete ${doc.value.name}?`)) return
   busy.value = true
   try {
     await deleteDoc('Billing', doc.value.name)

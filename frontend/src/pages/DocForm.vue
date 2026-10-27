@@ -12,9 +12,7 @@
     <template #actions>
       <button v-if="showSave" type="button" :class="BTN_SECONDARY" @click="discard">{{ isNew ? 'Cancel' : 'Discard' }}</button>
       <button v-if="canCancel" type="button" :class="BTN_SECONDARY" :disabled="busy" @click="confirmThen('Cancel', cancelDoc)">Cancel document</button>
-      <button v-if="canDelete" type="button" :class="[BTN_SECONDARY, 'flex items-center gap-1.5 text-red-700']" :disabled="busy" @click="confirmThen('Delete', deleteDoc)">
-        <LucideIcon name="trash-2" class="h-4 w-4" /> Delete
-      </button>
+      <DeleteRecord v-if="canDelete" :label="title" :busy="busy" @delete="deleteDoc" />
       <button v-if="canSubmit" type="button" :class="BTN_PRIMARY" :disabled="busy" @click="confirmThen('Submit', submit)">Submit</button>
       <!-- form= ties this header button to the form below, so Enter in a
       field still submits it as the old in-form Save did. -->
@@ -47,6 +45,16 @@
         </div>
         <button v-if="staleDoc" type="button" class="h-8 rounded-md border border-red-300 bg-white px-3 text-sm font-semibold text-red-800" @click="load">Reload latest</button>
       </div>
+
+      <!-- Desk asks a prompt-named doctype's name (Department, Ward Master,
+      Unit of Measure...) on a new record; without this the form is empty. -->
+      <section v-if="promptName" class="rounded-xl border border-gray-200 bg-white p-5">
+        <FormField :df="NAME_DF" :model-value="doc.__newname" required :error="tried && !doc.__newname ? 'Required' : ''" @update:model-value="(v) => (doc.__newname = v)" />
+      </section>
+      <!-- A saved record with only a name (Department) still shows it, not an empty page. -->
+      <section v-else-if="!isNew && !currentSections.length" class="rounded-xl border border-gray-200 bg-white p-5">
+        <FormField :df="NAME_DF" :model-value="doc.name" readonly />
+      </section>
 
       <section v-for="(s, si) in currentSections" :id="`sec-${si}`" :key="`${tab}-${si}`" class="flex scroll-mt-4 flex-col gap-4 rounded-xl border border-gray-200 bg-white p-5">
         <component :is="s.collapsible ? 'button' : 'header'" v-if="s.label" :type="s.collapsible ? 'button' : undefined" class="block w-full text-left" :aria-expanded="s.collapsible ? !!opened[sectionKey(s)] : undefined" @click="s.collapsible && (opened[sectionKey(s)] = !opened[sectionKey(s)])">
@@ -112,6 +120,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { call } from 'frappe-ui'
 import AppLayout from '@/components/AppLayout.vue'
+import DeleteRecord from '@/components/DeleteRecord.vue'
 import FormField from '@/components/FormField.vue'
 import ChildTableEditor from '@/components/ChildTableEditor.vue'
 import StatusBadge from '@/components/StatusBadge.vue'
@@ -166,7 +175,14 @@ const showSave = computed(() => !!canWrite.value && (dirty.value || isNew.value)
 const jumpSections = computed(() => currentSections.value.map((s, i) => ({ id: `sec-${i}`, label: s.label })).filter((s) => s.label))
 const patient = usePatientBar(meta, doc)
 const runs = (col) => fieldRuns(col, doc.value)
-const missing = computed(() => (meta.value && doc.value ? missingFields(meta.value, doc.value, byName.value) : []))
+const NAME_DF = { fieldname: '__newname', fieldtype: 'Data', label: 'Name', reqd: 1 }
+const promptName = computed(() => isNew.value && String(meta.value?.autoname || '').toLowerCase() === 'prompt')
+const missing = computed(() => {
+  if (!meta.value || !doc.value) return []
+  const out = missingFields(meta.value, doc.value, byName.value)
+  if (promptName.value && !doc.value.__newname) out.unshift('Name')
+  return out
+})
 const missingSet = computed(() => new Set(missing.value))
 const title = computed(() => {
   if (isNew.value) return `New ${props.doctype}`
@@ -263,6 +279,7 @@ async function save() {
   busy.value = true
   try {
     const payload = toPayload(doc.value)
+    if (promptName.value) payload.name = payload.__newname
     const saved = isNew.value ? await call('frappe.client.insert', { doc: payload }) : await call('frappe.client.save', { doc: payload })
     snapshot.value = JSON.stringify(toPayload(saved))
     if (isNew.value) {

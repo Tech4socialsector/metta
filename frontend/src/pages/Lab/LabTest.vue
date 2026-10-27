@@ -14,9 +14,7 @@
         <LucideIcon name="printer" class="h-4 w-4" /> Print
       </a>
       <button v-if="canCancelTest" type="button" class="h-9 rounded-lg border border-gray-300 bg-white px-4 text-sm font-semibold hover:bg-gray-50 disabled:opacity-60" :disabled="busy" @click="cancelTest">Cancel test</button>
-      <button v-if="canDelete" type="button" class="flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60" :disabled="busy" @click="deleteTest">
-        <LucideIcon name="trash-2" class="h-4 w-4" /> Delete
-      </button>
+      <DeleteRecord v-if="canDelete" :label="name" :busy="busy" @delete="deleteTest" />
       <template v-if="canWrite">
         <button v-if="dirty && !isNew" type="button" class="h-9 rounded-lg border border-gray-300 bg-white px-4 text-sm font-semibold hover:bg-gray-50" :disabled="busy" @click="load">Discard</button>
         <!-- With a next step, it is the brand button and Save stays white. -->
@@ -155,6 +153,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { call } from 'frappe-ui'
 import AppLayout from '@/components/AppLayout.vue'
+import DeleteRecord from '@/components/DeleteRecord.vue'
 import FormField from '@/components/FormField.vue'
 import StatusBadge from '@/components/StatusBadge.vue'
 import LabTestContext from '@/components/lab/LabTestContext.vue'
@@ -442,7 +441,6 @@ async function cancelTest() {
 }
 
 async function deleteTest() {
-  if (!window.confirm(`Delete ${props.name}?`)) return
   busy.value = true
   try {
     await call('frappe.client.delete', { doctype: DT, name: props.name })

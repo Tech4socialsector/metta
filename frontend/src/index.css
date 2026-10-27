@@ -13,27 +13,27 @@
    screen (#0C4A6E was too dark). Same values data/theme.js generates.
    accent = orange (OP tag, small highlights); 500 is the main shade. */
 :root {
-  --brand-50: 242 249 253;
-  --brand-100: 225 240 250;
-  --brand-200: 189 227 250;
-  --brand-300: 132 202 245;
-  --brand-400: 66 174 240;
-  --brand-500: 17 144 222;
-  --brand-600: 14 117 180;
-  --brand-700: 11 91 140;
-  --brand-800: 9 75 115;
-  --brand-900: 7 62 95;
+  --brand-50: 238 246 240;
+  --brand-100: 214 234 219;
+  --brand-200: 174 212 184;
+  --brand-300: 127 185 144;
+  --brand-400: 82 154 104;
+  --brand-500: 54 125 77;
+  --brand-600: 43 106 63;
+  --brand-700: 36 85 53;
+  --brand-800: 29 68 41;
+  --brand-900: 21 50 31;
 
-  --accent-50: 253 246 242;
-  --accent-100: 250 235 225;
-  --accent-200: 250 211 184;
-  --accent-300: 246 178 132;
-  --accent-400: 242 146 80;
-  --accent-500: 234 106 18;
-  --accent-600: 201 91 15;
-  --accent-700: 168 76 13;
-  --accent-800: 140 64 11;
-  --accent-900: 117 53 9;
+  --accent-50: 238 242 249;
+  --accent-100: 217 225 240;
+  --accent-200: 179 194 224;
+  --accent-300: 127 151 198;
+  --accent-400: 77 108 166;
+  --accent-500: 46 75 133;
+  --accent-600: 31 55 105;
+  --accent-700: 21 42 84;
+  --accent-800: 12 30 64;
+  --accent-900: 3 21 48;
 
   --app-bg: 244 246 248;
 }
@@ -81,3 +81,14 @@ body,
   .row-fit > .span-row { grid-column: 1 / -1; }
 }
 .pair-fit > .span-row { grid-column: 1 / -1; }
+
+/* Section sub-headings, as in the CHW app: green (main colour) and navy
+   (accent) take turns - odd sections green, even sections navy. Every
+   form puts its sections side by side as <section> siblings, so their
+   order is enough to alternate without each page counting them. */
+.hm-subhead { color: rgb(var(--brand-800)); border-color: rgb(var(--brand-100)); }
+.hm-subhead.hm-band { background: rgb(var(--brand-50)); box-shadow: inset 0 0 0 1px rgb(var(--brand-100)); }
+.hm-subhead .hm-dot { background: rgb(var(--brand-600)); }
+section:nth-of-type(even) .hm-subhead { color: rgb(var(--accent-800)); border-color: rgb(var(--accent-100)); }
+section:nth-of-type(even) .hm-subhead.hm-band { background: rgb(var(--accent-50)); box-shadow: inset 0 0 0 1px rgb(var(--accent-100)); }
+section:nth-of-type(even) .hm-subhead .hm-dot { background: rgb(var(--accent-600)); }

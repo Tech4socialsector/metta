@@ -4,7 +4,6 @@ export default [
   { path: '/reports/daily-collection', name: 'ReportsDailyCollection', component: () => import('@/pages/Reports/DailyCollection.vue') },
   { path: '/reports/collection-report', name: 'ReportsCollectionReport', component: () => import('@/pages/Reports/CollectionReport.vue') },
   { path: '/reports/hospital-overview', name: 'ReportsHospitalOverview', component: () => import('@/pages/Reports/HospitalOverview.vue') },
-  { path: '/reports/grl-for-gst', name: 'ReportsGrlForGst', component: () => import('@/pages/Reports/GrlForGst.vue') },
   { path: '/reports/date-wise-purchase-order', name: 'ReportsDateWisePurchaseOrder', component: () => import('@/pages/Reports/DateWisePurchaseOrder.vue') },
   { path: '/reports/supplier-wise-purchase', name: 'ReportsSupplierWisePurchase', component: () => import('@/pages/Reports/SupplierWisePurchase.vue') },
   { path: '/reports/purchase-return-summary', name: 'ReportsPurchaseReturnSummary', component: () => import('@/pages/Reports/PurchaseReturnSummary.vue') },

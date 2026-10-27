@@ -20,9 +20,9 @@
         <p v-if="!rows.length" class="px-4 py-6 text-center text-sm text-gray-600">No Purchase Orders found for this range.</p>
         <div v-else class="overflow-x-auto">
           <table class="w-full text-sm">
-            <thead class="border-b border-gray-200 bg-gray-50 text-left text-xs uppercase text-gray-600">
+            <thead class="border-b border-accent-100 bg-accent-50 text-left text-xs uppercase text-accent-900">
               <tr>
-                <th v-for="h in HEADER" :key="h" class="whitespace-nowrap px-3 py-2 font-semibold" :class="NUM_HEADS.has(h) && 'text-right'">{{ h }}</th>
+                <th v-for="h in HEADER" :key="h" class="whitespace-nowrap px-3 py-2 font-bold" :class="NUM_HEADS.has(h) && 'text-right'">{{ h }}</th>
               </tr>
             </thead>
             <tbody>

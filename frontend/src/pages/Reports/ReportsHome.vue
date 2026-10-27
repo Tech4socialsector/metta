@@ -1,18 +1,13 @@
 <template>
   <AppLayout title="Reports">
     <p v-if="session.roles.length && !groups.length" class="text-sm text-gray-600">You don't have access to any reports.</p>
-    <section v-for="g in groups" :key="g.name" class="flex flex-col gap-3">
-      <SectionTitle :title="g.name" :icon="ICONS[g.name]" />
-      <div class="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-3">
-        <router-link
-          v-for="r in g.reports"
-          :key="r.key"
-          :to="{ name: r.route }"
-          class="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-900 hover:bg-gray-50"
-        >
-          {{ r.title }}
-          <LucideIcon name="chevron-right" class="h-4 w-4 text-gray-400" />
-        </router-link>
+    <!-- Style A, same cards as the section pages (TaskCard); the hint line
+    is the report's one line from the catalog. -->
+    <section v-for="g in groups" :key="g.name" class="flex flex-col gap-2.5">
+      <h2 class="text-[18px] font-extrabold tracking-tight text-gray-900">{{ g.name }}</h2>
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <!-- Name only - no description line (user, 2026-10-26). -->
+        <TaskCard v-for="r in g.reports" :key="r.key" :label="r.title" :icon="ICONS[g.name] || 'file-bar-chart'" tone="bg-accent-50 text-accent-700" :to="{ name: r.route }" />
       </div>
     </section>
   </AppLayout>
@@ -21,12 +16,11 @@
 <script setup>
 import { computed } from 'vue'
 import AppLayout from '@/components/AppLayout.vue'
-import SectionTitle from '@/components/SectionTitle.vue'
-import LucideIcon from '@/components/LucideIcon.vue'
+import TaskCard from '@/components/TaskCard.vue'
 import { session, hasRole } from '@/data/session'
 import { REPORTS, REPORT_GROUPS } from '@/data/reports/catalog'
 
-const ICONS = { 'Collections & Accounts': 'wallet', GST: 'receipt', Purchase: 'shopping-cart', Stock: 'package', Laboratory: 'flask-conical' }
+const ICONS = { 'Collections & Accounts': 'wallet', Purchase: 'shopping-cart', Stock: 'package', Laboratory: 'flask-conical' }
 
 // Same role lists as each Desk page/report .json - a card is shown only to
 // those roles (System Manager always), so nobody sees a link Desk would refuse.

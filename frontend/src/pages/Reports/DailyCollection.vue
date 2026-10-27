@@ -43,11 +43,11 @@
       <p v-if="!dlg.rows.length" class="text-sm text-gray-600">No underlying records found for this.</p>
       <div v-else class="overflow-x-auto">
         <table class="w-full text-sm">
-          <thead class="border-b border-gray-200 bg-gray-50 text-left text-xs uppercase text-gray-600">
+          <thead class="border-b border-accent-100 bg-accent-50 text-left text-xs uppercase text-accent-900">
             <tr>
-              <th class="px-3 py-2 font-semibold">Document</th>
-              <th class="px-3 py-2 font-semibold">Detail</th>
-              <th class="px-3 py-2 text-right font-semibold">Amount</th>
+              <th class="px-3 py-2 font-bold">Document</th>
+              <th class="px-3 py-2 font-bold">Detail</th>
+              <th class="px-3 py-2 text-right font-bold">Amount</th>
             </tr>
           </thead>
           <tbody>

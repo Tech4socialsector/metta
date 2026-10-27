@@ -8,9 +8,7 @@
       </div>
     </template>
     <template v-if="doc" #actions>
-      <button v-if="canDelete" type="button" class="flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60" :disabled="busy" @click="remove">
-        <LucideIcon name="trash-2" class="h-4 w-4" /> Delete
-      </button>
+      <DeleteRecord v-if="canDelete" :label="title" :busy="busy" @delete="remove" />
       <button v-if="canWrite && dirty && !isNew" type="button" class="h-9 rounded-lg border border-gray-300 bg-white px-4 text-sm font-semibold hover:bg-gray-50" :disabled="busy" @click="load">Discard</button>
       <button v-if="canWrite" type="button" class="h-9 rounded-lg bg-brand-700 px-5 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-60" :disabled="busy || (!dirty && !isNew)" @click="save">{{ busy ? 'Saving…' : 'Save' }}</button>
     </template>
@@ -104,6 +102,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { call } from 'frappe-ui'
 import AppLayout from '@/components/AppLayout.vue'
+import DeleteRecord from '@/components/DeleteRecord.vue'
 import SubHeading from '@/components/SubHeading.vue'
 import TextField from '@/components/TextField.vue'
 import SelectField from '@/components/SelectField.vue'
@@ -207,7 +206,6 @@ async function save() {
 }
 
 async function remove() {
-  if (!window.confirm(`Delete ${props.name}?`)) return
   busy.value = true
   try {
     await call('frappe.client.delete', { doctype: DTT, name: props.name })

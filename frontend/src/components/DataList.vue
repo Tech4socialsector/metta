@@ -86,12 +86,13 @@
         wrap, long values are cut with … (full text on hover). Only a very
         narrow screen (min 720px) scrolls inside this box. -->
         <table class="w-full min-w-[720px] table-fixed text-sm">
-          <thead class="sticky top-0 z-10 border-b border-brand-100 bg-brand-50 text-left text-xs uppercase text-brand-800">
+          <!-- Table header in the accent (navy), rows hover in the main colour - as in the CHW app. -->
+          <thead class="sticky top-0 z-10 border-b border-accent-100 bg-accent-50 text-left text-xs uppercase text-accent-900">
             <tr>
               <th class="w-10 px-4 py-2" @click.stop>
                 <input type="checkbox" class="rounded border-gray-300 text-brand-700 focus:ring-brand-700" :checked="allOnPage" :indeterminate.prop="someOnPage && !allOnPage" aria-label="Select all rows on this page" @change="togglePage($event.target.checked)" />
               </th>
-              <th v-for="(c, i) in shownColumns" :key="c.fieldname" class="cursor-pointer select-none break-words px-4 py-2 align-bottom font-medium leading-tight hover:text-brand-900" :class="[isNumeric(c) && 'text-right', i === 0 && 'w-[22%]']" @click="toggleSort(c.fieldname)">
+              <th v-for="(c, i) in shownColumns" :key="c.fieldname" class="cursor-pointer select-none break-words px-4 py-2 align-bottom font-medium leading-tight hover:text-brand-900" :class="[isNumeric(c) && 'text-right', i === 0 && shownColumns.length > 1 && 'w-[22%]']" @click="toggleSort(c.fieldname)">
                 {{ c.label }}<span v-if="sortField === c.fieldname" class="ml-0.5">{{ sortDir === 'asc' ? '▲' : '▼' }}</span>
               </th>
               <th class="w-24 cursor-pointer select-none whitespace-nowrap px-4 py-2 text-right align-bottom font-medium hover:text-brand-900" @click="toggleSort('modified')">
@@ -100,13 +101,17 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="r in rows" :key="r.name" class="cursor-pointer border-b border-gray-100 last:border-0 hover:bg-gray-50" :class="selected.has(r.name) && 'bg-brand-50/60'" @click="router.push(rowRoute(r))">
+            <tr v-for="r in rows" :key="r.name" class="cursor-pointer border-b border-gray-100 last:border-0 hover:bg-brand-50" :class="selected.has(r.name) && 'bg-brand-50/70'" @click="openRow(r)">
               <td class="w-10 px-4 py-2.5" @click.stop>
                 <input type="checkbox" class="rounded border-gray-300 text-brand-700 focus:ring-brand-700" :checked="selected.has(r.name)" :aria-label="`Select ${r.name}`" @change="toggleRow(r.name, $event.target.checked)" />
               </td>
               <td v-for="(c, i) in shownColumns" :key="c.fieldname" class="overflow-hidden whitespace-nowrap px-4 py-2.5" :class="[i === 0 ? 'font-medium text-gray-900' : 'text-gray-600', isNumeric(c) && 'text-right']">
-                <router-link v-if="i === 0" :to="rowRoute(r)" class="block truncate hover:text-brand-700" :title="cellText(c, r)" @click.stop>{{ cellText(c, r) }}</router-link>
-                <StatusBadge v-else-if="c.fieldtype === 'Select' && isKnownStatus(r[c.fieldname])" :status="r[c.fieldname]" />
+                <a v-if="i === 0 && rowHref && rowHref(r)" :href="rowHref(r)" class="block truncate hover:text-brand-700" :title="cellText(c, r)" @click.stop>{{ cellText(c, r) }}</a>
+                <router-link v-else-if="i === 0" :to="rowRoute(r)" class="block truncate hover:text-brand-700" :title="cellText(c, r)" @click.stop>{{ cellText(c, r) }}</router-link>
+                <span v-else-if="c.fieldtype === 'Select' && isKnownStatus(r[c.fieldname])" class="flex items-center gap-1.5">
+                  <StatusBadge :status="r[c.fieldname]" />
+                  <span v-if="c.fieldname === 'status' && rowTag && rowTag(r)" class="rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700 ring-1 ring-red-200">{{ rowTag(r) }}</span>
+                </span>
                 <span v-else class="block truncate" :title="cellText(c, r)">{{ cellText(c, r) }}</span>
               </td>
               <td class="whitespace-nowrap px-4 py-2.5 text-right text-xs text-gray-500" :title="r.modified">{{ ago(r.modified) }}</td>
@@ -155,6 +160,16 @@ const props = defineProps({
   doctype: { type: String, required: true },
   // (row) => route location of a row
   rowRoute: { type: Function, required: true },
+  // Optional (row) => URL for rows that open outside the Vue app (a form
+  // that still opens in Desk); when it returns a URL, that wins over rowRoute.
+  rowHref: { type: Function, default: null },
+  // Show the record's ID as its own column, second after the title, with
+  // this heading (e.g. "OP ID" on the Patients page's OP visits).
+  idColumn: { type: String, default: '' },
+  // (row) => short red tag shown beside the row's status (e.g. "Late" on
+  // the Lab list), with the extra fields it needs read for every row.
+  rowTag: { type: Function, default: null },
+  extraFields: { type: Array, default: () => [] },
   // [{ label, filters: [[field, op, value]] }] - tabs above the list
   tabs: { type: Array, default: () => [] },
   // Fixed filters the page decides (e.g. the card picked on Patients),
@@ -192,22 +207,22 @@ const selected = reactive(new Set())
 const titleField = computed(() => meta.value?.title_field || 'name')
 const valueFields = computed(() => (meta.value?.fields || []).filter((f) => !NO_VALUE.includes(f.fieldtype) && !f.hidden))
 const byName = computed(() => Object.fromEntries(valueFields.value.map((f) => [f.fieldname, f])))
-const idField = { fieldname: 'name', label: 'ID', fieldtype: 'Data' }
+const idField = computed(() => ({ fieldname: 'name', label: props.idColumn || 'ID', fieldtype: 'Data' }))
 
 // First column is the record's title (Desk's title_field), then the
 // doctype's "In List View" fields, as in Desk.
 const defaultColumnNames = computed(() => {
   const title = titleField.value
   const list = valueFields.value.filter((f) => f.in_list_view && f.fieldname !== title).map((f) => f.fieldname)
-  return [title, ...list.slice(0, 5)]
+  return props.idColumn ? [title, 'name', ...list.slice(0, 4)] : [title, ...list.slice(0, 5)]
 })
-const pickableFields = computed(() => [idField, ...valueFields.value])
+const pickableFields = computed(() => [idField.value, ...valueFields.value])
 const shownColumns = computed(() =>
-  columnNames.value.map((n) => (n === 'name' ? idField : byName.value[n])).filter(Boolean),
+  columnNames.value.map((n) => (n === 'name' ? idField.value : byName.value[n])).filter(Boolean),
 )
 // Quick filters: Desk's "In Standard Filter" fields that have fixed choices.
 const quickFilters = computed(() => valueFields.value.filter((f) => f.in_standard_filter && ['Select', 'Check'].includes(f.fieldtype)))
-const filterFields = computed(() => [idField, ...valueFields.value])
+const filterFields = computed(() => [idField.value, ...valueFields.value])
 const isFiltered = computed(() => !!search.value.trim() || conditions.value.length > 0 || Object.values(quick).some((v) => v && v.length))
 
 const start = computed(() => (page.value - 1) * pageSize.value)
@@ -222,6 +237,13 @@ function choiceOptions(df) {
 function isNumeric(df) {
   return ['Currency', 'Float', 'Int', 'Percent'].includes(df.fieldtype)
 }
+// A row opens its Vue screen, or Desk when rowHref gives a URL for it.
+function openRow(r) {
+  const href = props.rowHref && props.rowHref(r)
+  if (href) window.location.href = href
+  else router.push(props.rowRoute(r))
+}
+
 function cellText(c, r) {
   const v = r[c.fieldname]
   if (v === null || v === undefined || v === '') return ''
@@ -247,7 +269,7 @@ function buildFilters(tabIndex) {
     out.push([df.fieldname, 'in', df.fieldtype === 'Check' ? vals.map((v) => (v === 'Yes' ? 1 : 0)) : vals])
   }
   for (const c of conditions.value) {
-    const df = c.field === 'name' ? idField : byName.value[c.field] || {}
+    const df = c.field === 'name' ? idField.value : byName.value[c.field] || {}
     let v = c.value
     if (df.fieldtype === 'Check') v = v === 'Yes' ? 1 : 0
     if (c.op === 'set' || c.op === 'not set') out.push([c.field, 'is', c.op])
@@ -276,7 +298,7 @@ async function reload() {
   const filters = buildFilters(tab.value)
   const orFilters = buildOrFilters()
   try {
-    const fields = Array.from(new Set(['name', 'modified', ...columnNames.value]))
+    const fields = Array.from(new Set(['name', 'modified', ...columnNames.value, ...props.extraFields]))
     const [list, n] = await Promise.all([
       call('frappe.client.get_list', {
         doctype: props.doctype,
@@ -402,7 +424,11 @@ onMounted(async () => {
     return
   }
   for (const df of quickFilters.value) quick[df.fieldname] = []
-  columnNames.value = loadColumns() || defaultColumnNames.value
+  const saved = loadColumns()
+  // A page that asks for the ID column always gets it, even over columns
+  // this browser saved before.
+  if (saved && props.idColumn && !saved.includes('name')) saved.splice(1, 0, 'name')
+  columnNames.value = saved || defaultColumnNames.value
   await reload()
   ready = true
   if (props.autoRefresh) timer = setInterval(reload, props.autoRefresh * 1000)

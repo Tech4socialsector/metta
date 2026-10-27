@@ -34,10 +34,10 @@
           <TextField id="hospital_name" v-model="draft.hospital_name" label="Hospital name" :readonly="!canSave" placeholder="Shown under the app name" />
         </FormSection>
 
-        <!-- Two steps per colour: pick a colour, then how light or dark it is. -->
+        <!-- One step per colour: pick it (its standard shade), or type any code (user, 2026-10-27: no shade row). -->
         <FormSection v-for="k in KINDS" :key="k.key" :title="k.title" :icon="k.icon" :cols="1">
           <div class="flex flex-col gap-1.5">
-            <span class="ctl-label">1. Colour</span>
+            <span class="ctl-label">Colour</span>
             <div class="flex flex-wrap items-center gap-2.5">
               <button
                 v-for="f in k.families"
@@ -55,24 +55,6 @@
                 <input type="color" :value="draft[k.field]" :disabled="!canSave" class="h-6 w-7 cursor-pointer border-0 bg-transparent p-0" :aria-label="`Pick any ${k.word}`" @input="pickCustom(k, $event.target.value)" />
                 <input :value="draft[k.field]" :readonly="!canSave" maxlength="7" class="w-20 bg-transparent font-mono text-sm uppercase focus:outline-none" :aria-label="`${k.word} code`" @change="pickCustom(k, $event.target.value)" />
               </label>
-            </div>
-          </div>
-          <div v-if="family[k.key]" class="flex flex-col gap-1.5">
-            <span class="ctl-label">2. Shade of {{ family[k.key] }}</span>
-            <div class="flex flex-wrap gap-2.5">
-              <button
-                v-for="s in shadeChoices(k)"
-                :key="s.hex"
-                type="button"
-                :aria-pressed="same(draft[k.field], s.hex)"
-                :disabled="!canSave"
-                class="flex w-[88px] flex-col items-center gap-1 rounded-lg p-1 text-xs"
-                :class="same(draft[k.field], s.hex) ? 'bg-gray-100 font-semibold text-gray-900' : 'text-gray-600 hover:bg-gray-50'"
-                @click="draft[k.field] = s.hex"
-              >
-                <span class="h-9 w-full rounded-md" :style="{ background: s.hex, boxShadow: same(draft[k.field], s.hex) ? `0 0 0 2px #fff, 0 0 0 4px ${s.hex}` : 'none' }" />
-                {{ s.label }}
-              </button>
             </div>
           </div>
         </FormSection>
@@ -117,6 +99,10 @@ import { DEFAULT_THEME, theme, applyTheme, saveTheme, relightened } from '@/data
 // Picking a family then offers five shades of it, light to dark (user,
 // 2026-10-24: "if they choose red - light, dark, more light - they can choose").
 const BRAND_FAMILIES = [
+  // The CHW app's colours, with their own hand-made shades in theme.js;
+  // CHW green (its banner colour) is the default.
+  { name: 'CHW green', hex: '#245535' },
+  { name: 'CHW navy', hex: '#031530' },
   { name: 'Ocean blue', hex: '#0B5B8C' },
   { name: 'Blue', hex: '#1E4FA8' },
   { name: 'Indigo', hex: '#3B3F8F' },
@@ -128,6 +114,8 @@ const BRAND_FAMILIES = [
   { name: 'Graphite', hex: '#2F3640' },
 ]
 const ACCENT_FAMILIES = [
+  { name: 'CHW navy', hex: '#2E4B85' },
+  { name: 'CHW green', hex: '#367D4D' },
   { name: 'Orange', hex: '#EA6A12' },
   { name: 'Amber', hex: '#D99A06' },
   { name: 'Red', hex: '#DC3A32' },

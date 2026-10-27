@@ -17,6 +17,7 @@
           <a v-if="b.href" :href="b.href" target="_blank" rel="noopener" :class="BTN.plain">{{ b.label }}</a>
           <button v-else type="button" :class="b === main ? BTN.primary : b.danger ? BTN.danger : BTN.plain" :disabled="form.busy" @click="b.run">{{ b.label }}</button>
         </template>
+        <DeleteRecord v-if="canDelete" :label="docLabel" :busy="form.busy" @delete="f.deleteDoc" />
       </template>
     </template>
 
@@ -88,6 +89,7 @@
 import SubHeading from '@/components/SubHeading.vue'
 import { computed, onBeforeUnmount, onMounted } from 'vue'
 import AppLayout from '@/components/AppLayout.vue'
+import DeleteRecord from '@/components/DeleteRecord.vue'
 import FormField from '@/components/FormField.vue'
 import StatusBadge from '@/components/StatusBadge.vue'
 import SectionJump from '@/components/SectionJump.vue'
@@ -174,7 +176,6 @@ const buttons = computed(() => {
   if (!f.isNew && f.doc?.name) list.push({ label: 'Print', href: `/printview?doctype=${encodeURIComponent(f.doctype)}&name=${encodeURIComponent(f.doc.name)}` })
   if (canCancel.value) list.push({ label: 'Cancel', run: () => confirmThen(`Permanently cancel ${docLabel.value}?`, f.cancelDoc) })
   if (canAmend.value && main.value !== amendBtn) list.push(amendBtn)
-  if (canDelete.value) list.push({ label: 'Delete', danger: true, run: () => confirmThen(`Delete ${docLabel.value}?`, f.deleteDoc) })
   if (main.value) list.push(main.value)
   return list
 })
