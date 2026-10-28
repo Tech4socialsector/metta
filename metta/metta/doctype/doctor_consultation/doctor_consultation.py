@@ -262,7 +262,8 @@ def lab_result_summary(test):
 	parts = []
 	for r in rows:
 		text = f"{r.parameter} {r.result_value or '-'}{(' ' + r.unit) if r.unit else ''}"
-		parts.append(f"{text} ({r.flag})" if r.flag else text)
+		# Only out-of-range results carry their flag in the one-line summary.
+		parts.append(f"{text} ({r.flag})" if r.flag and r.flag != "Normal" else text)
 	return ", ".join(parts)
 
 
@@ -301,8 +302,11 @@ def get_consultation_lab_reports_html(consultation):
 	tests = get_consultation_lab_reports(consultation)
 	if not tests:
 		return ""
+	# Same colour scale as the Vue screens and the printed report:
+	# green normal, blue low, orange high/abnormal, red critical.
 	flag_style = {
-		"Low": "color:#c2410c;font-weight:600",
+		"Normal": "color:#15803d;font-weight:600",
+		"Low": "color:#1d4ed8;font-weight:600",
 		"High": "color:#c2410c;font-weight:600",
 		"Abnormal": "color:#c2410c;font-weight:600",
 		"Critical Low": "color:#b91c1c;font-weight:700",

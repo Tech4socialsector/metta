@@ -73,13 +73,14 @@ frappe.ui.form.on("Diagnostic Test Result", {
 		const value = String(r.result_value || "").trim();
 		let flag = "";
 		if (value && r.value_type !== "Number") {
-			if (r.normal_text && value.toLowerCase() !== r.normal_text.trim().toLowerCase()) flag = "Abnormal";
+			if (r.normal_text) flag = value.toLowerCase() === r.normal_text.trim().toLowerCase() ? "Normal" : "Abnormal";
 		} else if (value && !isNaN(Number(value))) {
 			const v = Number(value);
 			if (r.critical_low && v < r.critical_low) flag = "Critical Low";
 			else if (r.critical_high && v > r.critical_high) flag = "Critical High";
 			else if (r.low && v < r.low) flag = "Low";
 			else if (r.high && v > r.high) flag = "High";
+			else if (r.low || r.high || r.critical_low || r.critical_high) flag = "Normal";
 		}
 		frappe.model.set_value(cdt, cdn, "flag", flag);
 	},

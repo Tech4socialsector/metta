@@ -22,7 +22,8 @@
               :readonly="readonly"
               :inputmode="r.value_type === 'Number' ? 'decimal' : undefined"
               :aria-label="`Result for ${r.parameter}`"
-              :class="['h-8 w-full', readonly ? 'ctl-ro' : 'ctl']"
+              :class="['h-8 w-full font-semibold', readonly ? 'ctl-ro' : 'ctl']"
+              :style="FLAG_BG[r.flag]"
               @input="setValue(r, $event.target.value)"
             />
           </td>
@@ -30,7 +31,7 @@
           <td class="px-3 py-1.5 tabular-nums text-gray-600">{{ r.normal_range }}</td>
           <td class="px-3 py-1.5">
             <!-- Worked out while typing; the server stores the same value on save. -->
-            <span v-if="r.flag" class="rounded-full px-2 py-0.5 text-xs font-semibold" :class="r.flag.startsWith('Critical') ? 'bg-red-100 text-red-800' : 'bg-accent-100 text-accent-800'">{{ r.flag }}</span>
+            <span v-if="r.flag" class="rounded-full px-2 py-0.5 text-xs font-semibold" :class="['ring-1', FLAG_CLASS[r.flag]]">{{ FLAG_ARROW[r.flag] ? `${FLAG_ARROW[r.flag]} ` : '' }}{{ r.flag }}</span>
           </td>
         </tr>
         <tr v-if="!rows.length">
@@ -42,7 +43,7 @@
 </template>
 
 <script setup>
-import { resultFlag } from '@/data/lab/labRules'
+import { resultFlag, FLAG_CLASS, FLAG_ARROW, FLAG_BG } from '@/data/lab/labRules'
 
 defineProps({
   rows: { type: Array, required: true },

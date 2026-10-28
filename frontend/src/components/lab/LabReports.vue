@@ -19,10 +19,10 @@
           <tbody>
             <tr v-for="r in t.rows" :key="r.parameter" class="border-t border-gray-100">
               <td class="px-3 py-1.5">{{ r.parameter }}</td>
-              <td class="px-3 py-1.5"><span class="font-semibold">{{ r.result_value || '—' }}</span> <span class="text-gray-500">{{ r.unit }}</span></td>
+              <td class="px-3 py-1.5"><span class="rounded-md border border-transparent px-2 py-0.5 font-semibold" :style="FLAG_BG[r.flag]">{{ r.result_value || '—' }}</span> <span class="text-gray-500">{{ r.unit }}</span></td>
               <td class="px-3 py-1.5 tabular-nums text-gray-600">{{ r.normal_range }}</td>
               <td class="px-3 py-1.5">
-                <span v-if="r.flag" class="rounded-full px-2 py-0.5 text-xs font-semibold" :class="r.flag.startsWith('Critical') ? 'bg-red-100 text-red-800' : 'bg-accent-100 text-accent-800'">{{ r.flag }}</span>
+                <span v-if="r.flag" class="rounded-full px-2 py-0.5 text-xs font-semibold" :class="['ring-1', FLAG_CLASS[r.flag]]">{{ FLAG_ARROW[r.flag] ? `${FLAG_ARROW[r.flag]} ` : '' }}{{ r.flag }}</span>
               </td>
             </tr>
           </tbody>
@@ -39,7 +39,7 @@
 import { onMounted, ref, watch } from 'vue'
 import StatusBadge from '@/components/StatusBadge.vue'
 import { api, errorText, DC } from '@/data/api'
-import { printUrl } from '@/data/lab/labRules'
+import { printUrl, FLAG_CLASS, FLAG_ARROW, FLAG_BG } from '@/data/lab/labRules'
 
 const props = defineProps({ consultation: { type: String, required: true } })
 const emit = defineEmits(['loaded'])

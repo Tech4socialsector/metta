@@ -47,8 +47,11 @@ export function nowIST() {
 export function resultFlag(r) {
   const value = String(r.result_value ?? '').trim()
   if (!value) return ''
+  // "Normal" when it can be judged and passes (user, 2026-10-28); empty when
+  // there is nothing to judge against.
   if (r.value_type !== 'Number') {
-    return r.normal_text && value.toLowerCase() !== String(r.normal_text).trim().toLowerCase() ? 'Abnormal' : ''
+    if (!r.normal_text) return ''
+    return value.toLowerCase() === String(r.normal_text).trim().toLowerCase() ? 'Normal' : 'Abnormal'
   }
   const v = Number(value)
   if (Number.isNaN(v)) return ''
@@ -57,8 +60,32 @@ export function resultFlag(r) {
   if (r.critical_high && v > r.critical_high) return 'Critical High'
   if (r.low && v < r.low) return 'Low'
   if (r.high && v > r.high) return 'High'
-  return ''
+  return r.low || r.high || r.critical_low || r.critical_high ? 'Normal' : ''
 }
+
+// One colour scale for flags everywhere (same as Desk and the printed
+// report): green normal, blue low, orange high/abnormal, red critical.
+// Full class names, so Tailwind keeps them.
+// Solid fills, not coloured text (user, 2026-10-28).
+export const FLAG_CLASS = {
+  Normal: 'bg-green-600 text-white ring-green-600',
+  Low: 'bg-blue-600 text-white ring-blue-600',
+  High: 'bg-orange-500 text-white ring-orange-500',
+  Abnormal: 'bg-orange-500 text-white ring-orange-500',
+  'Critical Low': 'bg-red-600 text-white ring-red-600',
+  'Critical High': 'bg-red-600 text-white ring-red-600',
+}
+// The result box itself takes a light shade of the same colour. Inline
+// style, so it wins over the input's own grey/white background.
+export const FLAG_BG = {
+  Normal: { background: '#dcfce7', borderColor: '#86efac' },
+  Low: { background: '#dbeafe', borderColor: '#93c5fd' },
+  High: { background: '#ffedd5', borderColor: '#fdba74' },
+  Abnormal: { background: '#ffedd5', borderColor: '#fdba74' },
+  'Critical Low': { background: '#fee2e2', borderColor: '#f87171' },
+  'Critical High': { background: '#fee2e2', borderColor: '#f87171' },
+}
+export const FLAG_ARROW = { Low: '↓', High: '↑', 'Critical Low': '↓↓', 'Critical High': '↑↑' }
 
 // A template test needs every row filled; any other test needs the
 // free-text result or an attachment (same rule as the server).

@@ -191,10 +191,13 @@ def result_flag(r):
 	value = (r.result_value or "").strip()
 	if not value:
 		return ""
+	# A result that can be judged and passes shows "Normal" (user, 2026-10-28),
+	# so the lab and doctor see it was checked; with nothing to judge against
+	# (no normal value / no range set) the flag stays empty.
 	if r.value_type != "Number":
-		if r.normal_text and value.lower() != r.normal_text.strip().lower():
-			return "Abnormal"
-		return ""
+		if not r.normal_text:
+			return ""
+		return "Normal" if value.lower() == r.normal_text.strip().lower() else "Abnormal"
 	try:
 		v = float(value)
 	except ValueError:
@@ -208,7 +211,7 @@ def result_flag(r):
 		return "Low"
 	if r.high and v > r.high:
 		return "High"
-	return ""
+	return "Normal" if (r.low or r.high or r.critical_low or r.critical_high) else ""
 
 
 def results_changed(before, doc):
