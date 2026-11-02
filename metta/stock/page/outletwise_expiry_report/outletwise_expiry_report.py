@@ -18,11 +18,19 @@ STATUS_SAFE = "Safe"
 
 @frappe.whitelist()
 def get_data(warehouse=None, item=None, item_type=None, status=None):
+	frappe.has_permission("Stock Ledger Entry", "read", throw=True)
+	return get_rows(warehouse=warehouse, item=item, item_type=item_type, status=status)
+
+
+def get_rows(warehouse=None, item=None, item_type=None, status=None):
+	# Not whitelisted: callers check access first. Split from get_data() so
+	# the Hospital Dashboard can count expiry for Management, a role with
+	# no Stock Ledger access of its own.
+	#
 	# This is a snapshot of CURRENT stock, not a historical range - the last
 	# ledger entry per item/warehouse/batch on or before right now already
 	# IS today's on-hand qty (qty_after_transaction is a running total), same
 	# technique Previous Day Stock Report and FSN Analysis both use.
-	frappe.has_permission("Stock Ledger Entry", "read", throw=True)
 
 	item_conditions = []
 	values = {}

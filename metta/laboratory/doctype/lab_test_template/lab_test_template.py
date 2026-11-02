@@ -39,6 +39,20 @@ class LabTestTemplate(Document):
 		if self.result_type == "Single value" and len(self.parameters) > 1:
 			frappe.throw(_("Result type Single value can have only one parameter row."))
 
+		# A Number row with no range at all can never show High or Low - warn
+		# (not block), since a range may be added later.
+		no_range = [
+			row.parameter
+			for row in self.parameters
+			if row.value_type == "Number" and not any(row.get(f) for pair in RANGE_PAIRS for f in pair[:2])
+		]
+		if no_range:
+			frappe.msgprint(
+				_("No range set for {0}. Their results will not show Normal, High or Low.").format(", ".join(no_range)),
+				indicator="orange",
+				alert=True,
+			)
+
 		seen = set()
 		for row in self.parameters:
 			key = (row.parameter or "").strip().lower()

@@ -42,10 +42,6 @@ const rows = computed(() => {
     ['Height (cm)', v.height],
     ['Weight (Kg)', v.weight],
     ['BMI', withStatus(v.bmi, v.bmi_category)],
-    ['Random Blood Glucose', withStatus(v.rbg_level, v.blood_sugar_status)],
-    ['Hemoglobin (g/dL)', withStatus(v.hemoglobin_level, v.anemia_status)],
-    ['PICCLE', v.piccle],
-    ["Nurse's Provisional Diagnosis", v.primary_diagnosis],
   ]
 })
 

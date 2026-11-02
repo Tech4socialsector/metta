@@ -3,7 +3,8 @@ export default [
   { path: '/reports', name: 'ReportsHome', component: () => import('@/pages/Reports/ReportsHome.vue') },
   { path: '/reports/daily-collection', name: 'ReportsDailyCollection', component: () => import('@/pages/Reports/DailyCollection.vue') },
   { path: '/reports/collection-report', name: 'ReportsCollectionReport', component: () => import('@/pages/Reports/CollectionReport.vue') },
-  { path: '/reports/hospital-overview', name: 'ReportsHospitalOverview', component: () => import('@/pages/Reports/HospitalOverview.vue') },
+  // Hospital Overview moved into the Hospital Dashboard (2026-10-29); old links land there.
+  { path: '/reports/hospital-overview', redirect: { name: 'HospitalDashboard' } },
   { path: '/reports/date-wise-purchase-order', name: 'ReportsDateWisePurchaseOrder', component: () => import('@/pages/Reports/DateWisePurchaseOrder.vue') },
   { path: '/reports/supplier-wise-purchase', name: 'ReportsSupplierWisePurchase', component: () => import('@/pages/Reports/SupplierWisePurchase.vue') },
   { path: '/reports/purchase-return-summary', name: 'ReportsPurchaseReturnSummary', component: () => import('@/pages/Reports/PurchaseReturnSummary.vue') },

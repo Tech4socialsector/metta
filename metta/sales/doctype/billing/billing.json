@@ -325,7 +325,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-20 15:00:00.000000",
+ "modified": "2026-10-29 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Sales",
  "name": "Billing",
@@ -377,6 +377,10 @@
    "read": 1,
    "report": 1,
    "role": "Account Staff"
+  },
+  {
+   "read": 1,
+   "role": "Management"
   }
  ],
  "row_format": "Dynamic",

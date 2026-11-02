@@ -7,6 +7,7 @@
  "field_order": [
   "patient_visit",
   "patient_name",
+  "status",
   "column_break_ls1",
   "sample_type",
   "container",
@@ -15,7 +16,13 @@
   "column_break_ls2",
   "collected_by",
   "collected_on",
-  "remarks"
+  "remarks",
+  "rejection_section",
+  "reject_reason",
+  "reject_note",
+  "column_break_ls3",
+  "rejected_by",
+  "rejected_on"
  ],
  "fields": [
   {
@@ -91,6 +98,52 @@
    "fieldname": "remarks",
    "fieldtype": "Small Text",
    "label": "Remarks"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Collected\nRejected",
+   "default": "Collected",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "rejection_section",
+   "fieldtype": "Section Break",
+   "label": "Rejection",
+   "depends_on": "eval:doc.status=='Rejected'"
+  },
+  {
+   "fieldname": "reject_reason",
+   "fieldtype": "Select",
+   "label": "Reject Reason",
+   "options": "Haemolysed\nClotted\nInsufficient quantity\nWrong container\nUnlabelled / mislabelled\nContaminated\nDelayed transport\nOther",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reject_note",
+   "fieldtype": "Small Text",
+   "label": "Reject Note",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_ls3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "rejected_by",
+   "fieldtype": "Link",
+   "options": "User",
+   "label": "Rejected By",
+   "read_only": 1
+  },
+  {
+   "fieldname": "rejected_on",
+   "fieldtype": "Datetime",
+   "label": "Rejected On",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
@@ -101,7 +154,7 @@
    "group": "Tests"
   }
  ],
- "modified": "2026-10-26 10:00:00",
+ "modified": "2026-10-28 15:00:38.695710",
  "modified_by": "Administrator",
  "module": "Laboratory",
  "name": "Lab Sample",

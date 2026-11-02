@@ -26,14 +26,7 @@
   "column_break_tloo",
   "bmi",
   "bmi_category",
-  "blood_pressure_mmhg",
-  "rbg_level",
-  "blood_sugar_status",
-  "blood_sugar_history",
-  "hemoglobin_level",
-  "anemia_status",
-  "piccle",
-  "primary_diagnosis"
+  "blood_pressure_mmhg"
  ],
  "fields": [
   {
@@ -174,57 +167,12 @@
    "fieldtype": "Data",
    "label": "Blood pressure (mmhg)</h4>",
    "reqd": 1
-  },
-  {
-   "description": "<i>gm/dl</i>",
-   "fieldname": "rbg_level",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Random Blood Glucose Level (gm/dl)"
-  },
-  {
-   "fieldname": "blood_sugar_status",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "Blood Sugar Status",
-   "options": "\nLow\nNormal\nHigh",
-   "read_only": 1
-  },
-  {
-   "fieldname": "blood_sugar_history",
-   "fieldtype": "Table",
-   "label": "Blood Sugar History",
-   "options": "Blood Sugar History Entry",
-   "read_only": 1
-  },
-  {
-   "fieldname": "hemoglobin_level",
-   "fieldtype": "Float",
-   "label": "Hemoglobin Level (g/dL)",
-   "non_negative": 1
-  },
-  {
-   "fieldname": "anemia_status",
-   "fieldtype": "Select",
-   "label": "Anemia Status",
-   "options": "\nNormal\nAnemic",
-   "read_only": 1
-  },
-  {
-   "fieldname": "piccle",
-   "fieldtype": "Small Text",
-   "label": "PICCLE (Pallor, Icterus, Cyanosis, Clubbing, Lymphnode enlargement, Edema)"
-  },
-  {
-   "fieldname": "primary_diagnosis",
-   "fieldtype": "Data",
-   "label": "Provisional diagnosis by nurse (Based on the detailed assessment during the triage)"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-18 17:00:00.000000",
+ "modified": "2026-10-30 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "metta",
  "name": "Nurse Interventions",
@@ -267,6 +215,10 @@
    "report": 1,
    "role": "Front Desk",
    "share": 1
+  },
+  {
+   "read": 1,
+   "role": "Management"
   }
  ],
  "row_format": "Dynamic",

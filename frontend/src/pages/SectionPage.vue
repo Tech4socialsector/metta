@@ -56,7 +56,9 @@
       </button>
     </div>
 
-    <DataList v-if="current" :key="current.key" fill :doctype="current.key" :row-route="(r) => viewRoute(current.key, r.name)" :row-href="current.deskOnly ? (r) => deskUrl(current.key, r.name) : null" />
+    <!-- Billing's own card shows what is waiting to be paid, not just the bill list. -->
+    <BillingQueue v-if="current?.key === 'Billing'" />
+    <DataList v-else-if="current" :key="current.key" fill :doctype="current.key" :row-route="(r) => viewRoute(current.key, r.name)" :row-href="current.deskOnly ? (r) => deskUrl(current.key, r.name) : null" />
     <p v-else class="flex items-center gap-2 px-1 text-[13.5px] text-gray-500">
       <LucideIcon name="mouse-pointer-click" class="h-4 w-4" /> Click a card to see its list.
     </p>
@@ -68,6 +70,7 @@ import { computed, onMounted, reactive, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { call } from 'frappe-ui'
 import AppLayout from '@/components/AppLayout.vue'
+import BillingQueue from '@/components/BillingQueue.vue'
 import DataList from '@/components/DataList.vue'
 import LucideIcon from '@/components/LucideIcon.vue'
 import { SECTIONS, DESK_ONLY, itemLabel, itemIcon } from '@/data/sections'
@@ -173,8 +176,13 @@ const activeGroup = computed(() => {
 })
 const cards = computed(() => (useGroupTabs.value ? groups.value.find((g) => g.label === activeGroup.value)?.tasks || [] : allCards.value))
 // Nothing is picked until a card is clicked (user, 2026-10-26) - no list
-// shows on opening the page.
-const selected = computed(() => (cards.value.some((t) => t.key === route.query.list) ? route.query.list : null))
+// shows on opening the page. Billing is the one exception (user, 2026-11-02):
+// its Billing card opens picked, so staff see what is waiting to be paid.
+const DEFAULT_CARD = { billing: 'Billing' }
+const selected = computed(() => {
+  const key = route.query.list || DEFAULT_CARD[props.section]
+  return cards.value.some((t) => t.key === key) ? key : null
+})
 const current = computed(() => cards.value.find((t) => t.key === selected.value) || null)
 
 function pick(key) {

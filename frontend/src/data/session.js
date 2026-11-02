@@ -20,9 +20,16 @@ export const userResource = createResource({
   },
   onSuccess(user) {
     session.user = user
-    contextResource.reload()
+    contextLoad = contextResource.reload()
   },
 })
+
+// Roles arrive in a second call after the user check; the landing screen
+// depends on them, so the router waits for this before choosing it.
+let contextLoad = Promise.resolve()
+export function whenRolesReady() {
+  return Promise.resolve(contextLoad).catch(() => {})
+}
 
 // The router's first navigation awaits this, so a hard reload doesn't treat
 // "not checked yet" as "logged out".
@@ -48,7 +55,7 @@ export const loginResource = createResource({
   onSuccess() {
     userResource.reload().then(() => {
       const redirect = router.currentRoute.value.query.redirect
-      router.replace(redirect || { name: 'Home' })
+      router.replace(redirect || { name: 'Landing' })
     })
   },
 })

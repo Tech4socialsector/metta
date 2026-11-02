@@ -28,10 +28,18 @@
             />
           </td>
           <td class="px-3 py-1.5 text-gray-600">{{ r.unit }}</td>
-          <td class="px-3 py-1.5 tabular-nums text-gray-600">{{ r.normal_range }}</td>
+          <td class="px-3 py-1.5 tabular-nums text-gray-600">
+            <!-- A number with no range can't be flagged; say so instead of a blank. -->
+            <span v-if="r.value_type === 'Number' && !hasRange(r)" class="italic text-gray-400">No range set</span>
+            <template v-else>{{ r.normal_range }}</template>
+          </td>
           <td class="px-3 py-1.5">
-            <!-- Worked out while typing; the server stores the same value on save. -->
-            <span v-if="r.flag" class="rounded-full px-2 py-0.5 text-xs font-semibold" :class="['ring-1', FLAG_CLASS[r.flag]]">{{ FLAG_ARROW[r.flag] ? `${FLAG_ARROW[r.flag]} ` : '' }}{{ r.flag }}</span>
+            <div class="flex flex-wrap items-center gap-1.5">
+              <!-- Worked out while typing; the server stores the same value on save. -->
+              <span v-if="r.flag" class="rounded-full px-2 py-0.5 text-xs font-semibold" :class="['ring-1', FLAG_CLASS[r.flag]]">{{ FLAG_ARROW[r.flag] ? `${FLAG_ARROW[r.flag]} ` : '' }}{{ r.flag }}</span>
+              <span v-if="notANumber(r)" class="rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-800 ring-1 ring-red-200">Enter a number</span>
+              <span v-else-if="looksWrong(r)" class="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-900 ring-1 ring-amber-300">Check value</span>
+            </div>
           </td>
         </tr>
         <tr v-if="!rows.length">
@@ -43,7 +51,7 @@
 </template>
 
 <script setup>
-import { resultFlag, FLAG_CLASS, FLAG_ARROW, FLAG_BG } from '@/data/lab/labRules'
+import { resultFlag, FLAG_CLASS, FLAG_ARROW, FLAG_BG, hasRange, looksWrong, notANumber } from '@/data/lab/labRules'
 
 defineProps({
   rows: { type: Array, required: true },

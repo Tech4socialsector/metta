@@ -6,3 +6,7 @@ metta.patches.fix_patient_registration_age
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated
 metta.patches.seed_pack_units
+metta.patches.management_read_custom_perms
+metta.patches.single_hmis_workspace
+metta.patches.reset_desktop_layouts
+metta.patches.hide_framework_icon

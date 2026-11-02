@@ -1,19 +1,37 @@
 # Copyright (c) 2026, tfss and contributors
 # For license information, please see license.txt
 
+import re
+
 import frappe
+from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt
 
 from metta.metta.doctype.patient_registration.patient_registration import calculate_age
 
+# The lowest and highest value each vital can possibly have - wide enough
+# for newborns and very ill patients, so it only stops typing mistakes
+# (a height of 1000, a pulse of 7000), never a real reading. The Vue form
+# (frontend/src/data/nurseRules.js VITAL_RANGES) shows the same limits.
+VITAL_RANGES = {
+	"temperature": (_("Temperature"), 90, 110, "°F"),
+	"pulse": (_("Pulse"), 30, 220, "beats/min"),
+	"respiration": (_("Respiration"), 5, 60, "/min"),
+	"saturation": (_("SpO2"), 50, 100, "%"),
+	"height": (_("Height"), 30, 250, "cm"),
+	"weight": (_("Weight"), 0.5, 300, "kg"),
+}
+SYSTOLIC_RANGE = (50, 260)
+DIASTOLIC_RANGE = (30, 160)
+BP_PATTERN = re.compile(r"^\s*(\d{2,3})\s*/\s*(\d{2,3})\s*$")
+
 
 class NurseInterventions(Document):
 	def validate(self):
+		self.validate_vital_ranges()
 		self.update_age()
 		self.update_bmi()
-		self.update_blood_sugar_status()
-		self.update_anemia_status()
 		# Saving this form WITH the actual vitals filled in is what
 		# "completed" means here - the blank placeholder Patient Visit
 		# creates up front (see its after_insert(), which deliberately
@@ -21,8 +39,41 @@ class NurseInterventions(Document):
 		# until a nurse actually records a real assessment.
 		if self.temperature:
 			self.status = "Completed"
-		self.update_blood_sugar_history()
 		self.notify_doctor_dashboard_if_ready()
+
+	def validate_vital_ranges(self):
+		# Empty values are skipped: the blank placeholder Patient Visit
+		# creates (see notes in validate()) has none yet, and Mandatory
+		# already covers a missing reading on a real save.
+		errors = []
+		for fieldname, (label, low, high, unit) in VITAL_RANGES.items():
+			value = self.get(fieldname)
+			if value in (None, "") or (fieldname in ("height", "weight") and not flt(value)):
+				continue
+			try:
+				number = float(str(value).strip())
+			except ValueError:
+				errors.append(_("{0} must be a number").format(label))
+				continue
+			if not low <= number <= high:
+				errors.append(_("{0} must be between {1} and {2} {3}").format(label, low, high, unit))
+
+		bp = (self.blood_pressure_mmhg or "").strip()
+		if bp:
+			match = BP_PATTERN.match(bp)
+			if not match:
+				errors.append(_("Blood Pressure must be like 120/80"))
+			else:
+				systolic, diastolic = int(match.group(1)), int(match.group(2))
+				if not SYSTOLIC_RANGE[0] <= systolic <= SYSTOLIC_RANGE[1]:
+					errors.append(_("Systolic BP must be between {0} and {1} mmHg").format(*SYSTOLIC_RANGE))
+				if not DIASTOLIC_RANGE[0] <= diastolic <= DIASTOLIC_RANGE[1]:
+					errors.append(_("Diastolic BP must be between {0} and {1} mmHg").format(*DIASTOLIC_RANGE))
+				if systolic <= diastolic:
+					errors.append(_("Systolic BP (first number) must be higher than diastolic"))
+
+		if errors:
+			frappe.throw("<br>".join(errors), title=_("Please check the vitals"))
 
 	def notify_doctor_dashboard_if_ready(self):
 		# Same event Patient Visit.after_insert() already fires for a newly
@@ -35,25 +86,6 @@ class NurseInterventions(Document):
 		doctor_user = frappe.db.get_value("Doctor Master", doctor, "user") if doctor else None
 		if doctor_user:
 			frappe.publish_realtime("doctor_dashboard_update", user=doctor_user, after_commit=True)
-
-	def update_blood_sugar_history(self):
-		# Rebuilt fresh on every save from this patient's own past readings -
-		# never hand-entered. Each row links back to the Nurse Interventions
-		# record it came from (Visit Record), so clicking through it in the
-		# grid opens that original assessment directly.
-		self.set("blood_sugar_history", [])
-		if not self.patient_unique_id:
-			return
-		for row in get_blood_sugar_history_rows(self.patient_unique_id, exclude=self.name):
-			self.append(
-				"blood_sugar_history",
-				{
-					"nurse_intervention": row.name,
-					"date": row.date,
-					"rbg_level": row.rbg_level,
-					"blood_sugar_status": row.blood_sugar_status,
-				},
-			)
 
 	def update_age(self):
 		dob = frappe.db.get_value("Patient Registration", self.patient_unique_id, "dob") if self.patient_unique_id else None
@@ -79,58 +111,27 @@ class NurseInterventions(Document):
 		else:
 			self.bmi_category = "Obese"
 
-	def update_blood_sugar_status(self):
-		# Random Blood Glucose, not fasting - thresholds are for a random
-		# reading (mg/dL, despite the field's own "gm/dl" label - a
-		# pre-existing mislabel, glucose is never actually measured in gm/dl).
-		if not self.rbg_level:
-			self.blood_sugar_status = ""
-			return
-		rbg = flt(self.rbg_level)
-		if rbg < 70:
-			self.blood_sugar_status = "Low"
-		elif rbg < 140:
-			self.blood_sugar_status = "Normal"
-		else:
-			self.blood_sugar_status = "High"
-
-	def update_anemia_status(self):
-		# WHO cutoffs differ by sex (Male 13 g/dL, Female/unspecified 12 g/dL)
-		# - a simplification, since these also vary further by age and
-		# pregnancy status, neither of which this doctype captures.
-		if not self.hemoglobin_level:
-			self.anemia_status = ""
-			return
-		threshold = 13.0 if self.gender == "Male" else 12.0
-		self.anemia_status = "Normal" if flt(self.hemoglobin_level) >= threshold else "Anemic"
-
-
-def get_blood_sugar_history_rows(patient_unique_id, exclude=None):
-	# Every past reading (Low/Normal/High), not just High ones - the nurse
-	# taking a fresh reading sees the full trend, not only a High-only alert.
-	# Not capped here - the Blood Sugar History child table's own grid_page_length
-	# (see that doctype) shows 5 at a time with Frappe's native "load more",
-	# so there's no need to truncate the underlying data itself.
-	if not patient_unique_id:
-		return []
-	filters = {"patient_unique_id": patient_unique_id, "blood_sugar_status": ["!=", ""]}
-	if exclude:
-		filters["name"] = ["!=", exclude]
-	return frappe.get_all(
-		"Nurse Interventions",
-		filters=filters,
-		fields=["name", "date", "rbg_level", "blood_sugar_status"],
-		order_by="date desc",
-	)
-
 
 @frappe.whitelist()
-def get_blood_sugar_history(patient_unique_id, exclude=None):
-	# Client-side live preview before the doc is actually saved (see
-	# update_blood_sugar_history() above for the authoritative, server-side
-	# version that actually gets stored).
-	frappe.has_permission("Nurse Interventions", "read", throw=True)
-	return get_blood_sugar_history_rows(patient_unique_id, exclude=exclude)
+def get_previous_vitals(name):
+	"""This patient's last completed vitals before this record, for the
+	"Last:" hint beside each field on the Vue vitals form. get_list, so a
+	Doctor still only sees their own patients' readings."""
+	frappe.has_permission("Nurse Interventions", "read", doc=name, throw=True)
+	patient, date = frappe.db.get_value("Nurse Interventions", name, ["patient_unique_id", "date"])
+	if not patient:
+		return None
+	filters = {"patient_unique_id": patient, "status": "Completed", "name": ["!=", name]}
+	if date:
+		filters["date"] = ["<", date]
+	rows = frappe.get_list(
+		"Nurse Interventions",
+		filters=filters,
+		fields=["name", "date", "temperature", "pulse", "respiration", "saturation", "blood_pressure_mmhg", "height", "weight"],
+		order_by="date desc",
+		limit_page_length=1,
+	)
+	return rows[0] if rows else None
 
 
 def get_permission_query_conditions(user=None):

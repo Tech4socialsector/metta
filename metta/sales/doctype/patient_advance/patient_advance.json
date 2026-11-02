@@ -79,7 +79,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-14 00:00:00.000000",
+ "modified": "2026-10-29 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Sales",
  "name": "Patient Advance",
@@ -122,6 +122,10 @@
    "read": 1,
    "report": 1,
    "role": "Billing Staff"
+  },
+  {
+   "read": 1,
+   "role": "Management"
   }
  ],
  "row_format": "Dynamic",

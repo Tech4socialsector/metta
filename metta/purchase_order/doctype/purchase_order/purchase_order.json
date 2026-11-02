@@ -116,7 +116,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-08-11 22:26:00.912155",
+ "modified": "2026-10-29 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Purchase Order",
  "name": "Purchase Order",
@@ -166,6 +166,10 @@
    "read": 1,
    "report": 1,
    "role": "Warehouse Staffs"
+  },
+  {
+   "read": 1,
+   "role": "Management"
   }
  ],
  "row_format": "Dynamic",

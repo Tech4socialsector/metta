@@ -5,8 +5,8 @@
       v-for="c in cards"
       :key="c.label"
       :type="c.click ? 'button' : undefined"
-      class="flex flex-col gap-1 rounded-xl border bg-white px-4 py-3 text-left"
-      :class="[TONES[c.tone] || 'border-gray-200', c.click && 'hover:bg-gray-50']"
+      class="flex flex-col gap-1 rounded-xl border px-4 py-3 text-left"
+      :class="[TONES[c.tone] || (tinted ? 'border-accent-600 bg-white' : 'border-gray-200 bg-white'), tinted ? 'transition-colors hover:bg-brand-50' : c.click && 'hover:bg-gray-50']"
       @click="c.click && c.click()"
     >
       <span class="text-xs font-bold uppercase tracking-wide text-gray-700">{{ c.label }}</span>
@@ -19,7 +19,9 @@
 
 <script setup>
 // [{ label, value, sub?, tone?: 'warn'|'bad'|'good', click?, clickLabel? }]
-defineProps({ cards: { type: Array, required: true } })
+// tinted (Hospital Dashboard): a navy (accent) border, and the brand colour
+// shows on hover; warn / bad / good cards keep their own colour until hovered.
+defineProps({ cards: { type: Array, required: true }, tinted: Boolean })
 
 // Desk highlights a card (pending / expired / payable) only when it's non-zero;
 // pages pass the tone conditionally the same way.

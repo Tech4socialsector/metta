@@ -15,6 +15,7 @@ declare module 'vue' {
     BedChooser: typeof import('./src/components/ward/BedChooser.vue')['default']
     BedGrid: typeof import('./src/components/BedGrid.vue')['default']
     BedTiles: typeof import('./src/components/ward/BedTiles.vue')['default']
+    BillingQueue: typeof import('./src/components/BillingQueue.vue')['default']
     BillItemsTable: typeof import('./src/components/billing/BillItemsTable.vue')['default']
     ChildTableEditor: typeof import('./src/components/ChildTableEditor.vue')['default']
     ColumnPicker: typeof import('./src/components/ColumnPicker.vue')['default']
@@ -36,6 +37,7 @@ declare module 'vue' {
     LucideIcon: typeof import('./src/components/LucideIcon.vue')['default']
     MultiSelectFilter: typeof import('./src/components/MultiSelectFilter.vue')['default']
     OpVisitFields: typeof import('./src/components/OpVisitFields.vue')['default']
+    OverviewPanel: typeof import('./src/components/dashboard/OverviewPanel.vue')['default']
     PageHeader: typeof import('./src/components/PageHeader.vue')['default']
     PatientBar: typeof import('./src/components/PatientBar.vue')['default']
     PatientHistory: typeof import('./src/components/PatientHistory.vue')['default']
@@ -68,6 +70,7 @@ declare module 'vue' {
     TextField: typeof import('./src/components/TextField.vue')['default']
     TopBar: typeof import('./src/components/TopBar.vue')['default']
     VisitSummary: typeof import('./src/components/VisitSummary.vue')['default']
+    VitalField: typeof import('./src/components/VitalField.vue')['default']
     VitalsCard: typeof import('./src/components/VitalsCard.vue')['default']
   }
 }

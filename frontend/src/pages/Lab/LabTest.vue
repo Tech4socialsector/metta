@@ -49,7 +49,15 @@
         <!-- The work for the step the test is at - the one main button for it
         is at the top of the page. -->
         <section v-else id="sec-work" class="flex scroll-mt-4 flex-col gap-4 rounded-xl border border-gray-200 bg-white p-5">
-          <SubHeading :icon="stage.icon">{{ stage.title }}</SubHeading>
+          <SubHeading :icon="stage.icon">
+            {{ stage.title }}
+            <!-- A bad tube goes back before any result is typed (haemolysed, clotted...). -->
+            <template v-if="canReject" #end>
+              <button type="button" class="flex h-8 items-center gap-1.5 rounded-md border border-red-200 bg-white px-3 text-sm font-semibold text-red-700 hover:bg-red-50" :disabled="busy" @click="openReject">
+                <LucideIcon name="test-tube" class="h-4 w-4" /> Reject sample
+              </button>
+            </template>
+          </SubHeading>
 
           <!-- 1. Not paid: nothing for the lab to do yet. -->
           <div v-if="stage.key === 'unpaid'" class="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -59,6 +67,9 @@
 
           <!-- 2. Paid: what to draw it in, from the Lab Sample Type. -->
           <template v-else-if="stage.key === 'collect'">
+            <p v-if="original.reject_reason" class="rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-800">
+              <span class="font-semibold">Last sample rejected:</span> {{ original.reject_reason }}. Collect a new sample.
+            </p>
             <div v-if="sampleInfo" class="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
               <div v-for="[label, value] in sampleRows" :key="label" class="rounded-lg bg-brand-50 px-3 py-2">
                 <p class="text-xs text-gray-600">{{ label }}</p>
@@ -74,6 +85,17 @@
             <p v-if="stage.key === 'verify' && !isVerifier" class="rounded-lg bg-brand-50 px-4 py-2.5 text-sm text-brand-900">Results are saved. A Lab Verifier checks them and reports the test to the doctor.</p>
             <p v-else-if="stage.key === 'verify'" class="rounded-lg bg-brand-50 px-4 py-2.5 text-sm text-brand-900">Check every value against the sample, then click <b>Verify &amp; report</b>. The report goes to the doctor and is locked.</p>
             <LabResultsTable v-if="doc.results?.length" :rows="doc.results" :readonly="resultsLocked" />
+            <!-- A critical value is phoned through before the report goes out
+            (the server refuses to report without it). -->
+            <div v-if="isCritical(doc) || doc.critical_informed_to" class="flex flex-col gap-3 rounded-lg border border-red-300 bg-red-50 px-4 py-3">
+              <p class="flex items-center gap-2 text-sm font-semibold text-red-800">
+                <LucideIcon name="phone" class="h-4 w-4" /> Critical result: call the doctor now and note who you told
+              </p>
+              <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <FormField v-for="df in criticalFields" :key="df.fieldname" :df="df" :doc="doc" :model-value="doc[df.fieldname]" :readonly="resultsLocked && original.status !== 'Result Entered'" :required="true" @update:model-value="(v) => setCritical(df, v)" />
+              </div>
+              <p v-if="doc.critical_informed_by" class="text-xs text-red-800">Recorded by {{ doc.critical_informed_by }}</p>
+            </div>
             <div v-for="df in resultFields" :key="df.fieldname">
               <FormField :df="df" :doc="doc" :model-value="doc[df.fieldname]" :readonly="resultsLocked || readOnly(df)" @update:model-value="(v) => setValue(df, v)" />
             </div>
@@ -143,17 +165,54 @@
       <RecordActivity v-if="!isNew" :doc="doc" />
     </form>
     <p v-else class="text-gray-600">Loading…</p>
+
+    <AppDialog v-model="reject.open" :title="`Reject sample ${original.lab_sample || ''}`">
+      <div class="flex flex-col gap-3 text-sm">
+        <p class="text-gray-700">Every test drawn in this tube goes back to <b>Collect sample</b> (still paid), with the reason.</p>
+        <label class="flex flex-col gap-1.5">
+          <span class="ctl-label">Reason <span class="text-red-600">*</span></span>
+          <select id="reject-reason" v-model="reject.reason" class="ctl">
+            <option value="" disabled>Pick a reason</option>
+            <option v-for="r in REJECT_REASONS" :key="r" :value="r">{{ r }}</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1.5">
+          <span class="ctl-label">Note<span v-if="reject.reason === 'Other'" class="text-red-600"> *</span></span>
+          <textarea id="reject-note" v-model="reject.note" rows="2" class="ctl h-auto py-2" />
+        </label>
+        <p v-if="reject.error" class="rounded-md bg-red-50 px-3 py-2 text-red-800">{{ reject.error }}</p>
+      </div>
+      <template #footer>
+        <button type="button" class="h-9 rounded-lg border border-gray-300 px-4 text-sm font-semibold hover:bg-gray-50" @click="reject.open = false">Keep sample</button>
+        <button type="button" class="h-9 rounded-lg bg-red-700 px-4 text-sm font-semibold text-white hover:bg-red-800 disabled:opacity-60" :disabled="busy || !reject.reason || (reject.reason === 'Other' && !reject.note.trim())" @click="rejectSample">Reject sample</button>
+      </template>
+    </AppDialog>
+
+    <!-- Values far outside the range: confirm before they go further. -->
+    <AppDialog v-model="oddAsk" title="Check these values">
+      <div class="flex flex-col gap-2 text-sm text-gray-700">
+        <p>These look far outside the normal range. Please check them against the sample or machine:</p>
+        <ul class="list-disc pl-5 font-semibold text-gray-900">
+          <li v-for="r in oddRows" :key="r.parameter">{{ r.parameter }}: {{ r.result_value }} {{ r.unit || '' }} <span class="font-normal text-gray-600">(range {{ r.normal_range }})</span></li>
+        </ul>
+      </div>
+      <template #footer>
+        <button type="button" class="h-9 rounded-lg border border-gray-300 px-4 text-sm font-semibold hover:bg-gray-50" @click="oddAsk = false">Go back and fix</button>
+        <button type="button" class="h-9 rounded-lg bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800" @click="oddConfirmed">Values are correct</button>
+      </template>
+    </AppDialog>
   </AppLayout>
 </template>
 
 <script setup>
 import LucideIcon from '@/components/LucideIcon.vue'
 import SubHeading from '@/components/SubHeading.vue'
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { call } from 'frappe-ui'
 import AppLayout from '@/components/AppLayout.vue'
 import DeleteRecord from '@/components/DeleteRecord.vue'
+import AppDialog from '@/components/AppDialog.vue'
 import FormField from '@/components/FormField.vue'
 import StatusBadge from '@/components/StatusBadge.vue'
 import LabTestContext from '@/components/lab/LabTestContext.vue'
@@ -165,7 +224,7 @@ import { getMeta } from '@/data/meta'
 import { errorText } from '@/data/api'
 import { session, hasRole } from '@/data/session'
 import { buildLayout, newDoc, isVisible, isRequired, isReadOnly, fetchTargets, missingFields, toPayload, linkFilters } from '@/data/formEngine'
-import { DT, LAB_API, LAB_API_DT, NEXT_STEP, CANCELLABLE, NEEDS_RESULT_MSG, VERIFIER_ROLES, nowIST, hasResult, printUrl } from '@/data/lab/labRules'
+import { DT, LAB_API, LAB_API_DT, NEXT_STEP, CANCELLABLE, NEEDS_RESULT_MSG, VERIFIER_ROLES, nowIST, hasResult, printUrl, REJECT_REASONS, looksWrong, isCritical, notANumber } from '@/data/lab/labRules'
 
 const props = defineProps({ name: { type: String, required: true } })
 const router = useRouter()
@@ -204,7 +263,7 @@ const jumpSections = computed(() => [
 // Fields the work panel shows (or the buttons set), so Test details leaves
 // them out. Status moves only by the step buttons and Cancel, never by hand;
 // the server refuses a skipped step anyway.
-const PANEL_FIELDS = ['result', 'normal_range', 'result_attachment', 'remarks']
+const PANEL_FIELDS = ['result', 'normal_range', 'result_attachment', 'remarks', 'critical_informed_to', 'critical_informed_on', 'critical_informed_by']
 const HIDDEN_ALWAYS = ['status', 'results', 'cancel_reason']
 const detailsOpen = ref(false)
 const detailSections = computed(() =>
@@ -229,6 +288,47 @@ const resultFields = computed(() => {
   const names = doc.value?.results?.length ? ['remarks'] : PANEL_FIELDS
   return names.map((n) => meta.value.fields.find((f) => f.fieldname === n)).filter(Boolean)
 })
+
+// Who was told about a critical value, and when (Desk fields, shown in the work panel).
+const criticalFields = computed(() =>
+  meta.value ? ['critical_informed_to', 'critical_informed_on'].map((n) => meta.value.fields.find((f) => f.fieldname === n)).filter(Boolean) : [],
+)
+function setCritical(df, v) {
+  doc.value[df.fieldname] = v
+  // Most calls are logged as they happen, so the time fills itself.
+  if (df.fieldname === 'critical_informed_to' && v && !doc.value.critical_informed_on) doc.value.critical_informed_on = nowIST()
+}
+
+// Reject sample: only while collected and no result has been saved yet.
+const canReject = computed(() => canWrite.value && original.value.status === 'Sample Collected')
+const reject = reactive({ open: false, reason: '', note: '', error: '' })
+function openReject() {
+  Object.assign(reject, { open: true, reason: '', note: '', error: '' })
+}
+async function rejectSample() {
+  reject.error = ''
+  busy.value = true
+  try {
+    await call(`${LAB_API_DT}.reject_sample`, { test: props.name, reason: reject.reason, note: reject.note })
+    reject.open = false
+    await load()
+    savedNote.value = 'Sample rejected'
+  } catch (err) {
+    reject.error = errorText(err) || 'Could not reject the sample.'
+  } finally {
+    busy.value = false
+  }
+}
+
+// Values that look like typing mistakes are confirmed once before saving.
+const oddAsk = ref(false)
+const oddOk = ref(false)
+const oddRows = computed(() => (doc.value?.results || []).filter(looksWrong))
+function oddConfirmed() {
+  oddAsk.value = false
+  oddOk.value = true
+  runStep()
+}
 
 // Tube to use, from the template's Lab Sample Type (read in load()).
 const sampleInfo = ref(null)
@@ -406,6 +506,20 @@ async function runStep() {
   if (!s) return
   if (s.needsResult && !hasResult(doc.value)) {
     stepError.value = NEEDS_RESULT_MSG
+    return
+  }
+  const bad = (doc.value.results || []).filter(notANumber)
+  if (bad.length) {
+    stepError.value = `Enter a number for: ${bad.map((r) => r.parameter).join(', ')}`
+    return
+  }
+  if (['Result Entered', 'Reported'].includes(s.to) && oddRows.value.length && !oddOk.value) {
+    oddAsk.value = true
+    return
+  }
+  oddOk.value = false
+  if (s.to === 'Reported' && isCritical(doc.value) && !(String(doc.value.critical_informed_to || '').trim() && doc.value.critical_informed_on)) {
+    stepError.value = 'Critical result: fill who was informed and when before reporting.'
     return
   }
   // Collecting goes through collect_samples (as Desk's Collect Sample does)

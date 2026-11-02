@@ -25,6 +25,15 @@ def _resolve_range(from_date, to_date):
 	return from_date, to_date
 
 
+def _check_read(doctype):
+	# Management (Hospital Dashboard, user 2026-10-29) reads these totals
+	# without being given read access to every doctype behind them; every
+	# other user still needs the Desk permission, exactly as before.
+	if "Management" in frappe.get_roles():
+		return
+	frappe.has_permission(doctype, "read", throw=True)
+
+
 def _dt_between(fieldname, from_date, to_date):
 	# Datetime/Date fields both accept "YYYY-MM-DD HH:MM:SS" bounds for "between".
 	return [fieldname, "between", [f"{from_date} 00:00:00", f"{to_date} 23:59:59"]]
@@ -32,13 +41,13 @@ def _dt_between(fieldname, from_date, to_date):
 
 @frappe.whitelist()
 def get_doctors():
-	frappe.has_permission("Doctor Master", "read", throw=True)
+	_check_read("Doctor Master")
 	return frappe.get_all("Doctor Master", pluck="name", order_by="name")
 
 
 @frappe.whitelist()
 def get_categories():
-	frappe.has_permission("Category Price Adjustment", "read", throw=True)
+	_check_read("Category Price Adjustment")
 	return frappe.get_all("Category Price Adjustment", pluck="name", order_by="name")
 
 
@@ -47,7 +56,7 @@ def get_dashboard_data(from_date=None, to_date=None, doctor=None, category=None)
 	# One call for the whole page - the sections below read very different
 	# doctypes, but a leadership dashboard is scanned as one screen, so it
 	# should also load as one round trip rather than a tile-per-request.
-	frappe.has_permission("Patient Visit", "read", throw=True)
+	_check_read("Patient Visit")
 
 	from_date, to_date = _resolve_range(from_date, to_date)
 	is_single_day = from_date == to_date
@@ -282,7 +291,7 @@ PENDING_PO_STATUSES = ["Pending Approval", "Approved", "Sent to Dealer", "Partia
 
 @frappe.whitelist()
 def get_warehouses():
-	frappe.has_permission("Warehouse", "read", throw=True)
+	_check_read("Warehouse")
 	return frappe.get_all("Warehouse", filters={"is_active": 1}, pluck="name", order_by="name")
 
 
@@ -291,9 +300,9 @@ def _expiry_rows(warehouse=None, item_type=None):
 	# re-deriving "current qty + days to expiry per batch" a second way -
 	# same latest-ledger-row-per-batch technique, same Expired/Expiring
 	# Soon/Safe thresholds, so this tab never disagrees with that report.
-	from metta.stock.page.outletwise_expiry_report.outletwise_expiry_report import get_data as get_expiry_data
+	from metta.stock.page.outletwise_expiry_report.outletwise_expiry_report import get_rows as get_expiry_rows
 
-	return get_expiry_data(warehouse=warehouse or None, item_type=item_type or None)
+	return get_expiry_rows(warehouse=warehouse or None, item_type=item_type or None)
 
 
 def _stock_value(warehouse=None):
@@ -458,7 +467,7 @@ def _top_suppliers(from_date, to_date):
 
 @frappe.whitelist()
 def get_stock_data(from_date=None, to_date=None, warehouse=None, category=None):
-	frappe.has_permission("Stock Balance", "read", throw=True)
+	_check_read("Stock Balance")
 	from_date, to_date = _resolve_range(from_date, to_date)
 
 	expiry_rows = _expiry_rows(warehouse=warehouse, item_type=category)

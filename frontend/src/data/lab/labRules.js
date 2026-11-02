@@ -53,8 +53,8 @@ export function resultFlag(r) {
     if (!r.normal_text) return ''
     return value.toLowerCase() === String(r.normal_text).trim().toLowerCase() ? 'Normal' : 'Abnormal'
   }
-  const v = Number(value)
-  if (Number.isNaN(v)) return ''
+  const v = toNumber(value)
+  if (v === null) return ''
   // Critical first; 0 means "not set", as on the server.
   if (r.critical_low && v < r.critical_low) return 'Critical Low'
   if (r.critical_high && v > r.critical_high) return 'Critical High'
@@ -86,6 +86,32 @@ export const FLAG_BG = {
   'Critical High': { background: '#fee2e2', borderColor: '#f87171' },
 }
 export const FLAG_ARROW = { Low: '↓', High: '↑', 'Critical Low': '↓↓', 'Critical High': '↑↑' }
+
+// "12,400" counts as a number; anything else that isn't one gives null.
+export function toNumber(value) {
+  const s = String(value ?? '').replace(/,/g, '').trim()
+  if (!s) return null
+  const v = Number(s)
+  return Number.isNaN(v) ? null : v
+}
+
+// A Number row with no range can't be flagged - shown as "No range set".
+export const hasRange = (r) => !!(r.low || r.high || r.critical_low || r.critical_high)
+
+// Ten times past the range, or below zero: almost always a typing mistake
+// (pH 400000). Same rule as looks_wrong() in diagnostic_test.py.
+export function looksWrong(r) {
+  if (r.value_type !== 'Number') return false
+  const v = toNumber(r.result_value)
+  if (v === null) return false
+  if (v < 0) return true
+  return !!((r.high && v > r.high * 10) || (r.low && v < r.low / 10))
+}
+export const notANumber = (r) => r.value_type === 'Number' && String(r.result_value ?? '').trim() !== '' && toNumber(r.result_value) === null
+
+// Why a tube is sent back (same list as the server's REJECT_REASONS).
+export const REJECT_REASONS = ['Haemolysed', 'Clotted', 'Insufficient quantity', 'Wrong container', 'Unlabelled / mislabelled', 'Contaminated', 'Delayed transport', 'Other']
+export const isCritical = (doc) => (doc?.results || []).some((r) => String(r.flag || '').startsWith('Critical'))
 
 // A template test needs every row filled; any other test needs the
 // free-text result or an attachment (same rule as the server).

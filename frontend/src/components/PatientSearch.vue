@@ -1,6 +1,7 @@
 <template>
-  <!-- Front Desk's patient search: UHIN, phone or name. -->
-  <div class="relative w-full max-w-xl">
+  <!-- Front Desk's patient search: name, UHIN and mobile together, always.
+  Several words narrow it - every word must match (user, 2026-11-02). -->
+  <div class="relative w-full max-w-2xl">
     <LucideIcon name="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
     <label for="patient-search" class="sr-only">Search patient</label>
     <input
@@ -9,7 +10,7 @@
       v-model="txt"
       type="search"
       autocomplete="off"
-      placeholder="Returning patient? Search by UHIN, phone or name"
+      placeholder="Search name, UHIN or mobile - e.g. Mercy 5650"
       class="h-11 w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 text-[15px] placeholder:text-gray-500 focus:border-brand-600 focus:outline-none focus:ring-1 focus:ring-brand-600"
       @input="searchDebounced"
       @focus="open = true"

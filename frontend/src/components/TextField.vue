@@ -28,9 +28,11 @@
       :inputmode="inputmode"
       :maxlength="maxlength"
       :list="list"
+      :aria-invalid="error ? 'true' : undefined"
+      :aria-describedby="error ? `${id}-error` : undefined"
       autocomplete="off"
       class="w-full px-3"
-      :class="[look.box, look.height, readonly ? look.locked : look.editable, (unit || $slots.end) && 'pr-28']"
+      :class="[look.box, look.height, readonly ? look.locked : look.editable, (unit || $slots.end) && 'pr-28', error && '!border-red-500 ring-1 ring-red-500']"
       @input="$emit('update:modelValue', $event.target.value)"
       @change="$emit('change', $event.target.value)"
     />
@@ -39,7 +41,8 @@
       <slot name="end" />
     </span>
     </div>
-    <p v-if="hint" class="text-xs text-gray-600">{{ hint }}</p>
+    <p v-if="error" :id="`${id}-error`" class="text-xs font-medium text-red-700">{{ error }}</p>
+    <p v-else-if="hint" class="text-xs text-gray-600">{{ hint }}</p>
   </div>
 </template>
 
@@ -63,6 +66,8 @@ defineProps({
   hint: { type: String, default: '' },
   // shown inside the box, e.g. °F, mmHg, kg
   unit: { type: String, default: '' },
+  // shown under the box in red, replacing the hint (e.g. a value out of range)
+  error: { type: String, default: '' },
 })
 defineEmits(['update:modelValue', 'change'])
 </script>

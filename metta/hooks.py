@@ -126,6 +126,7 @@ fixtures = [
 					"Lab Staff",
 					"Lab Verifier",
 					"CHW Coordinator",
+					"Management",
 				],
 			]
 		],
@@ -168,8 +169,8 @@ fixtures = [
 add_to_apps_screen = [
 	{
 		"name": "metta",
-		"title": "metta",
-		"route": "/app/stock-and-pharmacy",
+		"title": "HMIS",
+		"route": "/hmis",
 	}
 ]
 
@@ -221,9 +222,24 @@ website_route_rules = [
 # home_page = "login"
 
 # website user home page (by Role)
+# Every HMIS staff role lands in the Vue app after login (user, 2026-11-02):
+# Desk keeps only the one HMIS tile, so staff start where they work.
 role_home_page = {
-	"Front Desk": "front-desk-dashboard",
-	"Doctor": "doctor-dashboard",
+	role: "hmis"
+	for role in (
+		"Front Desk",
+		"Nurse",
+		"Doctor",
+		"Lab Staff",
+		"Lab Verifier",
+		"Billing Staff",
+		"Account Staff",
+		"Pharmacy Staff",
+		"Store Staff",
+		"Warehouse Staffs",
+		"Purchase Approver",
+		"Management",
+	)
 }
 
 # Generators
@@ -252,6 +268,7 @@ role_home_page = {
 
 after_migrate = [
 	"metta.metta.doctype.patient_registration.patient_registration.ensure_default_billing_categories",
+	"metta.utils.desk_home.keep_only_hmis_and_chw",
 ]
 
 # Uninstallation

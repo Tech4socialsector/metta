@@ -12,6 +12,17 @@ from frappe.utils import add_to_date, cint, flt, getdate, now_datetime
 FLOW = ["Ordered", "Sample Collected", "Result Entered", "Reported"]
 VERIFIER_ROLES = ("Lab Verifier", "System Manager")
 LOCKED = ("Reported", "Cancelled")
+# Why a tube is sent back (same list as Lab Sample's Reject Reason).
+REJECT_REASONS = (
+	"Haemolysed",
+	"Clotted",
+	"Insufficient quantity",
+	"Wrong container",
+	"Unlabelled / mislabelled",
+	"Contaminated",
+	"Delayed transport",
+	"Other",
+)
 
 
 class DiagnosticTest(Document):
@@ -20,8 +31,10 @@ class DiagnosticTest(Document):
 		self.set_template()
 		self.set_result_rows()
 		self.set_paid()
+		self.validate_numbers()
 		self.validate_status_change()
 		self.set_flags()
+		self.stamp_critical_call()
 
 		# Recorded the first time status actually reaches Reported - not reset
 		# on later edits, so it keeps showing who originally reported it even
@@ -111,6 +124,11 @@ class DiagnosticTest(Document):
 		if not before and self.status != "Ordered":
 			frappe.throw(_("A new test starts as Ordered."))
 
+		# A rejected sample sends the test back to Ordered for a new tube
+		# (reject_sample() below) - the one step backwards that is allowed.
+		if self.flags.sample_rejected and old == "Sample Collected" and self.status == "Ordered":
+			return
+
 		if before and old in LOCKED:
 			if self.status != old:
 				frappe.throw(_("A {0} test can't be moved to another status.").format(old))
@@ -167,12 +185,42 @@ class DiagnosticTest(Document):
 				same_ok = cint(frappe.db.get_single_value("Lab Settings", "allow_same_person_verify"))
 				if not same_ok and self.result_entered_by == frappe.session.user:
 					frappe.throw(_("The person who entered the result can't verify it. Ask another Lab Verifier."))
+			# A critical value must have been phoned through before the report
+			# is released (NABL): who was told, and when.
+			if any(result_flag(r).startswith("Critical") for r in self.results) and not (
+				(self.critical_informed_to or "").strip() and self.critical_informed_on
+			):
+				frappe.throw(
+					_("This test has a critical result. Fill Informed To and Informed On (who was told, and when) before reporting.")
+				)
 			self.verified_by = frappe.session.user
 			self.verified_on = now_datetime()
 
 	def set_flags(self):
 		for r in self.results:
 			r.flag = result_flag(r)
+
+	def validate_numbers(self):
+		# A Number row takes a number only, so the flag can always be worked
+		# out (commas in 12,400 are fine). Impossible-looking values are only
+		# warned about: the lab may have a real reason.
+		bad = [r.parameter for r in self.results if r.value_type == "Number" and (r.result_value or "").strip() and to_number(r.result_value) is None]
+		if bad:
+			frappe.throw(_("Enter a number for: {0}").format(", ".join(bad)))
+		before = self.get_doc_before_save()
+		if self.status == "Result Entered" and (not before or before.status != "Result Entered"):
+			odd = [f"{r.parameter} {r.result_value}" for r in self.results if looks_wrong(r)]
+			if odd:
+				frappe.msgprint(
+					_("Please check these values; they are far outside the normal range: {0}").format(", ".join(odd)),
+					indicator="orange",
+					alert=True,
+				)
+
+	def stamp_critical_call(self):
+		# Recorded once, the first time someone fills who was informed.
+		if (self.critical_informed_to or "").strip() and not self.critical_informed_by:
+			self.critical_informed_by = frappe.session.user
 
 
 def range_text(value_type, low, high, normal_text):
@@ -198,9 +246,8 @@ def result_flag(r):
 		if not r.normal_text:
 			return ""
 		return "Normal" if value.lower() == r.normal_text.strip().lower() else "Abnormal"
-	try:
-		v = float(value)
-	except ValueError:
+	v = to_number(value)
+	if v is None:
 		return ""
 	# Critical first: it matters more than plain low/high. 0 means "not set".
 	if r.critical_low and v < r.critical_low:
@@ -212,6 +259,88 @@ def result_flag(r):
 	if r.high and v > r.high:
 		return "High"
 	return "Normal" if (r.low or r.high or r.critical_low or r.critical_high) else ""
+
+
+def to_number(value):
+	try:
+		return float(str(value).replace(",", "").strip())
+	except ValueError:
+		return None
+
+
+def looks_wrong(r):
+	# Ten times past the range, or below zero: almost always a typing
+	# mistake (pH 400000). Same rule as looksWrong() in the Vue labRules.js.
+	if r.value_type != "Number":
+		return False
+	v = to_number(r.result_value or "")
+	if v is None:
+		return False
+	if v < 0:
+		return True
+	return bool((r.high and v > r.high * 10) or (r.low and v < r.low / 10))
+
+
+@frappe.whitelist()
+def reject_sample(test, reason, note=None):
+	"""Send a collected sample back: the tube (Lab Sample) is marked Rejected
+	and every test drawn in it returns to Ordered - still paid - so it shows
+	again under Collect sample with the reason. Results not entered yet only;
+	once a result is on a tube, the test is cancelled or reported instead."""
+	if reason not in REJECT_REASONS:
+		frappe.throw(_("Pick a reject reason."))
+	note = (note or "").strip()
+	if reason == "Other" and not note:
+		frappe.throw(_("Write what was wrong with the sample."))
+
+	doc = frappe.get_doc("Diagnostic Test", test)
+	doc.check_permission("write")
+	if doc.status != "Sample Collected":
+		frappe.throw(_("Only a collected sample with no results yet can be rejected."))
+
+	names = [doc.name]
+	if doc.lab_sample:
+		names = frappe.get_all(
+			"Diagnostic Test",
+			filters={"lab_sample": doc.lab_sample, "status": ["!=", "Cancelled"]},
+			fields=["name", "status"],
+		)
+		done = [t.name for t in names if t.status != "Sample Collected"]
+		if done:
+			frappe.throw(
+				_("Sample {0} already has results for {1}; it can't be rejected.").format(doc.lab_sample, ", ".join(done))
+			)
+		names = [t.name for t in names]
+		frappe.db.set_value(
+			"Lab Sample",
+			doc.lab_sample,
+			{
+				"status": "Rejected",
+				"reject_reason": reason,
+				"reject_note": note,
+				"rejected_by": frappe.session.user,
+				"rejected_on": now_datetime(),
+			},
+		)
+
+	why = f"{reason}: {note}" if note else reason
+	for name in names:
+		t = frappe.get_doc("Diagnostic Test", name)
+		sample = t.lab_sample
+		t.flags.sample_rejected = True
+		t.status = "Ordered"
+		t.sample_collected_on = None
+		t.due_on = None
+		t.lab_sample = None
+		for r in t.results:
+			r.result_value = None
+		t.sample_rejections = cint(t.sample_rejections) + 1
+		t.reject_reason = why
+		t.rejected_by = frappe.session.user
+		t.rejected_on = now_datetime()
+		t.save()
+		t.add_comment("Comment", _("Sample {0} rejected ({1}). Collect a new sample.").format(sample or "", why))
+	return names
 
 
 def results_changed(before, doc):
@@ -231,7 +360,7 @@ def get_collection_queue(patient_visit=None):
 	tests = frappe.get_all(
 		"Diagnostic Test",
 		filters=filters,
-		fields=["name", "item_name", "test_type", "patient_visit", "patient_name", "lab_test_template", "ordered_on"],
+		fields=["name", "item_name", "test_type", "patient_visit", "patient_name", "lab_test_template", "ordered_on", "reject_reason"],
 		order_by="ordered_on asc",
 	)
 	templates = {t.lab_test_template for t in tests if t.lab_test_template}
@@ -264,6 +393,8 @@ def get_collection_queue(patient_visit=None):
 				"container": info.get("container"),
 				"tube_colour": info.get("tube_colour"),
 				"volume": info.get("volume"),
+				# Set when an earlier tube was rejected: the queue shows "Recollect".
+				"reject_reason": t.reject_reason,
 			}
 		)
 	return list(groups.values())

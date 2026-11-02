@@ -24,8 +24,43 @@ frappe.ui.form.on("Diagnostic Test", {
 		if (frm.doc.status === "Ordered" && frm.doc.is_paid && frm.perm[0]?.write) {
 			frm.add_custom_button(__("Collect Sample"), () => collect_sample_dialog(frm)).addClass("btn-primary");
 		}
+		if (frm.doc.status === "Sample Collected" && frm.perm[0]?.write) {
+			frm.add_custom_button(__("Reject Sample"), () => reject_sample_dialog(frm));
+		}
 	},
 });
+
+// A bad tube goes back: every test drawn in it returns to Ordered (still
+// paid) and shows again under Collect sample with the reason.
+function reject_sample_dialog(frm) {
+	const d = new frappe.ui.Dialog({
+		title: __("Reject Sample {0}", [frm.doc.lab_sample || ""]),
+		fields: [
+			{
+				fieldname: "reason",
+				fieldtype: "Select",
+				label: __("Reason"),
+				reqd: 1,
+				options: ["", "Haemolysed", "Clotted", "Insufficient quantity", "Wrong container", "Unlabelled / mislabelled", "Contaminated", "Delayed transport", "Other"].join("\n"),
+			},
+			{ fieldname: "note", fieldtype: "Small Text", label: __("Note"), mandatory_depends_on: "eval:doc.reason=='Other'" },
+		],
+		primary_action_label: __("Reject"),
+		primary_action(values) {
+			frappe.call({
+				method: "metta.metta.doctype.diagnostic_test.diagnostic_test.reject_sample",
+				args: { test: frm.doc.name, reason: values.reason, note: values.note },
+				freeze: true,
+				callback() {
+					d.hide();
+					frappe.show_alert({ message: __("Sample rejected. Collect a new sample."), indicator: "orange" });
+					frm.reload_doc();
+				},
+			});
+		},
+	});
+	d.show();
+}
 
 // The patient's other paid tests are offered too, so one visit to the lab
 // counter gives one tube per sample type instead of one per test.
@@ -78,8 +113,8 @@ frappe.ui.form.on("Diagnostic Test Result", {
 		let flag = "";
 		if (value && r.value_type !== "Number") {
 			if (r.normal_text) flag = value.toLowerCase() === r.normal_text.trim().toLowerCase() ? "Normal" : "Abnormal";
-		} else if (value && !isNaN(Number(value))) {
-			const v = Number(value);
+		} else if (value && !isNaN(Number(value.replace(/,/g, "")))) {
+			const v = Number(value.replace(/,/g, ""));
 			if (r.critical_low && v < r.critical_low) flag = "Critical Low";
 			else if (r.critical_high && v > r.critical_high) flag = "Critical High";
 			else if (r.low && v < r.low) flag = "Low";

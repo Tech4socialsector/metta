@@ -135,18 +135,54 @@ def _insert_op_visit(reg, visit_values, visit_has_own_category):
 
 @frappe.whitelist()
 def search_patients(txt=""):
-	# Front Desk's one search box: UHIN, phone number or name. get_list (not
-	# get_all) so each user only ever sees what their own permissions allow.
+	# Front Desk's one search box: name, UHIN and mobile number together.
+	# Several words narrow it down - every word must match one of the three,
+	# so "mercy 5650" is Mercy with that number (user, 2026-11-02). get_list
+	# (not get_all) so each user only ever sees what their own permissions allow.
 	txt = (txt or "").strip()
-	if len(txt) < 2:
+	# Only digits, spaces and + - ( ) is one phone number typed with spaces
+	# ("+91 88385 25650"), not several words.
+	if set(txt) <= set("0123456789 +-()") and _digits(txt):
+		words = [txt]
+	else:
+		words = [w for w in txt.replace(",", " ").split() if w]
+	if not words or len(" ".join(words)) < 2:
 		return []
-	like = f"%{txt}%"
-	return frappe.get_list(
+
+	# The database narrows by the longest word; the other words are checked here.
+	first = max(words, key=len)
+	candidates = frappe.get_list(
 		"Patient Registration",
-		or_filters={"name": ["like", like], "patient_name": ["like", like], "phone": ["like", like]},
+		or_filters=_word_filters(first),
 		fields=["name", "patient_name", "phone", "sex", "age", "billing_category"],
 		order_by="modified desc",
-		limit_page_length=10,
+		limit_page_length=10 if len(words) == 1 else 200,
+	)
+	rest = [w for w in words if w is not first]
+	return [p for p in candidates if all(_matches(p, w) for w in rest)][:10]
+
+
+def _digits(text):
+	# Typed with spaces or +91 is still the same number: compare digits only.
+	d = "".join(ch for ch in text if ch.isdigit())
+	return d[2:] if len(d) > 10 and d.startswith("91") else d
+
+
+def _word_filters(word):
+	like = f"%{word}%"
+	filters = {"patient_name": ["like", like], "name": ["like", like]}
+	if len(_digits(word)) >= 2:
+		filters["phone"] = ["like", f"%{_digits(word)}%"]
+	return filters
+
+
+def _matches(patient, word):
+	w = word.lower()
+	digits = _digits(word)
+	return (
+		w in (patient.patient_name or "").lower()
+		or w in (patient.name or "").lower()
+		or (len(digits) >= 2 and digits in _digits(patient.phone or ""))
 	)
 
 

@@ -84,6 +84,11 @@
             </tbody>
           </table>
         </div>
+        <!-- Same warning the server gives on save: a Number row needs a range to be flagged. -->
+        <p v-if="noRange.length" class="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900" role="status">
+          <LucideIcon name="triangle-alert" class="mt-0.5 h-4 w-4 shrink-0" />
+          <span>No range set for <b>{{ noRange.join(', ') }}</b>. Their results will not show Normal, High or Low.</span>
+        </p>
         <div v-if="canWrite">
           <button type="button" class="flex h-9 items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 text-sm font-semibold hover:bg-gray-50" @click="addRow">
             <LucideIcon name="plus" class="h-4 w-4" /> Add parameter
@@ -122,6 +127,12 @@ const RANGE_GROUPS = [
   { key: 'child', label: 'Child' },
   { key: 'critical', label: 'Critical' },
 ]
+// Number rows with no range in any group (0 / empty = not set).
+const noRange = computed(() =>
+  (doc.value?.parameters || [])
+    .filter((r) => r.value_type === 'Number' && r.parameter && !RANGE_GROUPS.some((g) => Number(r[`${g.key}_low`]) || Number(r[`${g.key}_high`])))
+    .map((r) => r.parameter),
+)
 const GRID = 'row-fit grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 min-[1280px]:grid-cols-6'
 
 const props = defineProps({ name: { type: String, required: true } })

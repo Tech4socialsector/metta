@@ -6,6 +6,7 @@
  "custom_blocks": [],
  "docstatus": 0,
  "doctype": "Workspace",
+ "external_link": "/hmis",
  "hide_custom": 0,
  "idx": 0,
  "indicator_color": "green",
@@ -13,7 +14,7 @@
  "label": "HMIS",
  "link_type": "DocType",
  "links": [],
- "modified": "2026-09-04 15:08:27.642957",
+ "modified": "2026-11-02 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "metta",
  "name": "HMIS",
@@ -40,6 +41,42 @@
  "quick_lists": [],
  "roles": [
   {
+   "role": "Front Desk"
+  },
+  {
+   "role": "Nurse"
+  },
+  {
+   "role": "Doctor"
+  },
+  {
+   "role": "Lab Staff"
+  },
+  {
+   "role": "Lab Verifier"
+  },
+  {
+   "role": "Billing Staff"
+  },
+  {
+   "role": "Account Staff"
+  },
+  {
+   "role": "Pharmacy Staff"
+  },
+  {
+   "role": "Store Staff"
+  },
+  {
+   "role": "Warehouse Staffs"
+  },
+  {
+   "role": "Purchase Approver"
+  },
+  {
+   "role": "Management"
+  },
+  {
    "role": "System Manager"
   }
  ],
@@ -54,5 +91,5 @@
   }
  ],
  "title": "HMIS",
- "type": "Workspace"
+ "type": "URL"
 }

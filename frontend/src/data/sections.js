@@ -37,7 +37,9 @@ export const SECTIONS = [
     label: 'Billing',
     icon: 'receipt-text',
     roles: ['Billing Staff'],
-    items: [f('Billing'), f('Sales Return'), f('Patient Advance'), f('Doctor Consultation')],
+    // No Doctor Consultation card (user, 2026-11-02): the Billing card's
+    // waiting lists already bring each consultation's orders to the counter.
+    items: [f('Billing'), f('Sales Return'), f('Patient Advance')],
   },
   {
     key: 'pharmacy',
@@ -117,7 +119,7 @@ export const SECTIONS = [
     label: 'Reports',
     icon: 'chart-column',
     roles: [],
-    items: [p('reports', 'All Reports'), p('hospital-overview', 'Hospital Overview'), p('stock-ledger', 'Stock Ledger')],
+    items: [p('reports', 'All Reports'), p('stock-ledger', 'Stock Ledger')],
   },
   {
     key: 'masters',
@@ -210,7 +212,6 @@ const ITEM_ICONS = {
   'Room Master': 'door-open',
   'daily-collection-report': 'banknote',
   'collection-report': 'hand-coins',
-  'hospital-overview': 'layout-dashboard',
   'outletwise-expiry-report': 'hourglass',
   'previous-day-stock-report': 'calendar-clock',
   'purchase-analysis': 'trending-up',

@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, START_LOCATION } from 'vue-router'
-import { session, initialUserCheck } from '@/data/session'
+import { session, initialUserCheck, whenRolesReady } from '@/data/session'
+import { landingRoute } from '@/data/landing'
 
 const routes = [
   {
@@ -7,9 +8,15 @@ const routes = [
     name: 'Login',
     component: () => import('@/pages/Login.vue'),
   },
+  // /hmis itself opens each role's own main screen (data/landing.js).
   {
     path: '/',
-    redirect: '/home',
+    name: 'Landing',
+    component: () => import('@/pages/Home.vue'),
+    beforeEnter: async () => {
+      await whenRolesReady()
+      return landingRoute()
+    },
   },
   {
     path: '/home',
@@ -129,7 +136,7 @@ router.beforeEach(async (to, from, next) => {
     return
   }
   if (to.name === 'Login' && session.user) {
-    next({ name: 'Home' })
+    next({ name: 'Landing' })
     return
   }
   next()

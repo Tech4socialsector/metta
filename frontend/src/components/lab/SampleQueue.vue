@@ -23,6 +23,8 @@
           <label :for="`pick-${t.name}`" class="min-w-0 flex-1 cursor-pointer">
             <span class="font-medium text-gray-900">{{ t.item_name }}</span>
             <span v-if="t.sample_type" class="text-gray-600"> · {{ t.sample_type }}</span>
+            <!-- An earlier tube was rejected: take a new one. -->
+            <span v-if="t.reject_reason" class="ml-2 rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-800 ring-1 ring-red-200">Recollect: {{ t.reject_reason }}</span>
           </label>
           <!-- What to draw it in, from Lab Sample Type -->
           <span v-if="t.container || t.tube_colour || t.volume" class="text-right text-gray-600">{{ [t.container, t.tube_colour, t.volume].filter(Boolean).join(' · ') }}</span>

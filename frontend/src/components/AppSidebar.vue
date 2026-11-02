@@ -84,6 +84,8 @@ const home = (key, routeName, match = []) => {
   return s && { label: s.label, to: { name: routeName }, roles: s.roles, match: [routeName, ...match], icon: s.icon }
 }
 const GROUPS = [
+  // Whole-hospital view: Admin (System Manager, always passes hasRole) and Management only.
+  { label: 'Overview', items: [{ label: 'Hospital Dashboard', to: { name: 'HospitalDashboard' }, roles: ['Management'], match: ['HospitalDashboard'], icon: 'layout-dashboard' }] },
   {
     label: 'Patient care',
     items: [
