@@ -67,6 +67,10 @@ frappe.ui.form.on("Billing", {
 		frm.fields_dict.ip_id.set_disp_area = show_id_not_title;
 	},
 	refresh(frm) {
+		if (!frm.is_new()) {
+			frm.add_custom_button(__("Print"), () => metta.print_preview.show(frm, "Billing Receipt", { title: __("Patient Bill") }));
+		}
+
 		// An existing bill saved before OP ID / IP ID existed only has
 		// `patient` on it - infer which box that belongs in so it doesn't
 		// show up blank on reopening.

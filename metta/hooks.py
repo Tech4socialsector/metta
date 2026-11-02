@@ -15,7 +15,30 @@ fixtures = [
 			[
 				"name",
 				"in",
-				["Patient Registration Receipt", "Discharge Bill", "Billing Receipt", "Doctor Consultation Prescription"],
+				[
+					"Patient Registration Receipt",
+					"Discharge Bill",
+					"Billing Receipt",
+					"Doctor Consultation Prescription",
+					"Appointment Print",
+					"Bed Transfer Print",
+					"Diagnostic Test Print",
+					"Discharge Summary Print",
+					"Nurse Interventions Print",
+					"Patient Registration Print",
+					"Patient Advance Print",
+					"Sales Return Print",
+					"Payment Entry Print",
+					"Purchase Bill Print",
+					"Purchase Order Print",
+					"Purchase Receipt Print",
+					"Purchase Return Print",
+					"Quality Inspection Print",
+					"Material Issue Print",
+					"Stock Adjustment Print",
+					"Stock Reconciliation Print",
+					"Stock Transfer Print",
+				],
 			]
 		],
 	},
@@ -155,7 +178,7 @@ add_to_apps_screen = [
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/metta/css/metta.css"
-app_include_js = "report_export.bundle.js"
+app_include_js = ["report_export.bundle.js", "print_preview.bundle.js"]
 
 # include js, css files in header of web template
 # web_include_css = "/assets/metta/css/metta.css"

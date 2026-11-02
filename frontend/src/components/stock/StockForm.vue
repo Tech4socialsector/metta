@@ -19,7 +19,7 @@
           {{ a.label }}
         </button>
       </template>
-      <button v-if="!isNew && doc" type="button" :class="BTN_SECONDARY" @click="printDoc">Print</button>
+      <button v-if="!isNew && doc" type="button" :class="BTN_PRINT" @click="printDoc">Print</button>
       <button v-if="canCancel" type="button" :class="BTN_SECONDARY" :disabled="busy" @click="confirmThen(`Permanently Cancel ${name}?`, cancelDoc)">Cancel document</button>
       <DeleteRecord v-if="canDelete" :label="name" :busy="busy" @delete="deleteDoc" />
       <button v-if="showSave && meta && doc" type="button" :class="BTN_SECONDARY" @click="discard">{{ isNew ? 'Cancel' : 'Discard' }}</button>
@@ -196,6 +196,18 @@ const WIDGETS = { IndentItemSearch }
 const GRID = FORM_GRID
 const BTN_PRIMARY = 'h-9 rounded-lg bg-brand-700 px-5 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-60'
 const BTN_SECONDARY = 'h-9 rounded-lg border border-gray-300 bg-white px-4 text-sm font-semibold hover:bg-gray-50 disabled:opacity-60'
+// Print: themed like the brand colour so it stands out from the plain
+// white buttons, without competing with the one solid primary action.
+const BTN_PRINT = 'h-9 rounded-lg border border-brand-300 bg-brand-50 px-4 text-sm font-semibold text-brand-800 hover:bg-brand-100 disabled:opacity-60'
+// The standard Print Format for each stock doctype's "Print" button (see
+// printDoc() below). A doctype not listed here just opens Desk's default
+// print format instead.
+const PRINT_FORMATS = {
+  'Material Issue': 'Material Issue Print',
+  'Stock Adjustment': 'Stock Adjustment Print',
+  'Stock Reconciliation': 'Stock Reconciliation Print',
+  'Stock Transfer': 'Stock Transfer Print',
+}
 const NAME_DF = { fieldname: '__newname', fieldtype: 'Data', label: 'Name', reqd: 1 }
 
 const meta = ref(null)
@@ -574,7 +586,9 @@ function amend() {
 }
 
 function printDoc() {
-  window.open(`/printview?doctype=${encodeURIComponent(props.doctype)}&name=${encodeURIComponent(props.name)}`, '_blank')
+  const fmt = PRINT_FORMATS[props.doctype]
+  const url = `/printview?doctype=${encodeURIComponent(props.doctype)}&name=${encodeURIComponent(props.name)}` + (fmt ? `&format=${encodeURIComponent(fmt)}` : '')
+  window.open(url, '_blank')
 }
 async function confirmThen(message, fn) {
   if (await confirm(message)) fn()

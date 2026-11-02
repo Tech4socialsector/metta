@@ -13,6 +13,11 @@ frappe.ui.form.on("Stock Reconciliation", {
 			return { filters: { item: row.item } };
 		});
 	},
+	refresh(frm) {
+		if (!frm.is_new()) {
+			frm.add_custom_button(__("Print"), () => metta.print_preview.show(frm, "Stock Reconciliation Print"));
+		}
+	},
 });
 
 frappe.ui.form.on("Stock Reconciliation Item", {

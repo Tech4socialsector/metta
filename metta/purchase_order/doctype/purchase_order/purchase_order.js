@@ -43,6 +43,9 @@ frappe.ui.form.on("Purchase Order", {
 		}
 	},
 	refresh(frm) {
+		if (!frm.is_new()) {
+			frm.add_custom_button(__("Print"), () => metta.print_preview.show(frm, "Purchase Order Print"));
+		}
 		calculate_total(frm);
 		frm.toggle_display("item_search_area", frm.doc.docstatus === 0);
 		if (frm.doc.docstatus === 0) {

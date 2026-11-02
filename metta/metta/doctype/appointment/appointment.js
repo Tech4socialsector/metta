@@ -9,6 +9,10 @@ frappe.ui.form.on("Appointment", {
 		refresh_available_doctors(frm);
 	},
 	refresh(frm) {
+		if (!frm.is_new()) {
+			frm.add_custom_button(__("Print"), () => metta.print_preview.show(frm, "Appointment Print"));
+		}
+
 		refresh_available_doctors(frm);
 
 		if (frm.is_new() || frm.doc.status !== "Scheduled") return;

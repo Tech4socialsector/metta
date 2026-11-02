@@ -8,6 +8,9 @@ frappe.ui.form.on("Stock Adjustment", {
 		}));
 	},
 	refresh(frm) {
+		if (!frm.is_new()) {
+			frm.add_custom_button(__("Print"), () => metta.print_preview.show(frm, "Stock Adjustment Print"));
+		}
 		if (frm.is_new() && !frm.doc.adjusted_by) {
 			frm.set_value("adjusted_by", frappe.session.user);
 		}

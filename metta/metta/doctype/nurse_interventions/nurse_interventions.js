@@ -21,6 +21,10 @@ const STATUS_COLORS = {
 
 frappe.ui.form.on("Nurse Interventions", {
 	refresh(frm) {
+		if (!frm.is_new()) {
+			frm.add_custom_button(__("Print"), () => metta.print_preview.show(frm, "Nurse Interventions Print"));
+		}
+
 		Object.keys(STATUS_COLORS).forEach((fieldname) => colour_status_field(frm, fieldname));
 	},
 	patient_unique_id(frm) {

@@ -14,7 +14,7 @@
     <template #actions>
       <template v-if="form.doc && !form.loadError">
         <template v-for="b in buttons" :key="b.label">
-          <a v-if="b.href" :href="b.href" target="_blank" rel="noopener" :class="BTN.plain">{{ b.label }}</a>
+          <a v-if="b.href" :href="b.href" target="_blank" rel="noopener" :class="b.print ? BTN.themed : BTN.plain">{{ b.label }}</a>
           <button v-else type="button" :class="b === main ? BTN.primary : b.danger ? BTN.danger : BTN.plain" :disabled="form.busy" @click="b.run">{{ b.label }}</button>
         </template>
         <DeleteRecord v-if="canDelete" :label="docLabel" :busy="form.busy" @delete="f.deleteDoc" />
@@ -96,7 +96,7 @@ import SectionJump from '@/components/SectionJump.vue'
 import RecordActivity from '@/components/RecordActivity.vue'
 import ItemsTable from '@/components/purchase/ItemsTable.vue'
 import { LAYOUT_TYPES, isVisible, isRequired, isEmpty } from '@/data/formEngine'
-import { BTN, plain } from '@/data/purchase/ui'
+import { BTN, plain, printFormatFor } from '@/data/purchase/ui'
 
 const props = defineProps({
   // the reactive state from useDocForm()
@@ -173,7 +173,11 @@ const buttons = computed(() => {
   const list = props.actions.filter((a) => a !== main.value)
   if (canSave.value && main.value !== saveBtn) list.push(saveBtn)
   if (canSubmit.value && !canSave.value && main.value !== submitBtn) list.push(submitBtn)
-  if (!f.isNew && f.doc?.name) list.push({ label: 'Print', href: `/printview?doctype=${encodeURIComponent(f.doctype)}&name=${encodeURIComponent(f.doc.name)}` })
+  if (!f.isNew && f.doc?.name) {
+    const fmt = printFormatFor(f.doctype)
+    const href = `/printview?doctype=${encodeURIComponent(f.doctype)}&name=${encodeURIComponent(f.doc.name)}` + (fmt ? `&format=${encodeURIComponent(fmt)}` : '')
+    list.push({ label: 'Print', href, print: true })
+  }
   if (canCancel.value) list.push({ label: 'Cancel', run: () => confirmThen(`Permanently cancel ${docLabel.value}?`, f.cancelDoc) })
   if (canAmend.value && main.value !== amendBtn) list.push(amendBtn)
   if (main.value) list.push(main.value)

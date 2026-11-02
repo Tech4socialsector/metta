@@ -8,6 +8,9 @@ frappe.ui.form.on("Stock Transfer", {
 		}));
 	},
 	refresh(frm) {
+		if (!frm.is_new()) {
+			frm.add_custom_button(__("Print"), () => metta.print_preview.show(frm, "Stock Transfer Print"));
+		}
 		if (frm.is_new() && !frm.doc.issued_by) {
 			frm.set_value("issued_by", frappe.session.user);
 		}

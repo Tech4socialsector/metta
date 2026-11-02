@@ -11,6 +11,10 @@ frappe.ui.form.on("Diagnostic Test", {
 	},
 
 	refresh(frm) {
+		if (!frm.is_new()) {
+			frm.add_custom_button(__("Print"), () => metta.print_preview.show(frm, "Diagnostic Test Print"));
+		}
+
 		// Result rows come from the Lab Test Template; only their values are typed.
 		frm.set_df_property("results", "cannot_add_rows", true);
 		frm.set_df_property("results", "cannot_delete_rows", true);

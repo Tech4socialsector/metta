@@ -170,7 +170,10 @@ frappe.ui.form.on("Patient Visit", {
 						// preview matches the popup-with-print-button UX that was asked for.
 						const dialog = new frappe.ui.Dialog({
 							title: __("Receipt Preview"),
-							size: "small",
+							// "small" squeezed the letterhead/section layout onto
+							// too few pixels (text wrapping awkwardly); "large"
+							// gives it roughly the real printed width to lay out in.
+							size: "large",
 							fields: [
 								{
 									fieldtype: "HTML",

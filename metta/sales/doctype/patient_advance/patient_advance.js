@@ -20,6 +20,9 @@ function show_patient_visit_id(frm) {
 
 frappe.ui.form.on("Patient Advance", {
 	refresh(frm) {
+		if (!frm.is_new()) {
+			frm.add_custom_button(__("Print"), () => metta.print_preview.show(frm, "Patient Advance Print"));
+		}
 		// Advance is only ever collected for an IP stay (OP is paid at the
 		// counter per visit, no running balance to advance against) - so the
 		// picker itself should only ever offer IP visits, not every visit.

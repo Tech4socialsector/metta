@@ -13,6 +13,9 @@ frappe.ui.form.on("Purchase Return", {
 		frm.refresh();
 	},
 	refresh(frm) {
+		if (!frm.is_new()) {
+			frm.add_custom_button(__("Print"), () => metta.print_preview.show(frm, "Purchase Return Print"));
+		}
 		calculate_total(frm);
 
 		if (frm.doc.docstatus === 0 && frm.doc.quality_inspection) {

@@ -10,6 +10,9 @@ frappe.ui.form.on("Quality Inspection", {
 		}));
 	},
 	refresh(frm) {
+		if (!frm.is_new()) {
+			frm.add_custom_button(__("Print"), () => metta.print_preview.show(frm, "Quality Inspection Print"));
+		}
 		if (frm.is_new() && !frm.doc.inspected_by) {
 			frm.set_value("inspected_by", frappe.session.user);
 		}

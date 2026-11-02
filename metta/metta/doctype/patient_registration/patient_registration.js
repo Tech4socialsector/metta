@@ -8,6 +8,10 @@ const FIXED_BILLING_CATEGORIES = ["General", "Staff", "Staff Dependent"];
 
 frappe.ui.form.on("Patient Registration", {
 	refresh(frm) {
+		if (!frm.is_new()) {
+			frm.add_custom_button(__("Print"), () => metta.print_preview.show(frm, "Patient Registration Print"));
+		}
+
 		// Autocomplete's own validate() blanks out anything typed that isn't
 		// in the current options list - Village needs the opposite: the Pin
 		// Code lookup's villages are suggestions to pick from, never a

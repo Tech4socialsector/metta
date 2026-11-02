@@ -8,6 +8,9 @@ frappe.ui.form.on("Purchase Bill", {
 		}));
 	},
 	refresh(frm) {
+		if (!frm.is_new()) {
+			frm.add_custom_button(__("Print"), () => metta.print_preview.show(frm, "Purchase Bill Print"));
+		}
 		if (frm.is_new() && !frm.doc.entered_by) {
 			frm.set_value("entered_by", frappe.session.user);
 		}

@@ -20,6 +20,9 @@ frappe.ui.form.on("Sales Return", {
 		});
 	},
 	refresh(frm) {
+		if (!frm.is_new()) {
+			frm.add_custom_button(__("Print"), () => metta.print_preview.show(frm, "Sales Return Print"));
+		}
 		if (frm.is_new() && !frm.doc.returned_by) {
 			frm.set_value("returned_by", frappe.session.user);
 		}
