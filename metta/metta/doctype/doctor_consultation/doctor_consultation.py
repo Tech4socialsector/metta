@@ -13,6 +13,31 @@ class DoctorConsultation(Document):
 
 	def on_update(self):
 		self.route_referral()
+		self.sync_diagnostic_tests()
+
+	def sync_diagnostic_tests(self):
+		# Billing's "Lab tests to pay" reads the tests suggested here, and the
+		# Lab's "Waiting for payment" reads Diagnostic Tests - so they're made on
+		# every save, and both screens always show the same tests. (They used
+		# to need a separate "Order Diagnostic Tests" click, which was easy to
+		# forget: Billing then asked for payment while the Lab saw nothing.)
+		create_diagnostic_tests(self.name)
+
+		# A test the doctor takes off the list before it's paid is cancelled in
+		# the lab too. Paid or already-started tests are left alone - the lab or
+		# billing handles those.
+		suggested = {row.item for row in self.suggested_tests}
+		for test in frappe.get_all(
+			"Diagnostic Test",
+			filters={"doctor_consultation": self.name, "status": "Ordered", "is_paid": 0},
+			fields=["name", "item"],
+		):
+			if test.item in suggested:
+				continue
+			doc = frappe.get_doc("Diagnostic Test", test.name)
+			doc.status = "Cancelled"
+			doc.cancel_reason = _("Removed from the consultation by the doctor.")
+			doc.save(ignore_permissions=True)
 
 	def route_referral(self):
 		# A doctor's dashboard queue is driven entirely by Patient Visit.doctor_name -
@@ -344,17 +369,18 @@ def get_consultation_lab_reports_html(consultation):
 	return "".join(out)
 
 
-@frappe.whitelist()
 def create_diagnostic_tests(consultation):
 	# One Diagnostic Test per suggested_tests row not already converted -
 	# checked by (doctor_consultation, item) rather than a stored flag on the
-	# child row, so this can safely be called again later if new tests get
-	# added to the same consultation without duplicating the earlier ones.
-	frappe.has_permission("Doctor Consultation", "read", throw=True)
-
+	# child row, so it runs on every save of the consultation (see
+	# DoctorConsultation.sync_diagnostic_tests) without duplicating tests.
+	# A cancelled test doesn't count: a test the doctor removed and later adds
+	# back gets a fresh one.
 	already_converted = set(
 		frappe.get_all(
-			"Diagnostic Test", filters={"doctor_consultation": consultation}, pluck="item"
+			"Diagnostic Test",
+			filters={"doctor_consultation": consultation, "status": ["!=", "Cancelled"]},
+			pluck="item",
 		)
 	)
 
@@ -375,7 +401,9 @@ def create_diagnostic_tests(consultation):
 				"test_type": row.test_type,
 			}
 		)
-		doc.insert()
+		# Made by the consultation's own save (a doctor, who may order tests),
+		# not by a separate user action - so no second permission check.
+		doc.insert(ignore_permissions=True)
 		created.append(doc.name)
 
 	return created

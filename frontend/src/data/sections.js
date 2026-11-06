@@ -39,7 +39,9 @@ export const SECTIONS = [
     roles: ['Billing Staff'],
     // No Doctor Consultation card (user, 2026-11-02): the Billing card's
     // waiting lists already bring each consultation's orders to the counter.
-    items: [f('Billing'), f('Sales Return'), f('Patient Advance')],
+    // Discharge Bill listed here too: otherwise its list was only reachable
+    // from a bill's "Discharge Bill" button or the Home card.
+    items: [f('Billing'), f('Discharge Bill'), f('Sales Return'), f('Patient Advance')],
   },
   {
     key: 'pharmacy',

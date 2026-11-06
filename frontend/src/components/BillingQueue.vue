@@ -3,7 +3,8 @@
   orders not paid yet, as tabs - medicines, lab tests, and all bills. Shown
   under the Billing card of the Billing section and on /billing. -->
   <div class="flex min-h-0 flex-1 flex-col gap-3">
-    <div role="tablist" aria-label="Billing lists" class="flex shrink-0 flex-wrap gap-1 rounded-xl border border-gray-200 bg-white p-1">
+    <div class="flex shrink-0 flex-wrap items-center gap-3">
+    <div role="tablist" aria-label="Billing lists" class="flex flex-wrap gap-1 rounded-xl border border-gray-200 bg-white p-1">
       <button
         v-for="t in tabs"
         :key="t.key"
@@ -15,13 +16,41 @@
         @click="view = t.key"
       >
         <LucideIcon :name="t.icon" class="h-4 w-4" />{{ t.label }}
-        <span v-if="t.rows" class="rounded-full px-2 text-[12.5px] tabular-nums" :class="view === t.key ? 'bg-white/20' : 'bg-gray-100 text-gray-700'">{{ data ? t.rows.length : '…' }}</span>
+        <span v-if="t.rows" class="rounded-full px-2 text-[12.5px] tabular-nums" :class="view === t.key ? 'bg-white/20' : 'bg-gray-100 text-gray-700'">{{ data ? byType(t.rows).length : '…' }}</span>
       </button>
+    </div>
+
+    <!-- OP / IP / All: separates out-patient and in-patient billing on all
+    three tabs. Remembered on this browser, so IP billing staff land on IP. -->
+    <div role="radiogroup" aria-label="OP or IP" class="ml-auto flex gap-1 rounded-xl border border-gray-200 bg-white p-1">
+      <button
+        v-for="k in KINDS"
+        :key="k.key"
+        type="button"
+        role="radio"
+        :aria-checked="kind === k.key"
+        class="flex items-center gap-2 rounded-lg px-4 py-2 text-[14px] font-bold"
+        :class="kind === k.key ? 'bg-accent-600 text-white' : 'text-gray-700 hover:bg-gray-50'"
+        @click="kind = k.key"
+      >
+        {{ k.label }}
+        <span class="rounded-full px-2 text-[12.5px] tabular-nums" :class="kind === k.key ? 'bg-white/20' : 'bg-gray-100 text-gray-700'">{{ kindCount(k.key) ?? '…' }}</span>
+      </button>
+    </div>
     </div>
 
     <p v-if="error" class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">{{ error }}</p>
 
-    <DataList v-if="view === 'all'" fill doctype="Billing" :tabs="TABS" :row-route="(r) => ({ name: 'BillingForm', params: { name: r.name } })" :auto-refresh="60" />
+    <DataList
+      v-if="view === 'all'"
+      fill
+      doctype="Billing"
+      :tabs="TABS"
+      :filters="kind === 'all' ? [] : [['registration_category', '=', kind.toUpperCase()]]"
+      :add-columns="[{ fieldname: 'registration_category', label: 'OP / IP' }]"
+      :row-route="(r) => ({ name: 'BillingForm', params: { name: r.name } })"
+      :auto-refresh="60"
+    />
 
     <section v-else class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
       <div class="flex shrink-0 flex-wrap items-center gap-3 border-b border-gray-200 px-4 py-3">
@@ -70,7 +99,8 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { call } from 'frappe-ui'
 import { useRoute, useRouter } from 'vue-router'
 import DataList from '@/components/DataList.vue'
 import LucideIcon from '@/components/LucideIcon.vue'
@@ -97,6 +127,49 @@ const view = computed({
   get: () => (['med', 'lab', 'all'].includes(route.query.queue) ? route.query.queue : 'med'),
   set: (v) => router.replace({ query: { ...route.query, queue: v } }),
 })
+
+// OP / IP / All. The URL wins (a shared link), then this browser's last choice.
+const KINDS = [
+  { key: 'op', label: 'OP' },
+  { key: 'ip', label: 'IP' },
+  { key: 'all', label: 'All' },
+]
+const KIND_KEY = 'hmis-billing-kind'
+function savedKind() {
+  try {
+    return localStorage.getItem(KIND_KEY)
+  } catch {
+    return null
+  }
+}
+const kind = computed({
+  get: () => [route.query.type, savedKind(), 'all'].find((k) => KINDS.some((x) => x.key === k)),
+  set: (v) => {
+    try {
+      localStorage.setItem(KIND_KEY, v)
+    } catch {
+      // not remembered on this browser - the URL still keeps it
+    }
+    router.replace({ query: { ...route.query, type: v } })
+  },
+})
+const byType = (rows) => (kind.value === 'all' ? rows : rows.filter((r) => (kind.value === 'ip') === !!r.is_ip))
+
+// Counts on the switch follow the open tab: waiting patients on the two
+// queues, bills on "All bills".
+const billCounts = ref({})
+async function loadBillCounts() {
+  const count = (filters) => call('frappe.desk.reportview.get_count', { doctype: 'Billing', filters }).catch(() => null)
+  const [op, ip, all] = await Promise.all([count([['registration_category', '=', 'OP']]), count([['registration_category', '=', 'IP']]), count([])])
+  billCounts.value = { op, ip, all }
+}
+function kindCount(key) {
+  if (view.value === 'all') return billCounts.value[key] ?? null
+  if (!data.value) return null
+  const rows = current.value.rows
+  return key === 'all' ? rows.length : rows.filter((r) => (key === 'ip') === !!r.is_ip).length
+}
+watch(view, (v) => v === 'all' && loadBillCounts(), { immediate: true })
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
 const waited = (min) => (min < 60 ? `${min} min` : `${Math.floor(min / 60)} h ${min % 60} min`)
@@ -142,14 +215,16 @@ const tabs = computed(() => {
 const current = computed(() => tabs.value.find((t) => t.key === view.value && t.rows) || tabs.value[0])
 const shown = computed(() => {
   const q = search.value.trim().toLowerCase()
-  if (!q) return current.value.rows
-  return current.value.rows.filter((r) => `${r.patient_name} ${r.uhin}`.toLowerCase().includes(q))
+  const rows = byType(current.value.rows)
+  if (!q) return rows
+  return rows.filter((r) => `${r.patient_name} ${r.uhin}`.toLowerCase().includes(q))
 })
 
 async function load() {
   try {
     data.value = await api('metta.vue.billing.get_billing_queue')
     error.value = ''
+    if (view.value === 'all') loadBillCounts()
   } catch (err) {
     data.value = data.value || { medicines: [], lab: [] }
     error.value = errorText(err) || 'Could not load the billing queue.'

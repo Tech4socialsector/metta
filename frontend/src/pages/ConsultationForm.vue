@@ -10,7 +10,6 @@
     <template #actions>
       <template v-if="!isNew && doc.name">
         <button type="button" class="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm font-semibold hover:bg-gray-50" :disabled="busy" @click="printPrescription">Print Prescription</button>
-        <button v-if="doc.suggested_tests.length && canOrderTests" type="button" class="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm font-semibold hover:bg-gray-50" :disabled="busy" @click="orderTests">Order Diagnostic Tests</button>
         <router-link v-if="doc.suggested_tests.length && canEdit" :to="{ name: 'ConsultationForm', params: { name: 'new' }, query: { visit: doc.patient_consultation } }" class="flex h-9 items-center rounded-lg border border-gray-300 bg-white px-3 text-sm font-semibold hover:bg-gray-50">Follow-up Consultation</router-link>
         <!-- Billing is not in the Vue app yet: its Bill button is on the Desk form. -->
         <a v-if="canBill" :href="`/desk/doctor-consultation/${doc.name}`" class="flex h-9 items-center rounded-lg border border-gray-300 bg-white px-3 text-sm font-semibold hover:bg-gray-50">Bill (Desk)</a>
@@ -234,7 +233,6 @@ const SECTIONS = computed(() =>
 // Doctor (and System Manager) write; the server also checks it's their own
 // note and their own patient. Billing / Front Desk / Pharmacy only read.
 const canEdit = computed(() => hasRole('Doctor'))
-const canOrderTests = computed(() => hasRole('Doctor', 'Lab Staff'))
 const canBill = computed(() => hasRole('Billing Staff') && (doc.prescribed_items.length || doc.suggested_tests.length))
 
 function nowStr() {
@@ -406,20 +404,6 @@ async function printPrescription() {
     w.print()
   } catch (err) {
     saveError.value = errorText(err)
-  }
-}
-
-async function orderTests() {
-  busy.value = true
-  message.value = ''
-  saveError.value = ''
-  try {
-    const created = (await api(`${DC}.create_diagnostic_tests`, { consultation: doc.name })) || []
-    message.value = created.length ? `Created Diagnostic Test(s): ${created.join(', ')}` : 'All suggested tests already have a Diagnostic Test.'
-  } catch (err) {
-    saveError.value = errorText(err)
-  } finally {
-    busy.value = false
   }
 }
 </script>

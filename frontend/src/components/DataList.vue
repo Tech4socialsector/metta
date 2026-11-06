@@ -14,7 +14,7 @@
         :aria-selected="tab === i"
         class="relative flex h-10 items-center gap-2 px-3 text-sm font-medium"
         :class="tab === i ? 'text-brand-800' : 'text-gray-600 hover:text-gray-900'"
-        @click="tab = i"
+        @click="pickTab(i)"
       >
         {{ t.label }}
         <span class="rounded-full px-1.5 text-xs" :class="tab === i ? 'bg-brand-700 text-white' : 'bg-gray-100 text-gray-700'">{{ tabCounts[i] ?? '…' }}</span>
@@ -170,6 +170,10 @@ const props = defineProps({
   // the Lab list), with the extra fields it needs read for every row.
   rowTag: { type: Function, default: null },
   extraFields: { type: Array, default: () => [] },
+  // [{ fieldname, label }] columns this page always shows right after the
+  // title (e.g. Billing's "OP / IP"), even when the field is hidden on the
+  // form and over columns this browser saved before.
+  addColumns: { type: Array, default: () => [] },
   // [{ label, filters: [[field, op, value]] }] - tabs above the list
   tabs: { type: Array, default: () => [] },
   // Fixed filters the page decides (e.g. the card picked on Patients),
@@ -193,6 +197,14 @@ const total = ref(0)
 const loading = ref(false)
 const error = ref('')
 const tab = ref(0)
+// Until someone clicks a tab, an empty tab gives way to the first one with
+// records (e.g. Billing opened on "Draft" with no drafts, or switched to IP)
+// - an empty list there only looked broken. A tab picked by hand stays.
+let tabPicked = false
+function pickTab(i) {
+  tabPicked = true
+  tab.value = i
+}
 const tabCounts = ref([])
 const search = ref('')
 const quick = reactive({})
@@ -206,7 +218,16 @@ const selected = reactive(new Set())
 
 const titleField = computed(() => meta.value?.title_field || 'name')
 const valueFields = computed(() => (meta.value?.fields || []).filter((f) => !NO_VALUE.includes(f.fieldtype) && !f.hidden))
-const byName = computed(() => Object.fromEntries(valueFields.value.map((f) => [f.fieldname, f])))
+const addedNames = computed(() => props.addColumns.map((c) => c.fieldname))
+const byName = computed(() => {
+  const out = Object.fromEntries(valueFields.value.map((f) => [f.fieldname, f]))
+  // Added columns may be hidden on the form; shown here with the page's label.
+  for (const c of props.addColumns) {
+    const df = (meta.value?.fields || []).find((f) => f.fieldname === c.fieldname)
+    if (df) out[c.fieldname] = { ...df, label: c.label || df.label }
+  }
+  return out
+})
 const idField = computed(() => ({ fieldname: 'name', label: props.idColumn || 'ID', fieldtype: 'Data' }))
 
 // First column is the record's title (Desk's title_field), then the
@@ -214,7 +235,9 @@ const idField = computed(() => ({ fieldname: 'name', label: props.idColumn || 'I
 const defaultColumnNames = computed(() => {
   const title = titleField.value
   const list = valueFields.value.filter((f) => f.in_list_view && f.fieldname !== title).map((f) => f.fieldname)
-  return props.idColumn ? [title, 'name', ...list.slice(0, 4)] : [title, ...list.slice(0, 5)]
+  const added = addedNames.value.filter((f) => f !== title)
+  const rest = list.filter((f) => !added.includes(f))
+  return props.idColumn ? [title, 'name', ...added, ...rest.slice(0, 4 - added.length)] : [title, ...added, ...rest.slice(0, 5 - added.length)]
 })
 const pickableFields = computed(() => [idField.value, ...valueFields.value])
 const shownColumns = computed(() =>
@@ -297,6 +320,7 @@ async function reload() {
   error.value = ''
   const filters = buildFilters(tab.value)
   const orFilters = buildOrFilters()
+  let movedTab = false
   try {
     const fields = Array.from(new Set(['name', 'modified', ...columnNames.value, ...props.extraFields]))
     const [list, n] = await Promise.all([
@@ -315,12 +339,23 @@ async function reload() {
     total.value = n
     if (props.tabs.length) {
       tabCounts.value = await Promise.all(props.tabs.map((t, i) => (i === tab.value ? n : count(buildFilters(i), orFilters))))
+      if (!tabPicked && !n) {
+        const first = tabCounts.value.findIndex((c) => c > 0)
+        if (first >= 0 && first !== tab.value) {
+          tab.value = first
+          movedTab = true
+        }
+      }
     }
   } catch (err) {
     error.value = errorText(err) || 'Could not load the list.'
   } finally {
     loading.value = false
   }
+  // On the list's first load the watchers aren't listening yet, so the tab
+  // just moved to would show the old tab's (empty) rows - load them here.
+  // Later the tab watcher does it.
+  if (movedTab && !ready) await reload()
 }
 
 function toggleSort(field) {
@@ -428,6 +463,7 @@ onMounted(async () => {
   // A page that asks for the ID column always gets it, even over columns
   // this browser saved before.
   if (saved && props.idColumn && !saved.includes('name')) saved.splice(1, 0, 'name')
+  if (saved) for (const f of [...addedNames.value].reverse()) if (!saved.includes(f)) saved.splice(1, 0, f)
   columnNames.value = saved || defaultColumnNames.value
   await reload()
   ready = true
