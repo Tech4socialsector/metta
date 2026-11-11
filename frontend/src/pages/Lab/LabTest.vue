@@ -10,9 +10,9 @@
       </div>
     </template>
     <template v-if="meta && doc" #actions>
-      <a v-if="original.status === 'Reported'" :href="printUrl(name)" target="_blank" class="flex h-9 items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 text-sm font-semibold hover:bg-gray-50">
+      <button v-if="original.status === 'Reported'" type="button" class="flex h-9 items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 text-sm font-semibold hover:bg-gray-50" @click="printReport">
         <LucideIcon name="printer" class="h-4 w-4" /> Print
-      </a>
+      </button>
       <button v-if="canCancelTest" type="button" class="h-9 rounded-lg border border-gray-300 bg-white px-4 text-sm font-semibold hover:bg-gray-50 disabled:opacity-60" :disabled="busy" @click="cancelTest">Cancel test</button>
       <DeleteRecord v-if="canDelete" :label="name" :busy="busy" @delete="deleteTest" />
       <template v-if="canWrite">
@@ -224,7 +224,7 @@ import { getMeta } from '@/data/meta'
 import { errorText } from '@/data/api'
 import { session, hasRole } from '@/data/session'
 import { buildLayout, newDoc, isVisible, isRequired, isReadOnly, fetchTargets, missingFields, toPayload, linkFilters } from '@/data/formEngine'
-import { DT, LAB_API, LAB_API_DT, NEXT_STEP, CANCELLABLE, NEEDS_RESULT_MSG, VERIFIER_ROLES, nowIST, hasResult, printUrl, REJECT_REASONS, looksWrong, isCritical, notANumber } from '@/data/lab/labRules'
+import { DT, LAB_API, LAB_API_DT, NEXT_STEP, CANCELLABLE, NEEDS_RESULT_MSG, VERIFIER_ROLES, nowIST, hasResult, printLabReport, REJECT_REASONS, looksWrong, isCritical, notANumber } from '@/data/lab/labRules'
 
 const props = defineProps({ name: { type: String, required: true } })
 const router = useRouter()
@@ -240,6 +240,15 @@ const ctx = ref(null)
 const loadError = ref('')
 const saveError = ref('')
 const stepError = ref('')
+// Same print window as the OP slip / prescription; a failure shows with the other step errors.
+async function printReport() {
+  stepError.value = ''
+  try {
+    await printLabReport(props.name)
+  } catch (err) {
+    stepError.value = errorText(err) || 'Could not print the lab report.'
+  }
+}
 const savedNote = ref('')
 const staleDoc = ref(false)
 const busy = ref(false)

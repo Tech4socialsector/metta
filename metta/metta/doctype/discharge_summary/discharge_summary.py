@@ -32,16 +32,14 @@ class DischargeSummary(Document):
 		# in full (not just a submitted bill sitting there with a real
 		# Balance Due still on it) can the doctor's Discharge Summary be
 		# written, not the other way around.
-		from metta.sales.doctype.discharge_bill.discharge_bill import get_billing_status
+		from metta.sales.doctype.discharge_bill.discharge_bill import (
+			billing_not_completed_message,
+			get_billing_status,
+		)
 
 		status = get_billing_status(self.patient_visit)
 		if not status["completed"]:
-			frappe.throw(
-				_(
-					"The Discharge Bill for this admission must be submitted and fully paid (Balance Due {0}) before the Discharge Summary can be written."
-				).format(frappe.format(status["balance_due"], {"fieldtype": "Currency"})),
-				title=_("Billing Not Completed"),
-			)
+			frappe.throw(billing_not_completed_message(status), title=_("Billing Not Completed"))
 
 	def validate_single_summary_per_visit(self):
 		existing = frappe.db.get_value(

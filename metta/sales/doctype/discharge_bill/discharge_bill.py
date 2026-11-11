@@ -15,6 +15,26 @@ class DischargeBill(Document):
 		self.validate_single_bill_per_admission()
 		self.compile_from_billing()
 
+	def before_submit(self):
+		self.validate_no_draft_bills()
+
+	def validate_no_draft_bills(self):
+		# A draft Billing keeps the advance figure it took when it was made; if
+		# other bills were submitted since, that figure is stale and the advance
+		# gets counted twice (seen on UAT: advance used > advance paid,
+		# 2026-11-11). Submitting the draft re-checks it against the real
+		# balance, so the final bill waits until every bill is submitted.
+		drafts = frappe.get_all(
+			"Billing", filters={"patient": self.ip_id, "docstatus": 0}, pluck="name", order_by="name"
+		)
+		if drafts:
+			frappe.throw(
+				_("Submit or delete these draft bills for this admission before submitting the Discharge Bill: {0}").format(
+					", ".join(drafts)
+				),
+				title=_("Draft Bills Pending"),
+			)
+
 	def validate_is_ip_and_discharged(self):
 		if not self.ip_id:
 			return
@@ -112,18 +132,23 @@ def compile_discharge_bill(ip_id):
 		total_collected += flt(bill.amount_collected)
 
 	advance = get_advance_balance(ip_id)
+	advance_paid = flt(advance["total_collected"], 2)
 	total_billed = flt(total_billed, 2)
-	advance_adjusted = flt(total_adjusted, 2)
+	# The bills can't have used more advance than the patient actually paid.
+	# If they claim more (a stale draft, or an advance reduced after use),
+	# only what was paid counts; the rest stays in Balance Due so it is
+	# collected, instead of showing a negative Advance Balance and ₹0 due.
+	advance_adjusted = flt(min(total_adjusted, advance_paid), 2)
 	amount_collected = flt(total_collected, 2)
 	return {
 		"bill_items": items,
 		"total_billed": total_billed,
-		"advance_paid": flt(advance["total_collected"], 2),
+		"advance_paid": advance_paid,
 		# What's left of the advance after the bills listed above adjusted
 		# their share - computed from those same bills (drafts included),
 		# not get_advance_balance()'s submitted-only balance, so the two
-		# figures on this bill always agree.
-		"advance_balance": flt(flt(advance["total_collected"]) - advance_adjusted, 2),
+		# figures on this bill always agree. Never below zero (see above).
+		"advance_balance": flt(advance_paid - advance_adjusted, 2),
 		"advance_adjusted": advance_adjusted,
 		"amount_collected": amount_collected,
 		# Whatever's left unpaid after both the advance and what's already
@@ -166,6 +191,19 @@ def get_billing_status(ip_id):
 
 	balance_due = flt(bill.balance_due)
 	return {"completed": balance_due <= 0, "discharge_bill": bill.name, "balance_due": balance_due}
+
+
+def billing_not_completed_message(status):
+	# The old single message said "Balance Due ₹0.00" even when no Discharge
+	# Bill existed at all, which read as "already paid". Say what is actually
+	# missing: the bill itself, or the money still due on it.
+	if not status["discharge_bill"]:
+		return _(
+			"Billing has not submitted a Discharge Bill for this admission yet. The Discharge Summary can be written once the Discharge Bill is submitted and fully paid."
+		)
+	return _("{0} is still due on Discharge Bill {1}. The Discharge Summary can be written once it is fully paid.").format(
+		frappe.format(status["balance_due"], {"fieldtype": "Currency"}), status["discharge_bill"]
+	)
 
 
 @frappe.whitelist()

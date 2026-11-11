@@ -28,12 +28,54 @@ class PatientAdvance(Document):
 		if not self.received_by:
 			self.received_by = frappe.session.user
 
+		self.validate_not_below_used()
+
+	def validate_not_below_used(self):
+		# This doctype isn't submittable, so an advance can still be edited
+		# after bills have used it. Lowering it (or moving it to another
+		# admission) below what submitted bills already used would leave the
+		# bills claiming advance that was never paid (UAT, 2026-11-11).
+		if self.is_new():
+			return
+		before = self.get_doc_before_save()
+		if not before:
+			return
+		if before.patient_visit == self.patient_visit:
+			removed = flt(before.amount) - flt(self.amount)
+		else:
+			removed = flt(before.amount)
+		if removed > 0:
+			check_advance_still_covers_bills(before.patient_visit, removed, _("reduced"))
+
+	def on_trash(self):
+		check_advance_still_covers_bills(self.patient_visit, flt(self.amount), _("deleted"))
+
 	def after_insert(self):
 		# Only on genuine creation - this doctype isn't submittable, so a
 		# later correction (e.g. fixing a typo'd Remarks) goes through
 		# validate() again but must never add a second "Advance Collected"
 		# entry for the same deposit.
 		add_advance_tracking_entry(self.patient_visit, "Advance Collected", self.amount)
+
+
+def check_advance_still_covers_bills(patient_visit, removed, action):
+	# Raises if taking `removed` off this admission's advance would leave less
+	# than the submitted bills have already used from it.
+	info = get_advance_balance(patient_visit)
+	left = flt(info["balance"]) - flt(removed)
+	if left < -0.005:
+		frappe.throw(
+			_(
+				"This advance can't be {0}: {1} of the advance for {2} is already used by submitted bills, "
+				"so only {3} can be taken off. To give money back, cancel the bills that used it first."
+			).format(
+				action,
+				frappe.format(info["total_adjusted"], {"fieldtype": "Currency"}),
+				patient_visit,
+				frappe.format(max(flt(info["balance"]), 0), {"fieldtype": "Currency"}),
+			),
+			title=_("Advance Already Used"),
+		)
 
 
 @frappe.whitelist()

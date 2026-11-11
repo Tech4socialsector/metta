@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <div v-if="modelValue" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" @click.self="$emit('update:modelValue', false)">
-      <div role="dialog" aria-modal="true" :aria-label="title" class="w-full max-w-lg rounded-xl bg-white shadow-xl">
+      <div role="dialog" aria-modal="true" :aria-label="title" class="w-full rounded-xl bg-white shadow-xl" :class="SIZES[size] || SIZES.md">
         <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4">
           <h2 class="text-lg font-semibold text-gray-900">{{ title }}</h2>
           <button type="button" class="flex h-9 w-9 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100" aria-label="Close" @click="$emit('update:modelValue', false)">
@@ -23,6 +23,10 @@
 defineProps({
   modelValue: Boolean,
   title: { type: String, required: true },
+  // Most dialogs are short forms; wide ones (lab report tables) need room so columns aren't cut off.
+  size: { type: String, default: 'md' },
 })
+// Full class names written out so Tailwind keeps them in the build.
+const SIZES = { md: 'max-w-lg', lg: 'max-w-2xl', xl: 'max-w-4xl' }
 defineEmits(['update:modelValue'])
 </script>

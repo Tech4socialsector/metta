@@ -9,7 +9,10 @@
         <span class="font-semibold text-gray-900">{{ t.item_name || t.name }}</span>
         <StatusBadge :status="t.status" />
         <span v-if="t.reported_on" class="text-xs text-gray-500">{{ String(t.reported_on).slice(0, 16) }}</span>
-        <a v-if="t.status === 'Reported'" :href="printUrl(t.name)" target="_blank" class="ml-auto text-sm font-semibold text-brand-700 hover:underline">Print</a>
+        <!-- Same Lab Report print format and button look as the Lab Test screen; one per test since each test prints on its own. -->
+        <button v-if="t.status === 'Reported'" type="button" class="ml-auto flex h-9 items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-800 hover:bg-gray-50" @click="print(t.name)">
+          <LucideIcon name="printer" class="h-4 w-4" /> Print
+        </button>
       </div>
       <div v-if="t.rows.length" class="overflow-x-auto rounded-lg border border-gray-200">
         <table class="w-full min-w-[520px] text-sm">
@@ -38,13 +41,22 @@
 <script setup>
 import { onMounted, ref, watch } from 'vue'
 import StatusBadge from '@/components/StatusBadge.vue'
+import LucideIcon from '@/components/LucideIcon.vue'
 import { api, errorText, DC } from '@/data/api'
-import { printUrl, FLAG_CLASS, FLAG_ARROW, FLAG_BG } from '@/data/lab/labRules'
+import { printLabReport, FLAG_CLASS, FLAG_ARROW, FLAG_BG } from '@/data/lab/labRules'
 
 const props = defineProps({ consultation: { type: String, required: true } })
 const emit = defineEmits(['loaded'])
 const tests = ref(null)
 const error = ref('')
+
+async function print(name) {
+  try {
+    await printLabReport(name)
+  } catch (err) {
+    error.value = errorText(err) || 'Could not print the lab report.'
+  }
+}
 
 async function load() {
   error.value = ''

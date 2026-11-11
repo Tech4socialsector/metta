@@ -10,7 +10,8 @@
     <template #actions>
       <template v-if="!isNew && doc.name">
         <button type="button" class="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm font-semibold hover:bg-gray-50" :disabled="busy" @click="printPrescription">Print Prescription</button>
-        <router-link v-if="doc.suggested_tests.length && canEdit" :to="{ name: 'ConsultationForm', params: { name: 'new' }, query: { visit: doc.patient_consultation } }" class="flex h-9 items-center rounded-lg border border-gray-300 bg-white px-3 text-sm font-semibold hover:bg-gray-50">Follow-up Consultation</router-link>
+        <!-- Not on an admission: IP rounds are kept on paper for now (user, 2026-11-11). -->
+        <router-link v-if="doc.suggested_tests.length && canEdit && visitInfo.registration_category !== 'IP'" :to="{ name: 'ConsultationForm', params: { name: 'new' }, query: { visit: doc.patient_consultation } }" class="flex h-9 items-center rounded-lg border border-gray-300 bg-white px-3 text-sm font-semibold hover:bg-gray-50">Follow-up Consultation</router-link>
         <!-- Billing is not in the Vue app yet: its Bill button is on the Desk form. -->
         <a v-if="canBill" :href="`/desk/doctor-consultation/${doc.name}`" class="flex h-9 items-center rounded-lg border border-gray-300 bg-white px-3 text-sm font-semibold hover:bg-gray-50">Bill (Desk)</a>
       </template>
@@ -272,7 +273,7 @@ watch(
     try {
       // uhin_id / age / sex ride along for the patient bar; only
       // patient_name goes on the record.
-      const v = (await getValue('Patient Visit', visit, ['patient_name', 'uhin_id', 'age', 'sex'])) || {}
+      const v = (await getValue('Patient Visit', visit, ['patient_name', 'uhin_id', 'age', 'sex', 'registration_category'])) || {}
       doc.patient_name = v.patient_name || ''
       visitInfo.value = v
     } catch {

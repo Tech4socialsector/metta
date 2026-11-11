@@ -255,13 +255,19 @@ class PatientVisit(Document):
 		# placeholder is deliberately blank - ignore_mandatory skips past its
 		# own vitals fields being required, which only applies once a nurse
 		# actually opens it and saves their real assessment.
-		frappe.get_doc(
-			{
-				"doctype": "Nurse Interventions",
-				"patient_registration": self.name,
-				"status": "Pending",
-			}
-		).insert(ignore_permissions=True, ignore_mandatory=True)
+		# Not for an admission (user, 2026-11-11): vitals are taken once at the
+		# counter on the OP visit, and an IP visit is always converted from
+		# that OP visit - a second "Pending" record would ask for vitals the
+		# hospital doesn't take again. Its vitals are the OP visit's (see
+		# vitals_source_visits).
+		if self.registration_category != "IP":
+			frappe.get_doc(
+				{
+					"doctype": "Nurse Interventions",
+					"patient_registration": self.name,
+					"status": "Pending",
+				}
+			).insert(ignore_permissions=True, ignore_mandatory=True)
 
 		# So the assigned doctor's dashboard picks up a newly-assigned patient
 		# on its own - without this, "Assigned Today" only updates the next
@@ -566,16 +572,14 @@ def get_discharge_defaults(patient_visit):
 	# Discharge Bill comes first in this workflow now - the same check
 	# Discharge Summary's own validate() enforces on save, checked here too so
 	# the client isn't handed a form that's guaranteed to fail once opened.
-	from metta.sales.doctype.discharge_bill.discharge_bill import get_billing_status
+	from metta.sales.doctype.discharge_bill.discharge_bill import (
+		billing_not_completed_message,
+		get_billing_status,
+	)
 
 	status = get_billing_status(patient_visit)
 	if not status["completed"]:
-		frappe.throw(
-			_(
-				"The Discharge Bill for this admission must be submitted and fully paid (Balance Due {0}) before the Discharge Summary can be written."
-			).format(frappe.format(status["balance_due"], {"fieldtype": "Currency"})),
-			title=_("Billing Not Completed"),
-		)
+		frappe.throw(billing_not_completed_message(status), title=_("Billing Not Completed"))
 	return {"patient_visit": doc.name}
 
 
@@ -613,6 +617,28 @@ def check_room_availability(room, room_bed_no, registration=None):
 	return {"occupied": bool(existing), "occupied_by": existing}
 
 
+def vitals_source_visits(visit_names):
+	"""Map each visit to the visit whose vitals count for it.
+
+	Vitals are taken once, at the counter, on the OP visit. An admission (IP)
+	gets no vitals record of its own (see after_insert), so its vitals are
+	the ones of the OP visit it was converted from. Everything that asks "are
+	this visit's vitals done / what are they" looks them up through this.
+	"""
+	names = [n for n in visit_names if n]
+	source = {n: n for n in names}
+	if not names:
+		return source
+	for row in frappe.get_all(
+		"Patient Visit",
+		filters={"name": ["in", names], "registration_category": "IP"},
+		fields=["name", "converted_from_registration"],
+	):
+		if row.converted_from_registration:
+			source[row.name] = row.converted_from_registration
+	return source
+
+
 @frappe.whitelist()
 def get_front_desk_dashboard_stats():
 	# The whole shape of the day from Front Desk's own point of view - not
@@ -640,20 +666,30 @@ def get_front_desk_dashboard_stats():
 	if visit_names:
 		# A visit can in principle have more than one Nurse Interventions row -
 		# "done" means at least one of them is Completed, not that all are.
+		# An admission's vitals are its OP visit's, so it is looked up there.
+		source = vitals_source_visits(visit_names)
+		source_done = {}
 		for row in frappe.get_all(
 			"Nurse Interventions",
-			filters={"patient_registration": ["in", visit_names]},
+			filters={"patient_registration": ["in", list(set(source.values()))]},
 			fields=["patient_registration", "status"],
 		):
 			if row.status == "Completed":
-				nurse_done[row.patient_registration] = True
+				source_done[row.patient_registration] = True
 			else:
-				nurse_done.setdefault(row.patient_registration, False)
-		doctor_seen = set(
+				source_done.setdefault(row.patient_registration, False)
+		nurse_done = {v: source_done.get(src, False) for v, src in source.items()}
+		# Same for the doctor: an admission has no consultation of its own (IP
+		# rounds are on paper, user 2026-11-11) - the doctor saw the patient on
+		# the OP visit and admitted them, so that consultation counts as seen.
+		seen_sources = set(
 			frappe.get_all(
-				"Doctor Consultation", filters={"patient_consultation": ["in", visit_names]}, pluck="patient_consultation"
+				"Doctor Consultation",
+				filters={"patient_consultation": ["in", list(set(source.values()) | set(visit_names))]},
+				pluck="patient_consultation",
 			)
 		)
+		doctor_seen = {v for v, src in source.items() if v in seen_sources or src in seen_sources}
 
 	patient_flow = [
 		{

@@ -4,6 +4,9 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import flt
+
+from metta.metta.doctype.patient_visit.patient_visit import vitals_source_visits
 
 
 class DoctorConsultation(Document):
@@ -166,9 +169,9 @@ def get_vitals_status(patient_consultation):
 	frappe.has_permission("Doctor Consultation", "read", throw=True)
 	if not patient_consultation:
 		return {"completed": False}
-	statuses = frappe.get_all(
-		"Nurse Interventions", filters={"patient_registration": patient_consultation}, pluck="status"
-	)
+	# An admission has no vitals of its own - they are its OP visit's.
+	source = vitals_source_visits([patient_consultation])[patient_consultation]
+	statuses = frappe.get_all("Nurse Interventions", filters={"patient_registration": source}, pluck="status")
 	return {"completed": "Completed" in statuses}
 
 
@@ -183,9 +186,11 @@ def get_latest_vitals(patient_consultation):
 	frappe.has_permission("Nurse Interventions", "read", throw=True)
 	if not patient_consultation:
 		return None
+	# An admission has no vitals of its own - the doctor sees the OP visit's.
+	source = vitals_source_visits([patient_consultation])[patient_consultation]
 	rows = frappe.get_list(
 		"Nurse Interventions",
-		filters={"patient_registration": patient_consultation, "status": "Completed"},
+		filters={"patient_registration": source, "status": "Completed"},
 		fields=[
 			"temperature",
 			"pulse",
@@ -424,6 +429,7 @@ def get_my_dashboard_stats():
 			"waiting": 0,
 			"referred": 0,
 			"admitted": 0,
+			"discharge": 0,
 			"reports": 0,
 			"reports_visits": [],
 			"assigned_visits": [],
@@ -441,9 +447,12 @@ def get_my_dashboard_stats():
 	today = frappe.utils.today()
 
 	# Today's queue - the daily worklist, not an ever-growing all-time count.
+	# OP only (user, 2026-11-11): IP rounds and notes are kept on paper for
+	# now, so an admission is not a patient to "Consult" - it shows only under
+	# Admitted (IP) below, with View Visit.
 	assigned_visits_today = frappe.get_all(
 		"Patient Visit",
-		filters={"doctor_name": doctor, "creation": [">=", today]},
+		filters={"doctor_name": doctor, "creation": [">=", today], "registration_category": "OP"},
 		fields=["name", "patient_name", "registration_category"],
 		order_by="creation desc",
 	)
@@ -492,17 +501,25 @@ def get_my_dashboard_stats():
 		# one of them is Completed, not that all of them are. The Completed
 		# one is preferred as the record to link to - it's the one with
 		# actual vitals filled in, not a still-Pending placeholder.
+		# An admission's vitals are its OP visit's, so it is looked up there -
+		# otherwise a patient admitted today would sit in "Waiting for Vitals".
+		source = vitals_source_visits(assigned_names)
+		source_status, source_record = {}, {}
 		for row in frappe.get_all(
 			"Nurse Interventions",
-			filters={"patient_registration": ["in", assigned_names]},
+			filters={"patient_registration": ["in", list(set(source.values()))]},
 			fields=["name", "patient_registration", "status"],
 		):
 			if row.status == "Completed":
-				nurse_status_by_visit[row.patient_registration] = True
-				nurse_intervention_by_visit[row.patient_registration] = row.name
+				source_status[row.patient_registration] = True
+				source_record[row.patient_registration] = row.name
 			else:
-				nurse_status_by_visit.setdefault(row.patient_registration, False)
-				nurse_intervention_by_visit.setdefault(row.patient_registration, row.name)
+				source_status.setdefault(row.patient_registration, False)
+				source_record.setdefault(row.patient_registration, row.name)
+		for visit, src in source.items():
+			if src in source_status:
+				nurse_status_by_visit[visit] = source_status[src]
+				nurse_intervention_by_visit[visit] = source_record[src]
 
 	visited_names = set(consultation_by_visit.keys())
 	not_yet_visited = [v for v in assigned_visits if v.name not in visited_names]
@@ -544,6 +561,24 @@ def get_my_dashboard_stats():
 			)
 		)
 	discharge_pending_visits = [v for v in discharged_visits if v.name not in has_summary]
+	# Where each one stands with Billing, so the doctor sees why a summary
+	# can't be written yet (no Discharge Bill, not submitted, or a balance
+	# still due) instead of finding out only after clicking.
+	if discharge_pending_visits:
+		bill_by_visit = {
+			b.ip_id: b
+			for b in frappe.get_all(
+				"Discharge Bill",
+				filters={"ip_id": ["in", [v.name for v in discharge_pending_visits]], "docstatus": ["!=", 2]},
+				fields=["name", "ip_id", "docstatus", "balance_due"],
+			)
+		}
+		for v in discharge_pending_visits:
+			bill = bill_by_visit.get(v.name)
+			v["discharge_bill"] = bill.name if bill else None
+			v["bill_submitted"] = bool(bill and bill.docstatus == 1)
+			v["balance_due"] = flt(bill.balance_due) if bill else 0
+			v["ready"] = bool(bill and bill.docstatus == 1 and flt(bill.balance_due) <= 0)
 
 	# Another doctor referred this patient to *this* doctor - `doctor` on
 	# these rows is the referring doctor, not this one, so this has to be its
@@ -626,6 +661,7 @@ def get_my_dashboard_stats():
 		"waiting": len(waiting_visits),
 		"referred": len(referred_visits),
 		"admitted": len(admitted_visits),
+		"discharge": len(discharge_pending_visits),
 		"reports": len(reports_visits),
 		"reports_visits": reports_visits[:20],
 		# Capped - this is a quick-glance dashboard, not a full report; the

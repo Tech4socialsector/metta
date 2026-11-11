@@ -71,3 +71,14 @@ def get_test_context(test=None, consultation=None):
 			}
 		)
 	return out
+
+
+@frappe.whitelist()
+def get_lab_report_html(test):
+	# The Lab Report print as plain HTML, so the Vue screens print it the same
+	# way as the OP slip / prescription (own window + print dialog) instead of
+	# sending the user to Desk's /printview page. Access is checked on the test.
+	doc = frappe.get_doc("Diagnostic Test", test)
+	doc.check_permission("read")
+	print_format = frappe.get_doc("Print Format", "Lab Report")
+	return frappe.render_template(print_format.html, {"doc": doc})

@@ -54,7 +54,11 @@
                 <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold" :class="v.registration_category === 'IP' ? 'bg-violet-50 text-violet-800' : 'bg-brand-50 text-brand-800'">{{ v.registration_category }}</span>
               </td>
               <td class="px-3 py-3"><StatusPill :done="v.nurse_done" done-text="Done" pending-text="Pending" /></td>
-              <td class="px-3 py-3"><StatusPill :done="v.doctor_seen" done-text="Seen" pending-text="Waiting" /></td>
+              <td class="px-3 py-3">
+                <!-- An admitted patient isn't waiting for a doctor at the counter (IP rounds are on paper), so no "Waiting" for IP. -->
+                <span v-if="v.registration_category === 'IP' && !v.doctor_seen" class="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-700">Admitted</span>
+                <StatusPill v-else :done="v.doctor_seen" done-text="Seen" pending-text="Waiting" />
+              </td>
               <td class="px-5 py-3 text-right">₹{{ Number(v.net_amount || 0).toFixed(2) }}</td>
             </tr>
           </tbody>

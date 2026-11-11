@@ -1,3 +1,4 @@
+import { api } from '@/data/api'
 // The lab's status workflow on top of Diagnostic Test's own Status field.
 // The server only allows one step forward at a time (or Cancel), so these
 // buttons are the usual path; the dropdown can't skip a step either.
@@ -6,9 +7,23 @@ export const LAB_API = 'metta.vue.lab'
 // Sample collection lives on the doctype's own module so Desk uses it too.
 export const LAB_API_DT = 'metta.metta.doctype.diagnostic_test.diagnostic_test'
 
-// Desk's print view with the Lab Report format (phase 4).
-export function printUrl(name) {
-  return `/printview?doctype=${encodeURIComponent(DT)}&name=${encodeURIComponent(name)}&format=${encodeURIComponent('Lab Report')}&no_letterhead=0`
+// Lab Report print, done the same way as the OP slip / prescription: the
+// server renders the "Lab Report" format, it opens in its own window and the
+// print dialog comes up (no detour through Desk's /printview page).
+// The window is opened before the request so the browser doesn't block it.
+export async function printLabReport(name) {
+  const w = window.open('', '_blank')
+  try {
+    const html = await api(`${LAB_API}.get_lab_report_html`, { test: name })
+    w.document.open()
+    w.document.write(`<html><head><title>${name}</title></head><body>${html}</body></html>`)
+    w.document.close()
+    w.focus()
+    w.print()
+  } catch (err) {
+    w.close()
+    throw err
+  }
 }
 
 // Roles that may verify a lab test and release it to the doctor.

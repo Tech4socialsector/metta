@@ -20,8 +20,7 @@
           :class="isActive(item) ? 'bg-brand-50 font-semibold text-brand-800 ring-1 ring-brand-100' : 'font-medium text-gray-700 hover:bg-gray-100'"
         >
           <LucideIcon :name="item.icon" class="h-[18px] w-[18px] shrink-0" :class="isActive(item) ? 'text-brand-700' : 'text-gray-500'" />
-          <span v-if="expanded" class="flex-1 truncate">{{ item.label }}</span>
-        </component>
+          <span v-if="expanded" class="flex-1 truncate">{{ item.label }}</span>        </component>
       </template>
     </div>
     <div class="border-t border-gray-200 pt-2">
@@ -40,7 +39,6 @@ import { useRoute } from 'vue-router'
 import { hasRole } from '@/data/session'
 import { SECTIONS } from '@/data/sections'
 import { REPORTS } from '@/data/reports/catalog'
-
 // All reports live in one place (user, 2026-10-25). The menu item shows to
 // anyone allowed at least one report; the Reports page then lists only the
 // reports their roles may open. Stays lit inside any report (Reports* routes).
@@ -91,11 +89,14 @@ const GROUPS = [
     items: [
       { label: 'Front Desk', to: { name: 'Home' }, roles: ['Front Desk'], match: ['Home', 'Register'], icon: 'clipboard-list' },
       // Patients and Visits share one page (cards for registered / OP / IP / new).
-      { label: 'Patients', to: { name: 'PatientList' }, roles: ['Front Desk', 'Doctor', 'Nurse', 'Pharmacy Staff', 'Billing Staff'], match: ['PatientList', 'PatientView', 'NewVisit', 'WardPatientEdit', 'VisitView', 'AdmitPatient', 'WardVisitEdit'], icon: 'users' },
-      { label: 'Vitals Check', to: { name: 'NurseList' }, roles: ['Nurse', 'Doctor', 'Front Desk'], match: ['NurseList', 'NurseForm'], icon: 'heart-pulse' },
+      // No Doctor on Patients, Vitals Check or Wards (user, 2026-11-11): the
+      // doctor works from their own dashboard, whose links (View Visit, View
+      // Vitals, discharge) still open those pages.
+      { label: 'Patients', to: { name: 'PatientList' }, roles: ['Front Desk', 'Nurse', 'Pharmacy Staff', 'Billing Staff'], match: ['PatientList', 'PatientView', 'NewVisit', 'WardPatientEdit', 'VisitView', 'AdmitPatient', 'WardVisitEdit'], icon: 'users' },
+      { label: 'Vitals Check', to: { name: 'NurseList' }, roles: ['Nurse', 'Front Desk'], match: ['NurseList', 'NurseForm'], icon: 'heart-pulse' },
       { label: 'Doctor', to: { name: 'DoctorDashboard' }, roles: ['Doctor'], match: ['DoctorDashboard', 'ConsultationForm'], icon: 'stethoscope' },
       { label: 'Lab', to: { name: 'LabWorklist' }, roles: ['Lab Staff', 'Lab Verifier'], match: ['LabWorklist', 'LabTest'], icon: 'flask-conical' },
-      { label: 'Wards', to: { name: 'WardBoard' }, roles: ['Nurse', 'Doctor', 'Front Desk'], match: ['WardBoard'], icon: 'bed-double' },
+      { label: 'Wards', to: { name: 'WardBoard' }, roles: ['Nurse', 'Front Desk'], match: ['WardBoard'], icon: 'bed-double' },
     ],
   },
   { label: 'Pharmacy & Stores', items: [home('pharmacy', 'PharmacyHome', ['StockLookup']), section('store'), section('warehouse')] },
