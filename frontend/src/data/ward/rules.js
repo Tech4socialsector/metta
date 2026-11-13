@@ -16,7 +16,7 @@ export const DISCHARGE_OPTIONS = {
   condition_at_discharge: ['', 'Improved', 'Worse', 'LAMA', 'Unchanged', 'Died', 'Transfer', 'Absconded', 'Referred'],
 }
 
-export const APPOINTMENT_STATUS = ['', 'Scheduled', 'Checked-in', 'Completed', 'Cancelled', 'No-show']
+export const APPOINTMENT_STATUS = ['', 'Scheduled', 'Checked-in', 'Completed', 'Cancelled']
 
 // Fields Patient Visit fetches from the patient (fetch_from uhin_id.*):
 // visit field -> registration field.

@@ -18,6 +18,22 @@ class DoctorConsultation(Document):
 		self.route_referral()
 		self.sync_diagnostic_tests()
 
+	def after_insert(self):
+		self.mark_appointment_completed()
+
+	def mark_appointment_completed(self):
+		# Writing the first consultation note for a visit is the same signal
+		# get_my_dashboard_stats() already uses to call a visit "visited" - so
+		# it's also what closes out the Appointment it was booked from, instead
+		# of leaving Front Desk to notice and flip the status by hand. Only
+		# fires from Checked-in, never from Scheduled directly, so a
+		# consultation can't jump an appointment past the Check-In step.
+		appointment = frappe.db.get_value("Patient Visit", self.patient_consultation, "appointment")
+		if not appointment:
+			return
+		if frappe.db.get_value("Appointment", appointment, "status") == "Checked-in":
+			frappe.db.set_value("Appointment", appointment, "status", "Completed")
+
 	def sync_diagnostic_tests(self):
 		# Billing's "Lab tests to pay" reads the tests suggested here, and the
 		# Lab's "Waiting for payment" reads Diagnostic Tests - so they're made on
