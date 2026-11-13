@@ -20,8 +20,9 @@
       </button>
     </div>
 
-    <!-- OP / IP / All: separates out-patient and in-patient billing on all
-    three tabs. Remembered on this browser, so IP billing staff land on IP. -->
+    <!-- All / OP / IP: always opens on All so every doctor's order shows;
+    OP or IP only narrows the list when staff want to separate them
+    (user, 2026-11-13 - a remembered "IP" was hiding OP medicines). -->
     <div role="radiogroup" aria-label="OP or IP" class="ml-auto flex gap-1 rounded-xl border border-gray-200 bg-white p-1">
       <button
         v-for="k in KINDS"
@@ -128,30 +129,16 @@ const view = computed({
   set: (v) => router.replace({ query: { ...route.query, queue: v } }),
 })
 
-// OP / IP / All. The URL wins (a shared link), then this browser's last choice.
+// All / OP / IP. Defaults to All every time; a picked filter lives only in
+// the URL, so Back from a bill keeps it but a fresh visit shows everything.
 const KINDS = [
+  { key: 'all', label: 'All' },
   { key: 'op', label: 'OP' },
   { key: 'ip', label: 'IP' },
-  { key: 'all', label: 'All' },
 ]
-const KIND_KEY = 'hmis-billing-kind'
-function savedKind() {
-  try {
-    return localStorage.getItem(KIND_KEY)
-  } catch {
-    return null
-  }
-}
 const kind = computed({
-  get: () => [route.query.type, savedKind(), 'all'].find((k) => KINDS.some((x) => x.key === k)),
-  set: (v) => {
-    try {
-      localStorage.setItem(KIND_KEY, v)
-    } catch {
-      // not remembered on this browser - the URL still keeps it
-    }
-    router.replace({ query: { ...route.query, type: v } })
-  },
+  get: () => (KINDS.some((x) => x.key === route.query.type) ? route.query.type : 'all'),
+  set: (v) => router.replace({ query: { ...route.query, type: v } }),
 })
 const byType = (rows) => (kind.value === 'all' ? rows : rows.filter((r) => (kind.value === 'ip') === !!r.is_ip))
 
